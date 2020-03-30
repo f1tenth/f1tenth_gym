@@ -1,0 +1,150 @@
+syntax = 'proto3';
+
+package racecar_simulator_standalone;
+
+message MapRequest {
+    // request message for updating map
+    repeated double map = 1;
+    double origin_x = 2;
+    double origin_y = 3;
+    double map_resolution = 4;
+    double free_threshold = 5;
+    int32 map_height = 6;
+    int32 map_width = 7;
+}
+
+message MapResponse {
+    // response message for updating map
+    // 0 is success, 1 is failure
+    int32 result = 1;
+}
+
+message PoseRequest {
+    // request message for setting pose
+    double pose_x = 1;
+    double pose_y = 2;
+    double pose_theta = 3;
+}
+
+message PoseResponse {
+    // response message for setting pose
+    repeated double scan = 1;
+    double angle_min = 2;
+    double angle_max = 3;
+}
+
+message CarObservation {
+    // full state observation for EACH car
+    // bare minimum at the moment
+
+    // scan stuff
+    repeated double scan = 1;
+
+    // odom stuff
+    // position
+    double pose_x = 2;
+    double pose_y = 3;
+    // orientation
+    double theta = 4;
+    // velocities
+    double linear_vel_x = 5;
+    double linear_vel_y = 6;
+    double ang_vel_z = 7;
+
+    // collision
+    bool collision = 8;
+    double collision_angle = 9;
+}
+
+message SimObservation {
+    // observations for all agents in sim
+    repeated CarObservation observations = 1;
+    int32 ego_idx = 2;
+}
+
+message StepRequest {
+    // request for stepping the sim
+    // should have all cars' requested actions
+    int32 ego_idx = 1;
+    repeated double requested_vel = 2;
+    repeated double requested_ang = 3;
+}
+
+message StepResponse {
+    // response message for stepping if failure
+    // 1 is failure
+    // should not receive this with result other than failure
+    int32 result = 1;
+}
+
+message SimResetRequest {
+    // request for reinitialize sim
+    int32 num_cars = 1;
+    int32 ego_idx = 2;
+}
+
+message SimResetResponse {
+    // response for reinitialize sim
+    // 0 success, 1 failure
+    int32 result = 1;
+}
+
+message SimResetByPoseRequest {
+    // request for reinitializing sim at given pose
+    int32 num_cars = 1;
+    int32 ego_idx = 2;
+    repeated double car_x = 3;
+    repeated double car_y = 4;
+    repeated double car_theta = 5;
+}
+
+message UpdateParamRequest {
+    // request for param update
+    double mu = 1;
+    double h_cg = 2;
+    double l_r = 3;
+    double cs_f = 4;
+    double cs_r = 5;
+    double I_z = 6;
+    double mass = 7;
+}
+
+message UpdateParamResponse {
+    // response for update param
+    // 0 success, 1 failure
+    int32 result = 1;
+}
+
+message SimRequest {
+    // wrapper for all request sent to sim server
+    // types of requests: 0 - step the sim
+    //                    1 - set the map for sim
+    //                    2 - reset sim
+    //                    3 - update params
+    //                    4 - reset sim by pose
+    int32 type = 1;
+    oneof request {
+        StepRequest step_request = 2;
+        MapRequest map_request = 3;
+        SimResetRequest reset_request = 4;
+        SimResetByPoseRequest reset_bypose_request = 5;
+        UpdateParamRequest update_request = 6;
+    }
+}
+
+message SimResponse {
+    // wrapper for all response from the sim server
+    // types of responses: 0 - step response (full obs)
+    //                     1 - step failed response (no map)
+    //                     2 - map response
+    //                     3 - reset sim response
+    //                     4 - update sim response
+    int32 type = 1;
+    oneof response {
+        SimObservation sim_obs = 2;
+        StepResponse step_result = 3;
+        MapResponse map_result = 4;
+        SimResetResponse reset_resp = 5;
+        UpdateParamResponse update_resp = 6;
+    }
+}

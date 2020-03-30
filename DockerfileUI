@@ -1,0 +1,92 @@
+FROM ubuntu:18.04
+
+#ENV IM_IN_DOCKER Yes
+
+RUN apt-get update --fix-missing && \
+    apt-get install -y \
+    python3-dev python3-pip
+
+RUN apt-get install -y libzmq3-dev \
+                       nano \
+                       git \
+                       unzip \
+                       build-essential \
+                       autoconf \
+                       libtool \
+                       libeigen3-dev \
+                       cmake \
+                       emacs\
+		       libglvnd0 \
+                       mesa-utils 
+
+ENV NVIDIA_VISIBLE_DEVICES \
+    ${NVIDIA_VISIBLE_DEVICES:-all}
+
+ENV NVIDIA_DRIVER_CAPABILITIES \
+    ${NVIDIA_DRIVER_CAPABILITIES:+$NVIDIA_DRIVER_CAPABILITIES,}graphics
+
+RUN cp -r /usr/include/eigen3/Eigen /usr/include
+
+RUN git clone https://github.com/google/protobuf.git && \
+    cd protobuf && \
+    ./autogen.sh && \
+    ./configure && \
+    make -j 12 && \
+    make install && \
+    ldconfig && \
+    make clean && \
+    cd .. && \
+    rm -r protobuf
+
+RUN pip3 install --upgrade pip
+
+RUN pip3 install numpy \
+                scipy \
+                numba \
+                matplotlib \
+                zmq \
+                pyzmq \
+                Pillow \
+                gym \
+                protobuf \
+                pyyaml \
+                msgpack==0.6.2
+
+RUN pip3 install torch==1.3.1+cpu torchvision==0.4.2+cpu -f https://download.pytorch.org/whl/torch_stable.html
+
+RUN pip3 install pyopengl
+
+RUN apt install -y libgl1-mesa-dev \
+                   libglew-dev 
+
+RUN git clone https://github.com/hzheng40/Pangolin.git && \
+    cd Pangolin && \
+    git submodule init && git submodule update && \
+    mkdir build && \
+    cd build && \
+    cmake .. && \
+    cmake --build . && \ 
+    cd src && \
+    cp pypangolin.cpython-36m-x86_64-linux-gnu.so /usr/local/lib/python3.6/dist-packages
+
+RUN mkdir /simulator
+COPY . /simulator
+
+RUN cd /simulator && \
+    mkdir -p build && \
+    cd build && \
+    cmake .. && \
+    make
+
+RUN cp /simulator/build/sim_requests_pb2.py /simulator/gym/
+
+RUN cd /simulator && \
+    pip3 install -e gym/
+
+#WORKDIR /simulator
+WORKDIR /simulator/python
+EXPOSE 5557
+EXPOSE 5558
+
+#ENTRYPOINT ["/bin/bash"]
+CMD python3 worker_online.py
