@@ -76,8 +76,8 @@ class F110Env(gym.Env, utils.EzPickle):
         self.num_toggles = 0
 
         # race info
-        self.lap_times = []
-        self.lap_counts = []
+        self.lap_times = [0.0, 0.0]
+        self.lap_counts = [0, 0]
 
         # TODO: load the map (same as ROS .yaml format)
         # if not map_path.endswith('.yaml'):
