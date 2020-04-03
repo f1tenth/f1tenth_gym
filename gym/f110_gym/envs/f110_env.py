@@ -75,6 +75,10 @@ class F110Env(gym.Env, utils.EzPickle):
         self.near_start = True
         self.num_toggles = 0
 
+        # race info
+        self.lap_times = []
+        self.lap_counts = []
+
         # TODO: load the map (same as ROS .yaml format)
         # if not map_path.endswith('.yaml'):
         #     print('Gym env - Please use a yaml file for map input.')
@@ -231,6 +235,13 @@ class F110Env(gym.Env, utils.EzPickle):
                     self.near_starts[i] = False
                     self.toggle_list[i] += 1
             done = (self.in_collision | (timeout) | np.all(self.toggle_list >= 4))
+            # only for two cars atm
+            self.lap_counts[0] = np.floor(self.toggle_list[0] / 2)
+            self.lap_counts[1] = np.floor(self.toggle_list[1] / 2)
+            if self.toggle_list[0] < 4:
+                self.lap_times[0] = self.current_time
+            if self.toggle_list[1] < 4:
+                self.lap_times[1] = self.current_time
             return done, self.toggle_list >= 4
 
         delta_pt = np.dot(self.start_rot, np.array([self.x-self.start_x, self.y-self.start_y]))
@@ -324,7 +335,7 @@ class F110Env(gym.Env, utils.EzPickle):
         carobs_list = observations_proto.observations
         # construct observation dict
         # Observation DICT, assume indices consistent: {'ego_idx':int, 'scans':[[]], 'poses_x':[], 'poses_y':[], 'poses_theta':[], 'linear_vels_x':[], 'linear_vels_y':[], 'ang_vels_z':[], 'collisions':[], 'collision_angles':[]}
-        obs = {'ego_idx': observations_proto.ego_idx, 'scans': [], 'poses_x': [], 'poses_y': [], 'poses_theta': [], 'linear_vels_x': [], 'linear_vels_y': [], 'ang_vels_z': [], 'collisions': [], 'collision_angles': []}
+        obs = {'ego_idx': observations_proto.ego_idx, 'scans': [], 'poses_x': [], 'poses_y': [], 'poses_theta': [], 'linear_vels_x': [], 'linear_vels_y': [], 'ang_vels_z': [], 'collisions': [], 'collision_angles': [], 'lap_times': [], 'lap_counts': []}
         for car_obs in carobs_list:
             obs['scans'].append(car_obs.scan)
             obs['poses_x'].append(car_obs.pose_x)
@@ -338,7 +349,9 @@ class F110Env(gym.Env, utils.EzPickle):
             obs['ang_vels_z'].append(car_obs.ang_vel_z)
             obs['collisions'].append(car_obs.collision)
             obs['collision_angles'].append(car_obs.collision_angle)
-            # obs['min_dists'].append(self.get_min_dist([car_obs.pose_x, car_obs.pose_y]))
+
+        obs['lap_times'] = self.lap_times
+        obs['lap_counts'] = self.lap_counts
 
         # TODO: do we need step reward?
         reward = self.timestep
