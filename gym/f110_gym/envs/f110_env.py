@@ -234,8 +234,8 @@ class F110Env(gym.Env, utils.EzPickle):
         """
         # TODO: start not always 0, 0
         # dist_to_start = math.sqrt((self.x-self.start_x) ** 2 + (self.y-self.start_y) ** 2)
-        left_t = 1.5
-        right_t = 5
+        left_t = 2
+        right_t = 2
         timeout = self.current_time >= self.timeout
         if self.double_finish:
             poses_x = np.array(self.all_x)-self.start_xs
