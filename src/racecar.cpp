@@ -464,7 +464,7 @@ void RaceCar::update_pose() {
     odom.linear_z = 0.0;
     odom.angular_x = 0.0;
     odom.angular_y = 0.0;
-    odom.angular_z = AckermannKinematics::angular_velocity(state.velocity, state.steer_angle, params.wheelbase);
+    odom.angular_z = state.angular_velocity;
     // update pose 2d
     pose.x = state.x;
     pose.y = state.y;
