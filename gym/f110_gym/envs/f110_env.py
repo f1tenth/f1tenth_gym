@@ -45,6 +45,9 @@ import math
 import yaml
 import csv
 
+#cubic spline for finish lap checking
+import cubic_spline_planner
+
 # from matplotlib.pyplot import imshow
 # import matplotlib.pyplot as plt
 
@@ -97,10 +100,15 @@ class F110Env(gym.Env, utils.EzPickle):
         # loop completion
         self.near_start = True
         self.num_toggles = 0
+        self.lap_check = False
+        self.pos_s = []
 
         # race info
         self.lap_times = [0.0, 0.0]
         self.lap_counts = [0, 0]
+
+        # spline for laptime checking
+        self.spline = None
 
         # TODO: load the map (same as ROS .yaml format)
         # if not map_path.endswith('.yaml'):
@@ -221,6 +229,37 @@ class F110Env(gym.Env, utils.EzPickle):
         if set_map_result == 1:
             print('Gym env - Set map failed, exiting...')
             sys.exit()
+
+    def _check_done_ayoub(self):
+        """
+
+
+        """
+        
+        timeout = self.current_time >= self.timeout
+
+        for i in range(self.num_agents):
+            pos_s = self.spline.calc_current_s(self.all_x[i], self.all_y[i])
+            # if the car is between the start projection and the next 2 positions on the spline
+            # then count new lap. Assigning False to lap_check avoid to count it multiple time if the car stays still there
+            if self.start_s <= pos_s <= ((self.start_s + 2) % self.spline.s[-1]):
+                if self.lap_check:
+                    self.toggle_list[i] += 1
+                    self.lap_check = False
+            else:
+                self.lap_check = True
+            
+        done = (self.in_collision | (timeout) | np.all(self.toggle_list >= 2))
+
+        # only for two cars atm
+        self.lap_counts[0] = self.toggle_list[0]
+        self.lap_counts[1] = self.toggle_list[1]
+
+        if self.toggle_list[0] < 2:
+            self.lap_times[0] = self.current_time
+        if self.toggle_list[1] < 2:
+            self.lap_times[1] = self.current_time
+        return done, self.toggle_list >= 2
 
     def _check_done(self):
         """
@@ -399,6 +438,7 @@ class F110Env(gym.Env, utils.EzPickle):
         self.collision_angles = None
         self.num_toggles = 0
         self.near_start = True
+        self.lap_check = False
         self.near_starts = np.array([True]*self.num_agents)
         self.toggle_list = np.zeros((self.num_agents,))
         if poses:
@@ -410,6 +450,7 @@ class F110Env(gym.Env, utils.EzPickle):
             self.start_theta = pose_theta[0]
             self.start_xs = np.array(pose_x)
             self.start_ys = np.array(pose_y)
+            self.start_s = self.spline.calc_current_s(self.start_xs, self.start_ys)
             self.start_thetas = np.array(pose_theta)
             self.start_rot = np.array([[np.cos(-self.start_theta), -np.sin(-self.start_theta)],
                                         [np.sin(-self.start_theta), np.cos(-self.start_theta)]])
@@ -492,12 +533,15 @@ class F110Env(gym.Env, utils.EzPickle):
                 print(ex)
         self.map_inited = True
 
-        # load waypoints
-        # self.csv_path = os.path.splitext(self.map_path)[0] + '.csv'
-        # with open(self.csv_path) as f:
-        #     self.waypoints = [tuple(line) for line in csv.reader(f)]
-        #     # waypoints are [x, y, speed, theta]
-        #     self.waypoints = np.array([(float(pt[0]), float(pt[1]), float(pt[2]), float(pt[3])) for pt in self.waypoints])
+        # load centerline
+        self.csv_path = os.path.splitext(self.map_path)[0] + '.csv'
+        with open(self.csv_path) as f:
+             self.centerline = [tuple(line) for line in csv.reader(f)]
+             # waypoints are [x, y, speed, theta]
+             self.centerline = np.array([(float(pt[0]), float(pt[1])) for pt in self.waypoints])
+
+        # set spline for laptime checking
+        self.spline = Spline2D(self.centerline[0], self.centerline[1])
 
 
     def render(self, mode='human', close=False):
