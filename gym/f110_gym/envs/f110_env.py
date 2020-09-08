@@ -46,7 +46,7 @@ import yaml
 import csv
 
 #cubic spline for finish lap checking
-import cubic_spline_planner
+from cubic_spline_planner import *
 
 # from matplotlib.pyplot import imshow
 # import matplotlib.pyplot as plt
@@ -239,10 +239,11 @@ class F110Env(gym.Env, utils.EzPickle):
         timeout = self.current_time >= self.timeout
 
         for i in range(self.num_agents):
-            pos_s = self.spline.calc_current_s(self.all_x[i], self.all_y[i])
+            pos_s = self.spline.calc_current_s([self.all_x[i], self.all_y[i]])
             # if the car is between the start projection and the next 2 positions on the spline
             # then count new lap. Assigning False to lap_check avoid to count it multiple time if the car stays still there
-            if self.start_s <= pos_s <= ((self.start_s + 2) % self.spline.s[-1]):
+            start_s = self.spline.calc_current_s([self.start_xs[i], self.start_ys[i]])
+            if start_s <= pos_s <= ((start_s + 2) % self.spline.s[-1]):
                 if self.lap_check:
                     self.toggle_list[i] += 1
                     self.lap_check = False
@@ -422,10 +423,10 @@ class F110Env(gym.Env, utils.EzPickle):
         # TODO: donezo should be done in simulator? could be done here as well
         self._update_state(obs)
         if self.double_finish:
-            done, temp = self._check_done()
+            done, temp = self._check_done_ayoub()
             info = {'checkpoint_done': temp}
         else:
-            done = self._check_done()
+            done = self._check_done_ayoub()
             info = {}
 
         # TODO: return obs, reward, done, info
@@ -450,7 +451,6 @@ class F110Env(gym.Env, utils.EzPickle):
             self.start_theta = pose_theta[0]
             self.start_xs = np.array(pose_x)
             self.start_ys = np.array(pose_y)
-            self.start_s = self.spline.calc_current_s(self.start_xs, self.start_ys)
             self.start_thetas = np.array(pose_theta)
             self.start_rot = np.array([[np.cos(-self.start_theta), -np.sin(-self.start_theta)],
                                         [np.sin(-self.start_theta), np.cos(-self.start_theta)]])
@@ -538,7 +538,7 @@ class F110Env(gym.Env, utils.EzPickle):
         with open(self.csv_path) as f:
              self.centerline = [tuple(line) for line in csv.reader(f)]
              # waypoints are [x, y, speed, theta]
-             self.centerline = np.array([(float(pt[0]), float(pt[1])) for pt in self.waypoints])
+             self.centerline = np.array([(float(pt[0]), float(pt[1])) for pt in self.centerline])
 
         # set spline for laptime checking
         self.spline = Spline2D(self.centerline[0], self.centerline[1])
