@@ -235,21 +235,21 @@ class Spline2D:
     def calc_current_s(self, pose):
         interval = 0.05
 
-        print(pose)
+        #print(pose)
 
         s = self.cur_s
         d = self.cur_d
 
-        print ("S: ", s, self.s[-1])
+        #print ("S: ", s, self.s[-1])
         # reset for loop spline
         if(s >= self.s[-1] - interval):
             s = 0 
 
         p0 = self.calc_position(s)
         d0 = (pose[0] - p0[0])**2 + (pose[1] - p0[1])**2
-        print(p0)
+        #print(p0)
 
-        print(d0)
+        #print(d0)
         # if current distance greeter than 1 mt relocate globally
         if(d0.any() > 2.0): 
             #print("RELOCATE ",d0)

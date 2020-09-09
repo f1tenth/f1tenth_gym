@@ -100,7 +100,7 @@ class F110Env(gym.Env, utils.EzPickle):
         # loop completion
         self.near_start = True
         self.num_toggles = 0
-        self.lap_check = False
+        self.lap_check = [False, False]
         self.pos_s = []
 
         # race info
@@ -240,15 +240,17 @@ class F110Env(gym.Env, utils.EzPickle):
 
         for i in range(self.num_agents):
             pos_s = self.spline.calc_current_s([self.all_x[i], self.all_y[i]])
+            #print(pos_s)
             # if the car is between the start projection and the next 2 positions on the spline
             # then count new lap. Assigning False to lap_check avoid to count it multiple time if the car stays still there
             start_s = self.spline.calc_current_s([self.start_xs[i], self.start_ys[i]])
+            #print(start_s)
             if start_s <= pos_s <= ((start_s + 2) % self.spline.s[-1]):
-                if self.lap_check:
+                if self.lap_check[i]:
                     self.toggle_list[i] += 1
-                    self.lap_check = False
+                    self.lap_check[i] = False
             else:
-                self.lap_check = True
+                self.lap_check[i] = True
             
         done = (self.in_collision | (timeout) | np.all(self.toggle_list >= 2))
 
@@ -439,7 +441,7 @@ class F110Env(gym.Env, utils.EzPickle):
         self.collision_angles = None
         self.num_toggles = 0
         self.near_start = True
-        self.lap_check = False
+        self.lap_check = [False, False]
         self.near_starts = np.array([True]*self.num_agents)
         self.toggle_list = np.zeros((self.num_agents,))
         if poses:
@@ -503,7 +505,7 @@ class F110Env(gym.Env, utils.EzPickle):
             rgb: map grayscale or rgb
             flip: if map needs flipping
         """
-
+        
         self.map_path = map_path
         if not map_path.endswith('.yaml'):
             print('Gym env - Please use a yaml file for map initialization.')
@@ -536,12 +538,13 @@ class F110Env(gym.Env, utils.EzPickle):
         # load centerline
         self.csv_path = os.path.splitext(self.map_path)[0] + '.csv'
         with open(self.csv_path) as f:
-             self.centerline = [tuple(line) for line in csv.reader(f)]
-             # waypoints are [x, y, speed, theta]
-             self.centerline = np.array([(float(pt[0]), float(pt[1])) for pt in self.centerline])
-
-        # set spline for laptime checking
-        self.spline = Spline2D(self.centerline[0], self.centerline[1])
+            centerline = [tuple(line) for line in csv.reader(f)]
+            # waypoints are [x, y, speed, theta]
+            centerline_xs = [float(pt[0]) for pt in centerline]
+            centerline_ys = [float(pt[1]) for pt in centerline]
+            # set spline for laptime checking
+            self.spline = Spline2D(centerline_xs, centerline_ys)
+        print(self.spline.s)
 
 
     def render(self, mode='human', close=False):
