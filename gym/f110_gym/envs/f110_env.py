@@ -230,10 +230,11 @@ class F110Env(gym.Env, utils.EzPickle):
             print('Gym env - Set map failed, exiting...')
             sys.exit()
 
-    def _check_done_ayoub(self):
+    def _check_done_spline(self):
         """
-
-
+        Check if the agents pass at the start in order to count the lap and set the laptime after two laps.
+        It works checking the position in the spline self.spline generated in init_map().
+        It needs a reference trajectory as .csv in the /map folder for each map.
         """
         
         timeout = self.current_time >= self.timeout
@@ -241,11 +242,11 @@ class F110Env(gym.Env, utils.EzPickle):
         for i in range(self.num_agents):
             pos_s = self.spline.calc_current_s([self.all_x[i], self.all_y[i]])
             #print(pos_s)
-            # if the car is between the start projection and the next 2 positions on the spline
+            # if the car is between the start projection and the next 5 positions on the spline
             # then count new lap. Assigning False to lap_check avoid to count it multiple time if the car stays still there
             start_s = self.spline.calc_current_s([self.start_xs[i], self.start_ys[i]])
             #print(start_s)
-            if start_s <= pos_s <= ((start_s + 2) % self.spline.s[-1]):
+            if start_s <= pos_s <= ((start_s + 5) % self.spline.s[-1]):
                 if self.lap_check[i]:
                     self.toggle_list[i] += 1
                     self.lap_check[i] = False
@@ -425,10 +426,10 @@ class F110Env(gym.Env, utils.EzPickle):
         # TODO: donezo should be done in simulator? could be done here as well
         self._update_state(obs)
         if self.double_finish:
-            done, temp = self._check_done_ayoub()
+            done, temp = self._check_done_spline()
             info = {'checkpoint_done': temp}
         else:
-            done = self._check_done_ayoub()
+            done = self._check_done_spline()
             info = {}
 
         # TODO: return obs, reward, done, info
@@ -544,7 +545,7 @@ class F110Env(gym.Env, utils.EzPickle):
             centerline_ys = [float(pt[1]) for pt in centerline]
             # set spline for laptime checking
             self.spline = Spline2D(centerline_xs, centerline_ys)
-        print(self.spline.s)
+        #print(self.spline.s)
 
 
     def render(self, mode='human', close=False):
