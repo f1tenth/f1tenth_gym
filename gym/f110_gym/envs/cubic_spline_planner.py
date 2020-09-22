@@ -232,13 +232,17 @@ class Spline2D:
         self.cur_s = s
         self.cur_d = d
 
-    def calc_current_s(self, pose):
+    def calc_current_s(self, pose, actual_s=None, actual_d=None, update=False):
         interval = 0.05
 
         #print(pose)
 
-        s = self.cur_s
-        d = self.cur_d
+        if actual_s is None:
+            s = self.cur_s
+            d = self.cur_d
+        else:
+            s = actual_s
+            d = actual_d
 
         #print ("S: ", s, self.s[-1])
         # reset for loop spline
@@ -275,8 +279,12 @@ class Spline2D:
                 else:
                     break
             d = np.sqrt(d1)
+        
+        if update is True:
+            self.cur_s = s
+            self.cur_d = d
 
-        return s
+        return s, d
 
 def calc_spline_course(x, y, ds=0.1):
     sp = Spline2D(x, y)
