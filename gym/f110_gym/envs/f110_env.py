@@ -102,10 +102,11 @@ class F110Env(gym.Env, utils.EzPickle):
         self.num_toggles = 0
 
         # spline for laptime checking
-        self.spline = None
+        self.spline = [None, None]
         self.lap_check = [False, False]
         self.actual_s = [None, None]
         self.actual_d = [None, None]
+        self.start_s = [None, None]
 
         # race info
         self.lap_times = [0.0, 0.0]
@@ -240,22 +241,24 @@ class F110Env(gym.Env, utils.EzPickle):
         
         timeout = self.current_time >= self.timeout
 
-        
         for i in range(self.num_agents):
             # Get actual projection of the agent i position on the reference spline
-            self.actual_s[i], self.actual_d[i] = self.spline.calc_current_s([self.all_x[i], self.all_y[i]], self.actual_s[i], self.actual_d[i])
+            #self.actual_s[i], self.actual_d[i] = self.spline[i].update_current_s([self.all_x[i], self.all_y[i]], self.actual_s[i], self.actual_d[i], True)
+            self.actual_s[i], self.actual_d[i] = self.spline[i].update_current_s([self.all_x[i], self.all_y[i]])
             #print("ACTUAL S: ", self.actual_s[i])
 
             # Get the start position projection on the spline 
-            start_s, start_d = self.spline.calc_current_s([self.start_xs[i], self.start_ys[i]])
-            #print("---------------FINISH LINE S: ", start_s)
+            if self.start_s[i] is None:
+                self.start_s[i], start_d = self.spline[i].calc_current_s([self.start_xs[i], self.start_ys[i]])
+            #print("---------------FINISH LINE P: ", [self.start_x, self.start_y])
+            #print("---------------FINISH LINE S: ", self.start_s[i])
 
-            check_point_ending = (start_s + 5) % self.spline.s[-1]
+            check_point_ending = (self.start_s[i] + 1) % self.spline[i].s[-1]
             #print("----------------------------------CHECK_POINT_ENDING : ", check_point_ending)
 
-            # if the car is between the start projection and the next 5 positions on the spline
+            # if the car is between the start projection and the next 1 position s steps on the spline
             # then count new lap. Assigning False to lap_check avoid to count it multiple time if the car stays still there
-            if start_s <= self.actual_s[i] <= check_point_ending:
+            if self.start_s[i] <= self.actual_s[i] <= check_point_ending:
                 if self.lap_check[i]:
                     self.toggle_list[i] += 1
                     self.lap_check[i] = False
@@ -557,7 +560,10 @@ class F110Env(gym.Env, utils.EzPickle):
             centerline_ys = [float(pt[1]) for pt in centerline]
 
             # set spline for laptime checking
-            self.spline = Spline2D(centerline_xs, centerline_ys)
+            self.spline[0] = Spline2D(centerline_xs, centerline_ys)
+            self.spline[1] = Spline2D(centerline_xs, centerline_ys)
+
+            #print(self.spline.s)
 
 
     def render(self, mode='human', close=False):

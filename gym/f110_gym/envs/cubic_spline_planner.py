@@ -142,8 +142,7 @@ class Spline2D:
     def __calc_s(self, x, y):
         dx = np.diff(x)
         dy = np.diff(y)
-        self.ds = [math.sqrt(idx ** 2 + idy ** 2)
-                   for (idx, idy) in zip(dx, dy)]
+        self.ds = np.hypot(dx, dy)
         s = [0]
         s.extend(np.cumsum(self.ds))
         return s
@@ -195,33 +194,33 @@ class Spline2D:
         s = self.cur_s
         d = self.cur_d
 
-        print "S: ", s, self.s[-1]
+        #print("S: ", s, self.s[-1])
         # reset for loop spline
         if(s >= self.s[-1] - interval):
             s = 0 
 
         p0 = self.calc_position(s)
-        d0 = (pose[0] - p0[0])**2 + (pose[1] - p0[1])**2
+        d0 = math.sqrt((pose[0] - p0[0])**2 + (pose[1] - p0[1])**2)
 
         # if current distance greeter than 1 mt relocate globally
-        if(d0 > 2.0): 
+        if(d0 > 10.0): 
             #print("RELOCATE ",d0)
             for i in np.linspace(self.s[0], self.s[-1], 500):
                 p1 = self.calc_position(i)
-                d1 = (pose[0] - p1[0])**2 + (pose[1] - p1[1])**2 
+                d1 = math.sqrt((pose[0] - p1[0])**2 + (pose[1] - p1[1])**2 )
                 if(d1 < d0):
                     d0 = d1
                     s = i
 
         # else locate locally
         else:
-            s1 = s;  
-            d1 = d;  
+            s1 = s  
+            d1 = d  
 
             while(s < self.s[-1]):
                 s1 = s1 + interval
                 p1 = self.calc_position(s1)
-                d1 = (pose[0] - p1[0])**2 + (pose[1] - p1[1])**2 
+                d1 = math.sqrt((pose[0] - p1[0])**2 + (pose[1] - p1[1])**2)
                 if(d1 <= d0):
                     s = s1
                     d0 = d1
@@ -232,57 +231,26 @@ class Spline2D:
         self.cur_s = s
         self.cur_d = d
 
-    def calc_current_s(self, pose, actual_s=None, actual_d=None, update=False):
-        interval = 0.05
+        return s, d
 
-        #print(pose)
+    def calc_current_s(self, pose):
 
-        if actual_s is None:
-            s = self.cur_s
-            d = self.cur_d
-        else:
-            s = actual_s
-            d = actual_d
+        s = 0
+        d0 = 2
+        s1 = s
 
-        #print ("S: ", s, self.s[-1])
-        # reset for loop spline
-        if(s >= self.s[-1] - interval):
-            s = 0 
+        for i in range(len(self.s)):
+            s1 = self.s[i]
+            p1 = self.calc_position(s1)
+            d1 = math.sqrt((pose[0] - p1[0])**2 + (pose[1] - p1[1])**2)
+            if(d1 <= d0):
+                s = s1
+                d0 = d1
 
-        p0 = self.calc_position(s)
-        d0 = (pose[0] - p0[0])**2 + (pose[1] - p0[1])**2
-        #print(p0)
+        d = np.sqrt(d0)
 
-        #print(d0)
-        # if current distance greeter than 1 mt relocate globally
-        if(d0.any() > 2.0): 
-            #print("RELOCATE ",d0)
-            for i in np.linspace(self.s[0], self.s[-1], 500):
-                p1 = self.calc_position(i)
-                d1 = (pose[0] - p1[0])**2 + (pose[1] - p1[1])**2 
-                if(d1 < d0):
-                    d0 = d1
-                    s = i
-
-        # else locate locally
-        else:
-            s1 = s;  
-            d1 = d;  
-
-            while(s < self.s[-1]):
-                s1 = s1 + interval
-                p1 = self.calc_position(s1)
-                d1 = (pose[0] - p1[0])**2 + (pose[1] - p1[1])**2 
-                if(d1 <= d0):
-                    s = s1
-                    d0 = d1
-                else:
-                    break
-            d = np.sqrt(d1)
-        
-        if update is True:
-            self.cur_s = s
-            self.cur_d = d
+        s = s % self.s[-1]
+        s = 0 if self.s[-1] - s < 1.1 else s 
 
         return s, d
 
