@@ -20,6 +20,9 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+'''
+Author: Hongrui Zheng
+'''
 
 # gym imports
 import gym
@@ -34,8 +37,10 @@ import sim_requests_pb2
 
 # others
 import numpy as np
-# no cv2 if python 3
-# import cv2
+
+from numba import njit
+from scipy.ndimage import distance_transform_edt as edt
+
 from PIL import Image
 import sys
 import os
