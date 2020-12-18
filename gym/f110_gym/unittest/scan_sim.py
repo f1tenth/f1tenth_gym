@@ -104,7 +104,7 @@ def distance_transform(x, y, orig_x, orig_y, orig_c, orig_s, height, width, reso
     return distance
 
 @njit(cache=True)
-def trace_ray(x, y, theta_index, sines, cosines, eps, orig_x, orig_y, orig_c, orig_s, height, width, resolution, dt):
+def trace_ray(x, y, theta_index, sines, cosines, eps, orig_x, orig_y, orig_c, orig_s, height, width, resolution, dt, max_range):
     """
     Find the length of a specific ray at a specific scan angle theta
     Purely math calculation and loops, should be JITted.
@@ -120,8 +120,8 @@ def trace_ray(x, y, theta_index, sines, cosines, eps, orig_x, orig_y, orig_c, or
             total_distance (float): the distance to first obstacle on the current scan beam
     """
     
-    # fast flooring, and index precal trigs
-    theta_index_ = int(theta_index + 0.5)
+    # int casting, and index precal trigs
+    theta_index_ = int(theta_index)
     s = sines[theta_index_]
     c = cosines[theta_index_]
 
@@ -130,7 +130,7 @@ def trace_ray(x, y, theta_index, sines, cosines, eps, orig_x, orig_y, orig_c, or
     total_dist = dist_to_nearest
 
     # ray tracing iterations
-    while dist_to_nearest > eps:
+    while dist_to_nearest > eps and total_dist <= max_range:
         # move in the direction of the ray by dist_to_nearest
         x += dist_to_nearest * c
         y += dist_to_nearest * s
@@ -143,7 +143,7 @@ def trace_ray(x, y, theta_index, sines, cosines, eps, orig_x, orig_y, orig_c, or
     return total_dist
 
 @njit(cache=True)
-def get_scan(pose, theta_dis, fov, num_beams, theta_index_increment, sines, cosines, eps, orig_x, orig_y, orig_c, orig_s, height, width, resolution, dt):
+def get_scan(pose, theta_dis, fov, num_beams, theta_index_increment, sines, cosines, eps, orig_x, orig_y, orig_c, orig_s, height, width, resolution, dt, max_range):
     """
     Perform the scan for each discretized angle of each beam of the laser, loop heavy, should be JITted
 
@@ -171,7 +171,7 @@ def get_scan(pose, theta_dis, fov, num_beams, theta_index_increment, sines, cosi
     # sweep through each beam
     for i in range(0, num_beams):
         # trace the current beam
-        scan[i] = trace_ray(pose[0], pose[1], theta_index, sines, cosines, eps, orig_x, orig_y, orig_c, orig_s, height, width, resolution, dt)
+        scan[i] = trace_ray(pose[0], pose[1], theta_index, sines, cosines, eps, orig_x, orig_y, orig_c, orig_s, height, width, resolution, dt, max_range)
 
         # increment the beam index
         theta_index += theta_index_increment
@@ -192,16 +192,18 @@ class ScanSimulator2D(object):
         std_dev (float, default=0.01): standard deviation of the generated whitenoise in the scan
         eps (float, default=0.0001): ray tracing iteration termination condition
         theta_dis (int, default=2000): number of steps to discretize the angles between 0 and 2pi for look up
+        max_range (float, default=30.0): maximum range of the laser
         seed (int, default=123): seed for random number generator for the whitenoise in scan
     """
 
-    def __init__(self, num_beams, fov, std_dev=0.01, eps=0.0001, theta_dis=2000, seed=123):
+    def __init__(self, num_beams, fov, std_dev=0.01, eps=0.0001, theta_dis=2000, max_range=30.0, seed=123):
         # initialization 
         self.num_beams = num_beams
         self.fov = fov
         self.std_dev = std_dev
         self.eps = eps
         self.theta_dis = theta_dis
+        self.max_range = max_range
         self.angle_increment = self.fov / (self.num_beams - 1)
         self.theta_index_increment = theta_dis * self.angle_increment / (2. * np.pi)
         self.orig_c = None
@@ -217,7 +219,7 @@ class ScanSimulator2D(object):
         self.rng = np.random.default_rng(seed=seed)
 
         # precomputing corresponding cosines and sines of the angle array
-        theta_arr = np.linspace(0., 2*np.pi, num=theta_dis)
+        theta_arr = np.linspace(0.0, 2*np.pi, num=theta_dis)
         self.sines = np.sin(theta_arr)
         self.cosines = np.cos(theta_arr)
     
@@ -239,6 +241,11 @@ class ScanSimulator2D(object):
         map_img_path = os.path.splitext(map_path)[0] + map_ext
         self.map_img = np.array(Image.open(map_img_path).transpose(Image.FLIP_TOP_BOTTOM))
         self.map_img = self.map_img.astype(np.float64)
+
+        # grayscale -> binary
+        self.map_img[self.map_img <= 128.] = 0.
+        self.map_img[self.map_img > 128.] = 255.
+
         self.map_height = self.map_img.shape[0]
         self.map_width = self.map_img.shape[1]
 
@@ -277,7 +284,7 @@ class ScanSimulator2D(object):
         """
         if self.map_height is None:
             raise ValueError('Map is not set for scan simulator.')
-        scan = get_scan(pose, self.theta_dis, self.fov, self.num_beams, self.theta_index_increment, self.sines, self.cosines, self.eps, self.orig_x, self.orig_y, self.orig_c, self.orig_s, self.map_height, self.map_width, self.map_resolution, self.dt)
+        scan = get_scan(pose, self.theta_dis, self.fov, self.num_beams, self.theta_index_increment, self.sines, self.cosines, self.eps, self.orig_x, self.orig_y, self.orig_c, self.orig_s, self.map_height, self.map_width, self.map_resolution, self.dt, self.max_range)
         noise = self.rng.normal(0., self.std_dev, size=self.num_beams)
         final_scan = scan + noise
         return final_scan
@@ -328,8 +335,8 @@ class ScanTests(unittest.TestCase):
         # plotting
         import matplotlib.pyplot as plt
         theta = np.linspace(-self.fov/2., self.fov/2., num=self.num_beams)
-        plt.polar(theta, new_berlin[5,:], '.', lw=0)
-        plt.polar(theta, self.berlin_scan[5,:], '.', lw=0)
+        plt.polar(theta, new_berlin[1,:], '.', lw=0)
+        plt.polar(theta, self.berlin_scan[1,:], '.', lw=0)
         plt.show()
 
         self.assertLess(mse, 2.)
@@ -340,19 +347,20 @@ class ScanTests(unittest.TestCase):
         map_path = '../../../maps/skirk.yaml'
         map_ext = '.png'
         scan_sim.set_map(map_path, map_ext)
+        print('map set')
         # scan gen loop
         for i in range(self.num_test):
             test_pose = self.test_poses[i]
             new_skirk[i,:] = scan_sim.scan(test_pose)
         diff = self.skirk_scan - new_skirk
         mse = np.mean(diff**2)
-        # print('Levine distance test, norm: ' + str(norm))
+        print('skirk distance test, mse: ' + str(mse))
 
         # plotting
         import matplotlib.pyplot as plt
         theta = np.linspace(-self.fov/2., self.fov/2., num=self.num_beams)
-        plt.polar(theta, new_skirk[5,:], '.', lw=0)
-        plt.polar(theta, self.skirk_scan[5,:], '.', lw=0)
+        plt.polar(theta, new_skirk[1,:], '.', lw=0)
+        plt.polar(theta, self.skirk_scan[1,:], '.', lw=0)
         plt.show()
 
         self.assertLess(mse, 2.)
@@ -379,8 +387,8 @@ class ScanTests(unittest.TestCase):
 def main():
     num_beams = 1080
     fov = 4.7
-    map_path = '../../../maps/levine.yaml'
-    map_ext = '.pgm'
+    map_path = '../../../maps/berlin.yaml'
+    map_ext = '.png'
     scan_sim = ScanSimulator2D(num_beams, fov)
     scan_sim.set_map(map_path, map_ext)
     scan = scan_sim.scan(np.array([0., 0., 0.]))
