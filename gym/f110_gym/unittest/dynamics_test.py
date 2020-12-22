@@ -26,7 +26,7 @@ from numba import njit
 import unittest
 import time
 
-@njit
+@njit(cache=True)
 def accl_constraints(vel, accl, v_switch, a_max, v_min, v_max):
     """
     Acceleration constraints, adjusts the acceleration based on constraints
@@ -59,7 +59,7 @@ def accl_constraints(vel, accl, v_switch, a_max, v_min, v_max):
 
     return accl
 
-@njit
+@njit(cache=True)
 def steering_constraint(steering_angle, steering_velocity, s_min, s_max, sv_min, sv_max):
     """
     Steering constraints, adjusts the steering velocity based on constraints
@@ -87,7 +87,7 @@ def steering_constraint(steering_angle, steering_velocity, s_min, s_max, sv_min,
     return steering_velocity
 
 
-@njit
+@njit(cache=True)
 def vehicle_dynamics_ks(x, u_init, mu, C_Sf, C_Sr, lf, lr, h, m, I, s_min, s_max, sv_min, sv_max, v_switch, a_max, v_min, v_max):
     """
     Single Track Kinematic Vehicle Dynamics.
@@ -120,7 +120,7 @@ def vehicle_dynamics_ks(x, u_init, mu, C_Sf, C_Sr, lf, lr, h, m, I, s_min, s_max
          x[3]/lwb*np.tan(x[2])])
     return f
 
-@njit
+@njit(cache=True)
 def vehicle_dynamics_st(x, u_init, mu, C_Sf, C_Sr, lf, lr, h, m, I, s_min, s_max, sv_min, sv_max, v_switch, a_max, v_min, v_max):
     """
     Single Track Dynamic Vehicle Dynamics.
@@ -175,7 +175,7 @@ def vehicle_dynamics_st(x, u_init, mu, C_Sf, C_Sr, lf, lr, h, m, I, s_min, s_max
 
     return f
 
-@njit
+@njit(cache=True)
 def pid(speed, steer):
     """
     Basic controller for speed/steer -> accl./steer vel.
@@ -189,6 +189,14 @@ def pid(speed, steer):
             sv (float): desired input steering velocity
     """
     return
+
+def func_KS(x, t, u, mu, C_Sf, C_Sr, lf, lr, h, m, I, s_min, s_max, sv_min, sv_max, v_switch, a_max, v_min, v_max):
+    f = vehicle_dynamics_ks(x, u, mu, C_Sf, C_Sr, lf, lr, h, m, I, s_min, s_max, sv_min, sv_max, v_switch, a_max, v_min, v_max)
+    return f
+
+def func_ST(x, t, u, mu, C_Sf, C_Sr, lf, lr, h, m, I, s_min, s_max, sv_min, sv_max, v_switch, a_max, v_min, v_max):
+    f = vehicle_dynamics_st(x, u, mu, C_Sf, C_Sr, lf, lr, h, m, I, s_min, s_max, sv_min, sv_max, v_switch, a_max, v_min, v_max)
+    return f
 
 class DynamicsTest(unittest.TestCase):
     def setUp(self):
@@ -236,11 +244,153 @@ class DynamicsTest(unittest.TestCase):
         duration = time.time() - start
         avg_fps = 10000/duration
 
-        print('min_diffs: ', np.max(np.abs(f_ks_gt-f_ks)), np.max(np.abs(f_st_gt-f_st)))
-        print('fps: ', avg_fps)
         self.assertAlmostEqual(np.max(np.abs(f_ks_gt-f_ks)), 0.)
         self.assertAlmostEqual(np.max(np.abs(f_st_gt-f_st)), 0.)
         self.assertGreater(avg_fps, 5000)
+
+    def test_zeroinit_roll(self):
+        from scipy.integrate import odeint
+
+        # testing for zero initial state, zero input singularities
+        g = 9.81
+        t_start = 0.
+        t_final = 1.
+        delta0 = 0.
+        vel0 = 0.
+        Psi0 = 0.
+        dotPsi0 = 0.
+        beta0 = 0.
+        sy0 = 0.
+        initial_state = [0,sy0,delta0,vel0,Psi0,dotPsi0,beta0]
+
+        x0_KS = np.array(initial_state[0:5])
+        x0_ST = np.array(initial_state)
+
+        # time vector
+        t = np.arange(t_start, t_final, 1e-4)
+
+        # set input: rolling car (velocity should stay constant)
+        u = np.array([0., 0.])
+
+        # simulate single-track model
+        x_roll_st = odeint(func_ST, x0_ST, t, args=(u, self.mu, self.C_Sf, self.C_Sr, self.lf, self.lr, self.h, self.m, self.I, self.s_min, self.s_max, self.sv_min, self.sv_max, self.v_switch, self.a_max, self.v_min, self.v_max))
+        # simulate kinematic single-track model
+        x_roll_ks = odeint(func_KS, x0_KS, t, args=(u, self.mu, self.C_Sf, self.C_Sr, self.lf, self.lr, self.h, self.m, self.I, self.s_min, self.s_max, self.sv_min, self.sv_max, self.v_switch, self.a_max, self.v_min, self.v_max))
+
+        self.assertTrue(all(x_roll_st[-1]==x0_ST))
+        self.assertTrue(all(x_roll_ks[-1]==x0_KS))
+
+    def test_zeroinit_dec(self):
+        from scipy.integrate import odeint
+
+        # testing for zero initial state, decelerating input singularities
+        g = 9.81
+        t_start = 0.
+        t_final = 1.
+        delta0 = 0.
+        vel0 = 0.
+        Psi0 = 0.
+        dotPsi0 = 0.
+        beta0 = 0.
+        sy0 = 0.
+        initial_state = [0,sy0,delta0,vel0,Psi0,dotPsi0,beta0]
+
+        x0_KS = np.array(initial_state[0:5])
+        x0_ST = np.array(initial_state)
+
+        # time vector
+        t = np.arange(t_start, t_final, 1e-4)
+
+        # set decel input
+        u = np.array([0., -0.7*g])
+
+        # simulate single-track model
+        x_dec_st = odeint(func_ST, x0_ST, t, args=(u, self.mu, self.C_Sf, self.C_Sr, self.lf, self.lr, self.h, self.m, self.I, self.s_min, self.s_max, self.sv_min, self.sv_max, self.v_switch, self.a_max, self.v_min, self.v_max))
+        # simulate kinematic single-track model
+        x_dec_ks = odeint(func_KS, x0_KS, t, args=(u, self.mu, self.C_Sf, self.C_Sr, self.lf, self.lr, self.h, self.m, self.I, self.s_min, self.s_max, self.sv_min, self.sv_max, self.v_switch, self.a_max, self.v_min, self.v_max))
+
+        # ground truth for single-track model
+        x_dec_st_gt = [-3.4335000000000013, 0.0000000000000000, 0.0000000000000000, -6.8670000000000018, 0.0000000000000000, 0.0000000000000000, 0.0000000000000000]
+        # ground truth for kinematic single-track model
+        x_dec_ks_gt = [-3.4335000000000013, 0.0000000000000000, 0.0000000000000000, -6.8670000000000018, 0.0000000000000000]
+
+        self.assertTrue(all(abs(x_dec_st[-1] - x_dec_st_gt) < 1e-2))
+        self.assertTrue(all(abs(x_dec_ks[-1] - x_dec_ks_gt) < 1e-2))
+
+    def test_zeroinit_acc(self):
+        from scipy.integrate import odeint
+
+        # testing for zero initial state, accelerating with left steer input singularities
+        # wheel spin and velocity should increase more wheel spin at rear
+        g = 9.81
+        t_start = 0.
+        t_final = 1.
+        delta0 = 0.
+        vel0 = 0.
+        Psi0 = 0.
+        dotPsi0 = 0.
+        beta0 = 0.
+        sy0 = 0.
+        initial_state = [0,sy0,delta0,vel0,Psi0,dotPsi0,beta0]
+
+        x0_KS = np.array(initial_state[0:5])
+        x0_ST = np.array(initial_state)
+
+        # time vector
+        t = np.arange(t_start, t_final, 1e-4)
+
+        # set decel input
+        u = np.array([0.15, 0.63*g])
+
+        # simulate single-track model
+        x_acc_st = odeint(func_ST, x0_ST, t, args=(u, self.mu, self.C_Sf, self.C_Sr, self.lf, self.lr, self.h, self.m, self.I, self.s_min, self.s_max, self.sv_min, self.sv_max, self.v_switch, self.a_max, self.v_min, self.v_max))
+        # simulate kinematic single-track model
+        x_acc_ks = odeint(func_KS, x0_KS, t, args=(u, self.mu, self.C_Sf, self.C_Sr, self.lf, self.lr, self.h, self.m, self.I, self.s_min, self.s_max, self.sv_min, self.sv_max, self.v_switch, self.a_max, self.v_min, self.v_max))
+
+        # ground truth for single-track model
+        x_acc_st_gt = [3.0731976046859715, 0.2869835398304389, 0.1500000000000000, 6.1802999999999999, 0.1097747074946325, 0.3248268063223301, 0.0697547542798040]
+        # ground truth for kinematic single-track model
+        x_acc_ks_gt = [3.0845676868494927, 0.1484249221523042, 0.1500000000000000, 6.1803000000000017, 0.1203664469224163]
+
+        self.assertTrue(all(abs(x_acc_st[-1] - x_acc_st_gt) < 1e-2))
+        self.assertTrue(all(abs(x_acc_ks[-1] - x_acc_ks_gt) < 1e-2))
+
+    def test_zeroinit_rollleft(self):
+        from scipy.integrate import odeint
+
+        # testing for zero initial state, rolling and steering left input singularities
+        g = 9.81
+        t_start = 0.
+        t_final = 1.
+        delta0 = 0.
+        vel0 = 0.
+        Psi0 = 0.
+        dotPsi0 = 0.
+        beta0 = 0.
+        sy0 = 0.
+        initial_state = [0,sy0,delta0,vel0,Psi0,dotPsi0,beta0]
+
+        x0_KS = np.array(initial_state[0:5])
+        x0_ST = np.array(initial_state)
+
+        # time vector
+        t = np.arange(t_start, t_final, 1e-4)
+
+        # set decel input
+        u = np.array([0.15, 0.])
+
+        # simulate single-track model
+        x_left_st = odeint(func_ST, x0_ST, t, args=(u, self.mu, self.C_Sf, self.C_Sr, self.lf, self.lr, self.h, self.m, self.I, self.s_min, self.s_max, self.sv_min, self.sv_max, self.v_switch, self.a_max, self.v_min, self.v_max))
+        # simulate kinematic single-track model
+        x_left_ks = odeint(func_KS, x0_KS, t, args=(u, self.mu, self.C_Sf, self.C_Sr, self.lf, self.lr, self.h, self.m, self.I, self.s_min, self.s_max, self.sv_min, self.sv_max, self.v_switch, self.a_max, self.v_min, self.v_max))
+
+        # ground truth for single-track model
+        x_left_st_gt = [0.0000000000000000, 0.0000000000000000, 0.1500000000000000, 0.0000000000000000, 0.0000000000000000, 0.0000000000000000, 0.0000000000000000]
+        # ground truth for kinematic single-track model
+        x_left_ks_gt = [0.0000000000000000, 0.0000000000000000, 0.1500000000000000, 0.0000000000000000, 0.0000000000000000]
+
+        self.assertTrue(all(abs(x_left_st[-1] - x_left_st_gt) < 1e-2))
+        self.assertTrue(all(abs(x_left_ks[-1] - x_left_ks_gt) < 1e-2))
 
 if __name__ == '__main__':
     unittest.main()
