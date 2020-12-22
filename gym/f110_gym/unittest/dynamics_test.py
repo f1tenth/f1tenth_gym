@@ -28,6 +28,21 @@ import time
 
 @njit
 def accl_constraints(vel, accl, v_switch, a_max, v_min, v_max):
+    """
+    Acceleration constraints, adjusts the acceleration based on constraints
+
+        Args:
+            vel (float): current velocity of the vehicle
+            accl (float): unconstraint desired acceleration
+            v_switch (float): switching velocity (velocity at which the acceleration is no longer able to create wheel spin)
+            a_max (float): maximum allowed acceleration
+            v_min (float): minimum allowed velocity
+            v_max (float): maximum allowed velocity
+
+        Returns:
+            accl (float): adjusted acceleration
+    """
+
     # positive accl limit
     if vel > v_switch:
         pos_limit = a_max*v_switch/vel
@@ -46,6 +61,22 @@ def accl_constraints(vel, accl, v_switch, a_max, v_min, v_max):
 
 @njit
 def steering_constraint(steering_angle, steering_velocity, s_min, s_max, sv_min, sv_max):
+    """
+    Steering constraints, adjusts the steering velocity based on constraints
+
+        Args:
+            steering_angle (float): current steering_angle of the vehicle
+            steering_velocity (float): unconstraint desired steering_velocity
+            s_min (float): minimum steering angle
+            s_max (float): maximum steering angle
+            sv_min (float): minimum steering velocity
+            sv_max (float): maximum steering velocity
+
+        Returns:
+            steering_velocity (float): adjusted steering velocity
+    """
+
+    # constraint steering velocity
     if (steering_angle <= s_min and steering_velocity <= 0) or (steering_angle >= s_max and steering_velocity >= 0):
         steering_velocity = 0.
     elif steering_velocity <= sv_min:

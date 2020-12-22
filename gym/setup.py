@@ -1,6 +1,9 @@
 from setuptools import setup
 
 setup(name='f110_gym',
-			version='0.1',
-			install_requires=['gym']
-)
+      version='0.2',
+      author='Hongrui Zheng',
+      author_email='billyzheng.bz@gmail.com',
+      url='https://f1tenth.org'
+      install_requires=['gym', 'Pillow', 'scipy', 'numba']
+      )
