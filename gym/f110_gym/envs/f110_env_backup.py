@@ -29,79 +29,63 @@ import gym
 from gym import error, spaces, utils
 from gym.utils import seeding
 
-# dynamic models
-from f110_gym.envs.dynamic_models import vehicle_dynamics_st
+# zmq imports
+import zmq
 
-# laser model
-from f110_gym.envs.laser_models import ScanSimulator2D
+# protobuf import
+import sim_requests_pb2
 
 # others
 import numpy as np
 
+from numba import njit
+from scipy.ndimage import distance_transform_edt as edt
+
+from PIL import Image
+import sys
+import os
+import signal
+import subprocess
+import math
+import yaml
+import csv
+
+# from matplotlib.pyplot import imshow
+# import matplotlib.pyplot as plt
 
 class F110Env(gym.Env, utils.EzPickle):
     """
-    OpenAI gym environment for F1TENTH
-    
-    Env should be initialized by calling gym.make('f110_gym:f110-v0', **kwargs)
+    OpenAI gym environment for F1/10 simulator
+    Use 0mq's REQ-REP pattern to communicate to the C++ simulator
+    ONE env has ONE corresponding C++ instance
+    Need to create env with map input, full path to map yaml file, map pgm image and yaml should be in same directory
 
-    Args:
-        map (str, default='vegas'): name of the map used for the environment. Currently, available environments include: 'berlin', 'vegas', 'skirk'. You could use a string of the absolute path to the yaml file of your custom map.
-        
-        map_ext (str, default='png'): image extension of the map image file. For example 'png', 'pgm'
-        
-        params (dict, default={'mu': 1.0489, 'C_Sf':, 'C_Sr':, 'lf': 0.15875, 'lr': 0.17145, 'h': 0.074, 'm': 3.74, 'I': 0.04712, 's_min': -0.4189, 's_max': 0.4189, 'sv_min': -3.2, 'sv_max': 3.2, 'v_switch':7.319, 'a_max': 9.51, 'v_min':-5.0, 'v_max': 20.0}): dictionary of vehicle parameters.
-            mu: surface friction coefficient
-            C_Sf: Cornering stiffness coefficient, front
-            C_Sr: Cornering stiffness coefficient, rear
-            lf: Distance from center of gravity to front axle
-            lr: Distance from center of gravity to rear axle
-            h: Height of center of gravity
-            m: Total mass of the vehicle
-            I: Moment of inertial of the entire vehicle about the z axis
-            s_min: Minimum steering angle constraint
-            s_max: Maximum steering angle constraint
-            sv_min: Minimum steering velocity constraint
-            sv_max: Maximum steering velocity constraint
-            v_switch: Switching velocity (velocity at which the acceleration is no longer able to create wheel spin)
-            a_max: Maximum longitudinal acceleration
-            v_min: Minimum longitudinal velocity
-            v_max: Maximum longitudinal velocity
-
-        double_finish (bool, default=True): whether end the episode as the second car crosses the finish line or as the lead car crosses the finish line.
+    should be initialized with a map, a timestep, and number of agents
     """
-    metadata = {'render.modes': ['human']}
+    metadata = {'render.modes': []}
 
-    def __init__(self, **kwargs):
-        # kwargs extraction
-        # TODO: confirm defaults
-        if kwargs['map']:
-            self.map_path = kwargs['map']
-        else:
-            self.map_path = 'vegas.yaml'
-
-        if kwargs['map_ext']:
-            self.map_img_ext = kwargs['map_ext']
-        else:
-            self.map_img_ext = 'png'
-
-        if kwargs['params']:
-            self.params = kwargs['params']
-        else:
-            self.params = {'mu': 1.0489, 'C_Sf':, 'C_Sr':, 'lf': 0.15875, 'lr': 0.17145, 'h': 0.074, 'm': 3.74, 'I': 0.04712, 's_min': -0.4189, 's_max': 0.4189, 'sv_min': -3.2, 'sv_max': 3.2, 'v_switch':7.319, 'a_max': 9.51, 'v_min':-5.0, 'v_max': 20.0}
-
-        if kwargs['double_finish']:
-            self.double_finish = kwargs['double_finish']
-        else:
-            self.double_finish = True
-
-        # simulation parameters
+    def __init__(self):
+        # simualtor params
+        self.params_set = False
+        self.map_inited = False
+        # params list is [mu, h_cg, l_r, cs_f, cs_r, I_z, mass]
+        self.params = []
+        # TODO: add multi agent stuff, need a _add_agent function of sth
         self.num_agents = 2
         self.timestep = 0.01
+
+        # TODO: clean up the map path stuff, right now it's a init_map function
+        self.map_path = None
+        self.map_img = None
+
+        # current_dir = os.path.dirname(os.path.abspath(__file__))
+        # map_path = current_dir + '/../../../maps/levine.yaml'
 
         # default
         self.ego_idx = 0
 
+        # TODO: also set these things in init function?
+        self.timeout = 120.0
         # radius to consider done
         self.start_thresh = 0.5  # 10cm
 
@@ -257,7 +241,7 @@ class F110Env(gym.Env, utils.EzPickle):
         # dist_to_start = math.sqrt((self.x-self.start_x) ** 2 + (self.y-self.start_y) ** 2)
         left_t = 2
         right_t = 2
-        timeout = False
+        timeout = self.current_time >= self.timeout
         if self.double_finish:
             poses_x = np.array(self.all_x)-self.start_xs
             poses_y = np.array(self.all_y)-self.start_ys

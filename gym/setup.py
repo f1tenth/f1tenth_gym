@@ -5,5 +5,5 @@ setup(name='f110_gym',
       author='Hongrui Zheng',
       author_email='billyzheng.bz@gmail.com',
       url='https://f1tenth.org'
-      install_requires=['gym', 'Pillow', 'scipy', 'numba']
+      #install_requires=['gym', 'Pillow', 'scipy', 'numba']
       )
