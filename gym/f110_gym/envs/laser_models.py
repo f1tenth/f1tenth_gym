@@ -182,6 +182,131 @@ def get_scan(pose, theta_dis, fov, num_beams, theta_index_increment, sines, cosi
 
     return scan
 
+@njit(cache=True)
+def check_ttc_jit(scan, vel, scan_angles, cosines, side_distances, ttc_thresh):
+    """
+    Checks the iTTC of each beam in a scan for collision with environment
+
+    Args:
+        scan (np.ndarray(num_beams, )): current scan to check
+        vel (float): current velocity
+        scan_angles (np.ndarray(num_beams, )): precomped angles of each beam
+        cosines (np.ndarray(num_beams, )): precomped cosines of the scan angles
+        side_distances (np.ndarray(num_beams, )): precomped distances at each beam from the laser to the sides of the car
+        ttc_thresh (float): threshold for iTTC for collision
+
+    Returns:
+        in_collision (bool): whether vehicle is in collision with environment
+        collision_angle (float): at which angle the collision happened
+    """
+    if vel != 0.0:
+        num_beams = scan.shape[0]
+        for i in range(num_beams):
+            proj_vel = vel*cosines[i]
+            ttc = (scan[i] - side_distances[i])/proj_vel
+            if (ttc < ttc_thresh) and (ttc >= 0.0):
+                in_collision = True
+                break
+    else:
+        in_collision = False
+
+    return in_collision
+
+@njit(cache=True)
+def cross(v1, v2):
+    """
+    Cross product of two 2-vectors
+
+    Args:
+        v1, v2 (np.ndarray(2, )): input vectors
+
+    Returns:
+        crossproduct (float): cross product
+    """
+    return v1[0]*v2[1]-v1[1]*v2[0]
+
+@njit(cache=True)
+def are_collinear(pt_a, pt_b, pt_c):
+    """
+    Checks if three points are collinear in 2D
+
+    Args:
+        pt_a, pt_b, pt_c (np.ndarray(2, )): points to check in 2D
+
+    Returns:
+        col (bool): whether three points are collinear
+    """
+    tol = 1e-8
+    ba = pt_b - pt_a
+    ca = pt_a - pt_c
+    col = np.fabs(cross(ba, ca)) < tol
+    return col
+
+@njit(cache=True)
+def get_range(pose, beam_theta, va, vb):
+    """
+    Get the distance at a beam angle to the vector formed by two of the four vertices of a vehicle
+
+    Args:
+        pose (np.ndarray(3, )): pose of the scanning vehicle
+        beam_theta (float): angle of the current beam (world frame)
+        va, vb (np.ndarray(2, )): the two vertices forming an edge
+
+    Returns:
+        distance (float): smallest distance at beam theta from scanning pose to edge
+    """
+    o = pose[0:2]
+    v1 = o - va
+    v2 = vb - va
+    v3 = np.array([np.cos(beam_theta + np.pi/2.), np.sin(beam_theta + np.pi/2.)])
+
+    denom = v2.dot(v3)
+    distance = np.inf
+
+    if np.fabs(denom) > 0.0:
+        d1 = cross(v2, v1) / denom
+        d2 = v1.dot(v3) / denom
+        if d1 >= 0.0 and d2 >= 0.0 and d2 <= 1.0:
+            distance = d1
+    elif are_collinear(o, va, vb):
+        da = np.linalg.norm(va - o)
+        db = np.linalg.norm(vb - o)
+        distance = min(da, db)
+
+    return distance
+
+@njit(cache=True)
+def ray_cast(pose, scan, scan_angles, vertices):
+    """
+    Modify a scan by ray casting onto another agent's four vertices
+
+    Args:
+        pose (np.ndarray(3, )): pose of the vehicle performing scan
+        scan (np.ndarray(num_beams, )): original scan to modify
+        scan_angles (np.ndarray(num_beams, )): corresponding beam angles
+        vertices (np.ndarray(4, 2)): four vertices of a vehicle pose
+    
+    Returns:
+        new_scan (np.ndarray(num_beams, )): modified scan
+    """
+    num_beams = scan.shape[0]
+
+    # pad vertices so loops around
+    looped_vertices = np.empty((5, 2))
+    looped_vertices[0:4, :] = vertices
+    looped_vertices[4, :] = vertices[0, :]
+
+    # looping over beams
+    for i in range(num_beams):
+        # looping over vertices
+        for j in range(4):
+            # check if original scan is longer than ray casted distance
+            scan_range = get_range(pose, pose[2]+scan_angles[i], looped_vertices[j,:], looped_vertices[j+1,:])
+            if scan_range < scan[i]:
+                scan[i] = scan_range
+
+    return scan
+
 class ScanSimulator2D(object):
     """
     2D LIDAR scan simulator class
@@ -424,5 +549,27 @@ def main():
     plt.show()
 
 if __name__ == '__main__':
-    unittest.main()
+    # unittest.main()
     # main()
+
+    import time 
+    pt_a = np.array([1., 1.])
+    pt_b = np.array([1., 2.])
+    pt_c = np.array([1., 3.])
+    col = are_collinear(pt_a, pt_b, pt_c)
+    print(col)
+
+    pose = np.array([0., 0., -1.])
+    beam_theta = 0.
+    start = time.time()
+    dist = get_range(pose, beam_theta, pt_a, pt_b)
+    print(dist, time.time()-start)
+
+    num_beams = 1080
+    scan = 100.*np.ones((num_beams, ))
+    scan_angles = np.linspace(-2.35, 2.35, num=num_beams)
+    assert scan.shape[0] == scan_angles.shape[0]
+    vertices = np.asarray([[4,11.],[5,5],[9,9],[10,10]])
+    start = time.time()
+    new_scan = ray_cast(pose, scan, scan_angles, vertices)
+    print(time.time()-start)

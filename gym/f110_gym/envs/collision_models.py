@@ -181,6 +181,36 @@ def collision(vertices1, vertices2):
         iter_count += 1
     return False
 
+@njit(cache=True)
+def collision_multiple(vertices):
+    """
+    Check pair-wise collisions for all provided vertices
+
+    Args:
+        vertices (np.ndarray (num_bodies, 4, 2)): all vertices for checking pair-wise collision
+
+    Returns:
+        collisions (np.ndarray (num_vertices, )): whether each body is in collision
+        collision_idx (np.ndarray (num_vertices, )): which index of other body is each index's body is in collision, -1 if not in collision
+    """
+    collisions = np.zeros((vertices.shape[0], ))
+    collision_idx = -1 * np.ones((vertices.shape[0], ))
+    # looping over all pairs
+    for i in range(vertices.shape[0]-1):
+        for j in range(i+1, vertices.shape[0]):
+            # check collision
+            vi = np.ascontiguousarray(vertices[i, :, :])
+            vj = np.ascontiguousarray(vertices[j, :, :])
+            ij_collision = collision(vi, vj)
+            # fill in results
+            if ij_collision:
+                collisions[i] = 1.
+                collisions[j] = 1.
+                collision_idx[i] = j
+                collision_idx[j] = i
+
+    return collisions, collision_idx
+
 """
 Utility functions for getting vertices by pose and shape
 """
@@ -279,6 +309,19 @@ class CollisionTests(unittest.TestCase):
             a = self.vertices1 + np.random.normal(size=(self.vertices1.shape))/100.
             b = self.vertices1 + np.random.normal(size=(self.vertices1.shape))/100.
             self.assertTrue(collision(a,b))
+
+    def test_multiple_collisions(self):
+        a = self.vertices1 + np.random.normal(size=(self.vertices1.shape))/100.
+        b = self.vertices1 + np.random.normal(size=(self.vertices1.shape))/100.
+        c = self.vertices1 + np.random.normal(size=(self.vertices1.shape))/100.
+        d = self.vertices1 + np.random.normal(size=(self.vertices1.shape))/100.
+        e = self.vertices1 + np.random.normal(size=(self.vertices1.shape))/100.
+        f = self.vertices1 + np.random.normal(size=(self.vertices1.shape))/100.
+        g = self.vertices1 + 10.
+        allv = np.stack((a,b,c,d,e,f,g))
+        collisions, collision_idx = collision_multiple(allv)
+        self.assertTrue(np.all(collisions == np.array([1., 1., 1., 1., 1., 1., 0.])))
+        self.assertTrue(np.all(collision_idx == np.array([5., 5., 5., 5., 5., 4., -1.])))
 
     def test_fps(self):
         # also perturb the body but mainly want to test GJK speed

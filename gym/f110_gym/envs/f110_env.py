@@ -35,6 +35,9 @@ from f110_gym.envs.dynamic_models import vehicle_dynamics_st
 # laser model
 from f110_gym.envs.laser_models import ScanSimulator2D
 
+# base classes
+from f110_gym.envs.laser_models import *
+
 # others
 import numpy as np
 
@@ -123,21 +126,6 @@ class F110Env(gym.Env, utils.EzPickle):
         self.lap_times = [0.0, 0.0]
         self.lap_counts = [0, 0]
 
-        # TODO: load the map (same as ROS .yaml format)
-        # if not map_path.endswith('.yaml'):
-        #     print('Gym env - Please use a yaml file for map input.')
-        #     sys.exit()
-        # load map img
-        # map_img_path = 'levine.png'
-        # self.map_img = cv2.imread(map_img_path, 0)
-        # self.map_img = cv2.flip(self.map_img, 0)
-        # self.map_img = np.array(Image.open(map_img_path).transpose(Image.FLIP_TOP_BOTTOM))
-        # self.map_img = self.map_img.astype(np.float64)
-        # self.map_img = self.map_img[::-1]
-        # self.map_img = np.dot(self.map_img[..., :3], [0.29, 0.57, 0.14])
-        # plt.imshow(self.map_img)
-        # plt.show()
-
         # map metadata
         # self.map_height = self.map_img.shape[0]
         # self.map_width = self.map_img.shape[1]
@@ -146,16 +134,6 @@ class F110Env(gym.Env, utils.EzPickle):
         self.map_resolution = 0.0
         self.free_thresh = 0.0
         self.origin = []
-        # load map metadata
-        # with open(map_path, 'r') as yaml_stream:
-        #     try:
-        #         map_metadata = yaml.safe_load(yaml_stream)
-        #         self.map_resolution = map_metadata['resolution']
-        #         self.origin = map_metadata['origin']
-        #         # print(self.origin)
-        #         # self.free_thresh?????
-        #     except yaml.YAMLError as ex:
-        #         print(ex)
 
         # create zmq stuff
         # port number range from 6666 - 6766
