@@ -420,12 +420,35 @@ class Simulator(object):
         Steps the simulation environment
 
         Args:
-            control_inputs (np.ndarray (num_agents, 2)): control inputs of all agents
+            control_inputs (np.ndarray (num_agents, 2)): control inputs of all agents, first column is desired steering angle, second column is desired velocity
         
         Returns:
             observations (dict): dictionary for observations: poses of agents, current laser scan of each agent, collision indicators, etc.
         """
-        pass
+        
+        # looping over agents
+        for i, agent in enumerate(self.agents):
+            # update each agent's pose
+            agent.update_pose(control_inputs[i, 0], control_inputs[i, 1])
+
+            # update sim's information of agent poses
+            self.agent_poses[i, :] = np.append(agent.state[0:2], agent.state[4])
+
+        # check collisions between all agents
+        self.check_collision()
+
+
+        for i, agent in enumerate(self.agents):
+            # update agent's information on other agents
+            opp_poses = np.hstack((self.agent_poses[0:i, :], self.agent_poses[i+1, :]))
+            agent.update_opp_poses(opp_poses)
+
+            # update each agent's current scan based on other agents
+            agent.update_scan()
+
+        # fill in observations
+        observations = {}
+        return observations
 
     def reset(self, poses):
         """
