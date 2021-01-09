@@ -5,16 +5,17 @@ This is the repository of the F1TENTH Gym environment.
 This project is still under heavy developement.
 
 ## Installation (With Docker)
-We recommend using the provided Dockerfile to create containers for this simulation environment. Note that if you need to use the visualizer in docker, you'll need Linux with an NVIDIA GPU.
+We recommend using the provided Dockerfile to create containers for this simulation environment.
 
-To build and run the docker containers without the Visualization, note that you might need to run these with ```sudo``` depending on how you setup docker:
+To build and run the docker containers, note that you might need to run these with ```sudo``` depending on how you setup docker:
 ```bash
-$ ./build_docker.sh
-$ ./docker.sh
+$ cd f1tenth_gym
+$ docker build -t f1tenth_gym -f Dockerfile .
+$ docker run -it --name=f1tenth_gym_container --rm f1tenth_gym
 ```
 
 ## Installation (Native)
-The environment officially supports Python3, Python2 might also work. You'll need several dependencies to run this environment:
+The environment officially supports Python3, and you'll need several dependencies to run this environment:
 
 ### Python packages:
 
@@ -35,13 +36,30 @@ $ pip3 install --user -e gym/
 ```
 
 ## Example Usage
-You can step through the environment with the usual step function:
+### Basic:
 ```python
 import gym
+import numpy as np
 
 # making the environment
 racecar_env = gym.make('f110_gym:f110-v0')
+obs, step_reward, done, info = racecar_env.reset(np.array([[0., 0., 0.], # pose of ego
+                                                            2., 0., 0.])) # pose of 2nd agent
 
+# simulation loop
+lap_time = 0.
+while not done:
+    # some agent policy that you created
+    actions = planner.plan(obs) # numpy.ndarray (num_agents, 2), columns are steering angle and then velocity
+
+    # stepping through the environment
+    obs, step_reward, done, info = racecar_env.step(actions)
+
+    lap_time += step_reward
+```
+
+### TODO: More customization:
+```python
 # loading the map (uses the ROS convention with .yaml and an image file)
 map_path = 'your/path/to/the/map/file.yaml'
 map_img_ext = '.png' # png extension for example
