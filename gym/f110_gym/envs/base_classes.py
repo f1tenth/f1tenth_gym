@@ -347,6 +347,8 @@ class Simulator(object):
         """
         self.num_agents = num_agents
         self.time_step = time_step
+        self.ego_idx = ego_idx
+        self.params = params
         self.agent_poses = np.empty((self.num_agents, 3))
         self.agents = []
         self.collisions = np.zeros((self.num_agents, ))
@@ -440,14 +442,33 @@ class Simulator(object):
 
         for i, agent in enumerate(self.agents):
             # update agent's information on other agents
-            opp_poses = np.hstack((self.agent_poses[0:i, :], self.agent_poses[i+1, :]))
+            opp_poses = np.concatenate((self.agent_poses[0:i, :], self.agent_poses[i+1:, :]), axis=0)
             agent.update_opp_poses(opp_poses)
 
             # update each agent's current scan based on other agents
             agent.update_scan()
 
         # fill in observations
-        observations = {}
+        # state is [x, y, steer_angle, vel, yaw_angle, yaw_rate, slip_angle]
+        # collision_angles is removed from observations
+        observations = {'ego_idx': self.ego_idx,
+            'scans': [],
+            'poses_x': [],
+            'poses_y': [],
+            'poses_theta': [],
+            'linear_vels_x': [],
+            'linear_vels_y': [],
+            'ang_vels_z': [],
+            'collisions': self.collisions}
+        for agent in self.agents:
+            observations['scans'].append(agent.current_scan)
+            observations['poses_x'].append(agent.state[0])
+            observations['poses_y'].append(agent.state[1])
+            observations['poses_theta'].append(agent.state[4])
+            observations['linear_vels_x'].append(agent.state[3])
+            observations['linear_vels_y'].append(0.)
+            observations['ang_vels_z'].append(agent.state[5])
+
         return observations
 
     def reset(self, poses):
