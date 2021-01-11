@@ -4,6 +4,22 @@ This is the repository of the F1TENTH Gym environment.
 
 This project is still under heavy developement.
 
+## Citing
+If you find this Gym environment useful, please consider citing:
+
+```
+@inproceedings{o2020textscf1tenth,
+  title={textscF1TENTH: An Open-source Evaluation Environment for Continuous Control and Reinforcement Learning},
+  author={O’Kelly, Matthew and Zheng, Hongrui and Karthik, Dhruv and Mangharam, Rahul},
+  booktitle={NeurIPS 2019 Competition and Demonstration Track},
+  pages={77--89},
+  year={2020},
+  organization={PMLR}
+}
+```
+
+F1TENTH also provide a guide on building the physical 1/10th scale vehicle:[https://f1tenth.org/build.html](https://f1tenth.org/build.html)
+
 ## Installation (With Docker)
 We recommend using the provided Dockerfile to create containers for this simulation environment.
 
