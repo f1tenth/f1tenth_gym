@@ -448,6 +448,10 @@ class Simulator(object):
             # update each agent's current scan based on other agents
             agent.update_scan()
 
+            # update agent collision with environment
+            if agent.in_collision:
+                self.collisions[i] = 1.
+
         # fill in observations
         # state is [x, y, steer_angle, vel, yaw_angle, yaw_rate, slip_angle]
         # collision_angles is removed from observations

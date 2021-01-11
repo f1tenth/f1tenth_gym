@@ -36,6 +36,19 @@ from f110_gym.envs.base_classes import Simulator
 import numpy as np
 import os
 
+# gl
+import pyglet
+pyglet.options['debug_gl'] = False
+from pyglet import gl
+
+# constants
+
+# rendering
+VIDEO_W = 600
+VIDEO_H = 400
+WINDOW_W = 1000
+WINDOW_H = 800
+
 class F110Env(gym.Env, utils.EzPickle):
     """
     OpenAI gym environment for F1TENTH
@@ -44,6 +57,8 @@ class F110Env(gym.Env, utils.EzPickle):
 
     Args:
         kwargs:
+            seed (int): seed for random state and reproducibility
+            
             map (str, default='vegas'): name of the map used for the environment. Currently, available environments include: 'berlin', 'vegas', 'skirk'. You could use a string of the absolute path to the yaml file of your custom map.
         
             map_ext (str, default='png'): image extension of the map image file. For example 'png', 'pgm'
@@ -77,6 +92,10 @@ class F110Env(gym.Env, utils.EzPickle):
     def __init__(self, **kwargs):        
         # kwargs extraction
         try:
+            np.random.seed(kwargs['seed'])
+        except:
+            pass
+        try:
             self.map_path = kwargs['map']
             # different default maps
             if self.map_path == 'berlin':
@@ -85,6 +104,8 @@ class F110Env(gym.Env, utils.EzPickle):
                 self.map_path = os.path.dirname(os.path.abspath(__file__)) + '/maps/skirk.yaml'
             elif self.map_path == 'levine':
                 self.map_path = os.path.dirname(os.path.abspath(__file__)) + '/maps/levine.yaml'
+            else:
+                self.map_path = self.map_path + '.yaml'
         except:
             self.map_path = os.path.dirname(os.path.abspath(__file__)) + '/maps/vegas.yaml'
 
@@ -148,6 +169,9 @@ class F110Env(gym.Env, utils.EzPickle):
         # initiate stuff
         self.sim = Simulator(self.params, self.num_agents)
         self.sim.set_map(self.map_path, self.map_ext)
+
+        # rendering
+        self.viewer = None
 
     def __del__(self):
         """
@@ -308,5 +332,24 @@ class F110Env(gym.Env, utils.EzPickle):
         self.sim.update_params(params, agent_idx=index)
 
     def render(self, mode='human', close=False):
-        # TODO
+        assert mode == 'human'
+        if self.viewer is None:
+            # first call, initialize everything
+            from gym.envs.classic_control import rendering
+            self.viewer = rendering.Viewer(WINDOW_W, WINDOW_H)
+            self.score_label = pyglet.text.Label(
+                'Lap Time: {laptime:.2f}, Lap Count: {count:.0f}'.format(laptime=0.0, count=0.0),
+                font_size=36,
+                x=20,
+                y=WINDOW_H * 2.5 / 40.0,
+                anchor_x='left',
+                anchor_y='center',
+                color=(255, 255, 255, 255))
+            self.transform = rendering.Transform()
+
+        gl.glViewport(0, 0, WINDOW_W, WINDOW_H)
+        
+        # update lap times and lap counts
+        self.score_label.text = 'Lap Time: {laptime:.2f}, Lap Count: {count:.0f}'.format(laptime=self.lap_times[0], count=self.lap_counts[0])
+        self.score_label.draw()
         return

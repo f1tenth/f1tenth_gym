@@ -387,7 +387,8 @@ class ScanTests(unittest.TestCase):
 def main():
     num_beams = 1080
     fov = 4.7
-    map_path = '../../../maps/berlin.yaml'
+    # map_path = '../envs/maps/berlin.yaml'
+    map_path = '/home/f1tenth-eval/tunercar/es/maps/map0.yaml'
     map_ext = '.png'
     scan_sim = ScanSimulator2D(num_beams, fov)
     scan_sim.set_map(map_path, map_ext)
@@ -411,18 +412,19 @@ def main():
     theta = np.linspace(-fov/2., fov/2., num=num_beams)
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='polar')
-    ax.set_ylim(0, 10)
+    ax.set_ylim(0, 70)
     line, = ax.plot([], [], '.', lw=0)
     def update(i):
         # x_ani = i * 3. / num_iter
         theta_ani = -i * 2 * np.pi / num_iter
         x_ani = 0.
         current_scan = scan_sim.scan(np.array([x_ani, 0., theta_ani]))
+        print(np.max(current_scan))
         line.set_data(theta, current_scan)
         return line, 
     ani = FuncAnimation(fig, update, frames=num_iter, blit=True)
     plt.show()
 
 if __name__ == '__main__':
-    unittest.main()
-    # main()
+    # unittest.main()
+    main()

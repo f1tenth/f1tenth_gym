@@ -139,6 +139,9 @@ def trace_ray(x, y, theta_index, sines, cosines, eps, orig_x, orig_y, orig_c, or
         # also keeps track of total ray length
         dist_to_nearest = distance_transform(x, y, orig_x, orig_y, orig_c, orig_s, height, width, resolution, dt)
         total_dist += dist_to_nearest
+
+    if total_dist > max_range:
+        total_dist = max_range
     
     return total_dist
 
@@ -512,7 +515,8 @@ class ScanTests(unittest.TestCase):
 def main():
     num_beams = 1080
     fov = 4.7
-    map_path = '../../../maps/berlin.yaml'
+    # map_path = '../envs/maps/berlin.yaml'
+    map_path = '/home/f1tenth-eval/tunercar/es/maps/map0.yaml'
     map_ext = '.png'
     scan_sim = ScanSimulator2D(num_beams, fov)
     scan_sim.set_map(map_path, map_ext)
@@ -536,13 +540,14 @@ def main():
     theta = np.linspace(-fov/2., fov/2., num=num_beams)
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='polar')
-    ax.set_ylim(0, 10)
+    ax.set_ylim(0, 31)
     line, = ax.plot([], [], '.', lw=0)
     def update(i):
         # x_ani = i * 3. / num_iter
         theta_ani = -i * 2 * np.pi / num_iter
         x_ani = 0.
         current_scan = scan_sim.scan(np.array([x_ani, 0., theta_ani]))
+        print(np.max(current_scan))
         line.set_data(theta, current_scan)
         return line, 
     ani = FuncAnimation(fig, update, frames=num_iter, blit=True)
@@ -550,26 +555,26 @@ def main():
 
 if __name__ == '__main__':
     # unittest.main()
-    # main()
+    main()
 
-    import time 
-    pt_a = np.array([1., 1.])
-    pt_b = np.array([1., 2.])
-    pt_c = np.array([1., 3.])
-    col = are_collinear(pt_a, pt_b, pt_c)
-    print(col)
+    # import time 
+    # pt_a = np.array([1., 1.])
+    # pt_b = np.array([1., 2.])
+    # pt_c = np.array([1., 3.])
+    # col = are_collinear(pt_a, pt_b, pt_c)
+    # print(col)
 
-    pose = np.array([0., 0., -1.])
-    beam_theta = 0.
-    start = time.time()
-    dist = get_range(pose, beam_theta, pt_a, pt_b)
-    print(dist, time.time()-start)
+    # pose = np.array([0., 0., -1.])
+    # beam_theta = 0.
+    # start = time.time()
+    # dist = get_range(pose, beam_theta, pt_a, pt_b)
+    # print(dist, time.time()-start)
 
-    num_beams = 1080
-    scan = 100.*np.ones((num_beams, ))
-    scan_angles = np.linspace(-2.35, 2.35, num=num_beams)
-    assert scan.shape[0] == scan_angles.shape[0]
-    vertices = np.asarray([[4,11.],[5,5],[9,9],[10,10]])
-    start = time.time()
-    new_scan = ray_cast(pose, scan, scan_angles, vertices)
-    print(time.time()-start)
+    # num_beams = 1080
+    # scan = 100.*np.ones((num_beams, ))
+    # scan_angles = np.linspace(-2.35, 2.35, num=num_beams)
+    # assert scan.shape[0] == scan_angles.shape[0]
+    # vertices = np.asarray([[4,11.],[5,5],[9,9],[10,10]])
+    # start = time.time()
+    # new_scan = ray_cast(pose, scan, scan_angles, vertices)
+    # print(time.time()-start)
