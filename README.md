@@ -36,7 +36,7 @@ The environment officially supports Python3, and you'll need several dependencie
 ### Python packages:
 
 ```bash
-$ pip3 install --user numpy scipy numba Pillow gym pyyaml
+$ pip3 install --user numpy scipy numba Pillow gym pyyaml pyglet
 ```
 
 ### To install the simulation environment natively, clone this repo.
@@ -60,7 +60,7 @@ import numpy as np
 # making the environment
 racecar_env = gym.make('f110_gym:f110-v0')
 obs, step_reward, done, info = racecar_env.reset(np.array([[0., 0., 0.], # pose of ego
-                                                            2., 0., 0.])) # pose of 2nd agent
+                                                           [2., 0., 0.]])) # pose of 2nd agent
 
 # simulation loop
 lap_time = 0.

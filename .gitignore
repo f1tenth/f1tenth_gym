@@ -6,3 +6,4 @@ __pycache__
 .vscode/
 gym/f110_gym/unittest/maps/
 gym/f110_gym/unittest/waypoints/
+docs/_build/

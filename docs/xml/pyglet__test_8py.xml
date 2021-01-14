@@ -1,0 +1,24 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.1" xml:lang="en-US">
+  <compounddef id="pyglet__test_8py" kind="file" language="Python">
+    <compoundname>pyglet_test.py</compoundname>
+    <innernamespace refid="namespacef110__gym_1_1unittest_1_1pyglet__test">f110_gym::unittest::pyglet_test</innernamespace>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="keyword">import</highlight><highlight class="normal"><sp/>pyglet</highlight></codeline>
+<codeline lineno="2"><highlight class="normal">pyglet.options[</highlight><highlight class="stringliteral">&apos;debug_gl&apos;</highlight><highlight class="normal">]<sp/>=<sp/></highlight><highlight class="keyword">False</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight><highlight class="keyword">from</highlight><highlight class="normal"><sp/>pyglet<sp/></highlight><highlight class="keyword">import</highlight><highlight class="normal"><sp/>gl</highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight><highlight class="keyword">import</highlight><highlight class="normal"><sp/>numpy<sp/></highlight><highlight class="keyword">as</highlight><highlight class="normal"><sp/>np</highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal">VIDEO_W<sp/>=<sp/>600</highlight></codeline>
+<codeline lineno="7"><highlight class="normal">VIDEO_H<sp/>=<sp/>400</highlight></codeline>
+<codeline lineno="8"><highlight class="normal">WINDOW_W<sp/>=<sp/>1000</highlight></codeline>
+<codeline lineno="9"><highlight class="normal">WINDOW_H<sp/>=<sp/>800</highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight></codeline>
+    </programlisting>
+    <location file="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/unittest/pyglet_test.py"/>
+  </compounddef>
+</doxygen>

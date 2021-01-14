@@ -347,6 +347,9 @@ class F110Env(gym.Env, utils.EzPickle):
                 color=(255, 255, 255, 255))
             self.transform = rendering.Transform()
 
+        self.transform.set_scale(1, 1)
+        # self.transform.set_translation()
+
         gl.glViewport(0, 0, WINDOW_W, WINDOW_H)
         
         # update lap times and lap counts

@@ -1,0 +1,126 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.1" xml:lang="en-US">
+  <compounddef id="namespacef110__gym_1_1unittest_1_1random__trackgen" kind="namespace" language="Python">
+    <compoundname>f110_gym::unittest::random_trackgen</compoundname>
+      <sectiondef kind="var">
+      <memberdef kind="variable" id="namespacef110__gym_1_1unittest_1_1random__trackgen_1abfe988f97ecef07688ff57cb15c5c630" prot="public" static="no" mutable="no">
+        <type>int</type>
+        <definition>int f110_gym::unittest::random_trackgen.NUM_MAPS</definition>
+        <argsstring></argsstring>
+        <name>NUM_MAPS</name>
+        <initializer>=  10</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/unittest/random_trackgen.py" line="15" column="1" bodyfile="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/unittest/random_trackgen.py" bodystart="15" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="namespacef110__gym_1_1unittest_1_1random__trackgen_1a2fe20a3d4b091cfa0c3eb867adc992ce" prot="public" static="no" mutable="no">
+        <type>float</type>
+        <definition>float f110_gym::unittest::random_trackgen.WIDTH</definition>
+        <argsstring></argsstring>
+        <name>WIDTH</name>
+        <initializer>=  5.0</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/unittest/random_trackgen.py" line="16" column="1" bodyfile="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/unittest/random_trackgen.py" bodystart="16" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="namespacef110__gym_1_1unittest_1_1random__trackgen_1a8f9627599e2526027f715cd162b7155f" prot="public" static="no" mutable="no">
+        <type></type>
+        <definition>f110_gym::unittest::random_trackgen.track</definition>
+        <argsstring></argsstring>
+        <name>track</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/unittest/random_trackgen.py" line="191" column="1" bodyfile="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/unittest/random_trackgen.py" bodystart="191" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="namespacef110__gym_1_1unittest_1_1random__trackgen_1a55ebef782ee46bdd7cd03aa6a404cd02" prot="public" static="no" mutable="no">
+        <type></type>
+        <definition>f110_gym::unittest::random_trackgen.track_int</definition>
+        <argsstring></argsstring>
+        <name>track_int</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/unittest/random_trackgen.py" line="191" column="1" bodyfile="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/unittest/random_trackgen.py" bodystart="191" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="namespacef110__gym_1_1unittest_1_1random__trackgen_1a492ff0fd0e3e2e4b53c804fe4656e19f" prot="public" static="no" mutable="no">
+        <type></type>
+        <definition>f110_gym::unittest::random_trackgen.track_ext</definition>
+        <argsstring></argsstring>
+        <name>track_ext</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/unittest/random_trackgen.py" line="191" column="1" bodyfile="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/unittest/random_trackgen.py" bodystart="191" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="func">
+      <memberdef kind="function" id="namespacef110__gym_1_1unittest_1_1random__trackgen_1af5ac6d92744435a0c2572146ec14cd00" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>def</type>
+        <definition>def f110_gym.unittest.random_trackgen.create_track</definition>
+        <argsstring>()</argsstring>
+        <name>create_track</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/unittest/random_trackgen.py" line="17" column="1" bodyfile="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/unittest/random_trackgen.py" bodystart="17" bodyend="135"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacef110__gym_1_1unittest_1_1random__trackgen_1a10f9f980a813a2beca515c9965995c12" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>def</type>
+        <definition>def f110_gym.unittest.random_trackgen.convert_track</definition>
+        <argsstring>(track, track_int, track_ext, iter)</argsstring>
+        <name>convert_track</name>
+        <param>
+          <type>track</type>
+          <defname>track</defname>
+        </param>
+        <param>
+          <type>track_int</type>
+          <defname>track_int</defname>
+        </param>
+        <param>
+          <type>track_ext</type>
+          <defname>track_ext</defname>
+        </param>
+        <param>
+          <type>iter</type>
+          <defname>iter</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/unittest/random_trackgen.py" line="136" column="1" bodyfile="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/unittest/random_trackgen.py" bodystart="136" bodyend="187"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+<para><verbatim> Generates random tracks.
+    Adapted from https://gym.openai.com/envs/CarRacing-v0</verbatim> </para>
+    </detaileddescription>
+    <location file="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/unittest/random_trackgen.py" line="1" column="1"/>
+  </compounddef>
+</doxygen>

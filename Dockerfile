@@ -42,7 +42,8 @@ RUN pip3 install numpy \
                  numba \
                  Pillow \
                  gym \
-                 pyyaml
+                 pyyaml \
+                 pyglet
 
 RUN mkdir /f1tenth_gym
 COPY . /f1tenth_gym
