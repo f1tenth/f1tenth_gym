@@ -49,4 +49,8 @@ To build a physical 1/10th scale vehicle, following the guide here: https://f1te
    :caption: API REFERENCE
    :maxdepth: 2
 
-   api
+   api/base_classes
+   api/dynamic_models
+   api/laser_models
+   api/collision_models
+   api/env
