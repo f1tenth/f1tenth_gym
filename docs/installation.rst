@@ -35,19 +35,7 @@ A Dockerfile is provided. A container can be created by running the following co
 Using pip
 ---------------
 
-The environment officially supports python3, and you'll need the following dependencies to install the environment:
-
-.. code:: bash
-
-    $ pip3 install --user numpy \
-                          scipy \
-                          numba \
-                          Pillow \
-                          gym \
-                          pyyaml \
-                          pyglet
-
-Then, install the environment via:
+The environment is a python package, and only depends on ``numpy``, ``scipy``, ``numba``, ``Pillow``, ``gym``, ``pyyaml``, and ``pyglet``. You can install the package via pip:
 
 .. code:: bash
 

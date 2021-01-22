@@ -1,19 +1,58 @@
-""" Generates random tracks.
-    Adapted from https://gym.openai.com/envs/CarRacing-v0
-    
+# MIT License
+
+# Copyright (c) 2020 Joseph Auckley, Matthew O'Kelly, Aman Sinha, Hongrui Zheng
+
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+
+"""
+Generates random tracks.
+Adapted from https://gym.openai.com/envs/CarRacing-v0
+Author: Hongrui Zheng  
 """
 
 import cv2
-import sys, math
+import os
+import math
 import numpy as np
 import shapely.geometry as shp
 import matplotlib.pyplot as plt
 from matplotlib.patches import Polygon
 from matplotlib.collections import PatchCollection
+import argparse
 
+parser = argparse.ArgumentParser()
+parser.add_argument('--seed', type=int, default=123, help='Seed for the numpy rng.')
+parser.add_argument('--num_maps', type=int, default=1, help='Number of maps to generate.')
+args = parser.parse_args()
 
-NUM_MAPS = 10
-WIDTH = 5.0
+np.random.seed(args.seed)
+
+if not os.path.exists('maps'):
+    print('Creating maps/ directory.')
+    os.makedirs('maps')
+if not os.path.exists('centerline'):
+    print('Creating centerline/ directory.')
+    os.makedirs('centerline')
+
+NUM_MAPS = args.num_maps
+WIDTH = 10.0
 def create_track():
     CHECKPOINTS = 16
     SCALE = 6.0
@@ -171,14 +210,14 @@ def convert_track(track, track_int, track_ext, iter):
     # create yaml file
     yaml = open('maps/map' + str(iter) + '.yaml', 'w')
     yaml.write('image: map' + str(iter) + '.pgm\n')
-    yaml.write('resolution: 0.050000\n')
+    yaml.write('resolution: 0.062500\n')
     yaml.write('origin: [' + str(map_origin_x) + ',' + str(map_origin_y) + ', 0.000000]\n')
     yaml.write('negate: 0\noccupied_thresh: 0.45\nfree_thresh: 0.196')
     yaml.close()
     plt.close()
 
     # saving track centerline as a csv in ros coords
-    waypoints_csv = open('waypoints/map' + str(iter) + '.csv', 'w')
+    waypoints_csv = open('centerline/map' + str(iter) + '.csv', 'w')
     for row in xy_pixels:
         waypoints_csv.write(str(0.05*row[0]) + ', ' + str(0.05*row[1]) + '\n')
     waypoints_csv.close()

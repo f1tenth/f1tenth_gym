@@ -5,5 +5,5 @@ __pycache__
 .DS_Store
 .vscode/
 gym/f110_gym/unittest/maps/
-gym/f110_gym/unittest/waypoints/
+gym/f110_gym/unittest/centerline/
 docs/_build/

@@ -35,6 +35,7 @@ from f110_gym.envs.base_classes import Simulator
 # others
 import numpy as np
 import os
+import time
 
 # gl
 import pyglet
@@ -96,16 +97,16 @@ class F110Env(gym.Env, utils.EzPickle):
         except:
             pass
         try:
-            self.map_path = kwargs['map']
+            self.map_name = kwargs['map']
             # different default maps
-            if self.map_path == 'berlin':
+            if self.map_name == 'berlin':
                 self.map_path = os.path.dirname(os.path.abspath(__file__)) + '/maps/berlin.yaml'
-            elif self.map_path == 'skirk':
+            elif self.map_name == 'skirk':
                 self.map_path = os.path.dirname(os.path.abspath(__file__)) + '/maps/skirk.yaml'
-            elif self.map_path == 'levine':
+            elif self.map_name == 'levine':
                 self.map_path = os.path.dirname(os.path.abspath(__file__)) + '/maps/levine.yaml'
             else:
-                self.map_path = self.map_path + '.yaml'
+                self.map_path = self.map_name + '.yaml'
         except:
             self.map_path = os.path.dirname(os.path.abspath(__file__)) + '/maps/vegas.yaml'
 
@@ -171,7 +172,8 @@ class F110Env(gym.Env, utils.EzPickle):
         self.sim.set_map(self.map_path, self.map_ext)
 
         # rendering
-        self.viewer = None
+        self.renderer = None
+        self.current_obs = None
 
     def __del__(self):
         """
@@ -249,13 +251,15 @@ class F110Env(gym.Env, utils.EzPickle):
             obs (dict): observation of the current step
             reward (float, default=self.timestep): step reward, currently is physics timestep
             done (bool): if the simulation is done
-            info (dict): auxillary information dictionary 
+            info (dict): auxillary information dictionary
         """
         
         # call simulation step
         obs = self.sim.step(action)
         obs['lap_times'] = self.lap_times
         obs['lap_counts'] = self.lap_counts
+
+        self.current_obs = obs
 
         # times
         reward = self.timestep
@@ -333,26 +337,13 @@ class F110Env(gym.Env, utils.EzPickle):
 
     def render(self, mode='human', close=False):
         assert mode == 'human'
-        if self.viewer is None:
+        if self.renderer is None:
             # first call, initialize everything
-            from gym.envs.classic_control import rendering
-            self.viewer = rendering.Viewer(WINDOW_W, WINDOW_H)
-            self.score_label = pyglet.text.Label(
-                'Lap Time: {laptime:.2f}, Lap Count: {count:.0f}'.format(laptime=0.0, count=0.0),
-                font_size=36,
-                x=20,
-                y=WINDOW_H * 2.5 / 40.0,
-                anchor_x='left',
-                anchor_y='center',
-                color=(255, 255, 255, 255))
-            self.transform = rendering.Transform()
-
-        self.transform.set_scale(1, 1)
-        # self.transform.set_translation()
-
-        gl.glViewport(0, 0, WINDOW_W, WINDOW_H)
-        
-        # update lap times and lap counts
-        self.score_label.text = 'Lap Time: {laptime:.2f}, Lap Count: {count:.0f}'.format(laptime=self.lap_times[0], count=self.lap_counts[0])
-        self.score_label.draw()
-        return
+            from f110_gym.envs.rendering import EnvRenderer
+            self.renderer = EnvRenderer(WINDOW_W, WINDOW_H)
+            self.renderer.update_map(self.map_name, self.map_ext)
+        self.renderer.update_obs(self.current_obs)
+        self.renderer.dispatch_events()
+        self.renderer.on_draw()
+        self.renderer.flip()
+        time.sleep(0.008)
