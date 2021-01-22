@@ -6,7 +6,7 @@ This project is still under heavy developement.
 
 You can find the [documentation](https://f1tenth-gym.readthedocs.io/en/latest/) of the environment here.
 
-## Quicstart
+## Quickstart
 You can install the environment by running:
 
 ```bash
