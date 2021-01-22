@@ -16,6 +16,12 @@ $ git checkout exp_py
 $ pip3 install --user -e gym/
 ```
 
+Then you can run a quick waypoint follow example by:
+```bash
+cd examples
+python3 waypoint_follow.py
+```
+
 ## Citing
 If you find this Gym environment useful, please consider citing:
 

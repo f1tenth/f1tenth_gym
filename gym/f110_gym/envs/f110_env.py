@@ -88,7 +88,7 @@ class F110Env(gym.Env, utils.EzPickle):
 
             ego_idx (int, default=0): ego's index in list of agents
     """
-    metadata = {'render.modes': ['human']}
+    metadata = {'render.modes': ['human', 'human_fast']}
 
     def __init__(self, **kwargs):        
         # kwargs extraction
@@ -335,8 +335,19 @@ class F110Env(gym.Env, utils.EzPickle):
         """
         self.sim.update_params(params, agent_idx=index)
 
-    def render(self, mode='human', close=False):
-        assert mode == 'human'
+    def render(self, mode='human'):
+        """
+        Renders the environment with pyglet. Use mouse scroll in the window to zoom in/out, use mouse click drag to pan. Shows the agents, the map, current fps (bottom left corner), and the race information near as text.
+
+        Args:
+            mode (str, default='human'): rendering mode, currently supports:
+                'human': slowed down rendering such that the env is rendered in a way that sim time elapsed is close to real time elapsed
+                'human_fast': render as fast as possible
+
+        Returns:
+            None
+        """
+        assert mode in ['human', 'human_fast']
         if self.renderer is None:
             # first call, initialize everything
             from f110_gym.envs.rendering import EnvRenderer
@@ -346,4 +357,7 @@ class F110Env(gym.Env, utils.EzPickle):
         self.renderer.dispatch_events()
         self.renderer.on_draw()
         self.renderer.flip()
-        time.sleep(0.008)
+        if mode == 'human':
+            time.sleep(0.005)
+        elif mode == 'human_fast':
+            pass
