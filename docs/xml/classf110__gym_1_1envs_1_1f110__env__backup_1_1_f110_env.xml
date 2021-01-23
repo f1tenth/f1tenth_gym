@@ -1,9 +1,9 @@
 <?xml version='1.0' encoding='UTF-8' standalone='no'?>
-<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.1" xml:lang="en-US">
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
   <compounddef id="classf110__gym_1_1envs_1_1f110__env__backup_1_1_f110_env" kind="class" language="Python" prot="public">
     <compoundname>f110_gym::envs::f110_env_backup::F110Env</compoundname>
-    <basecompoundref prot="public" virt="non-virtual">gym.Env</basecompoundref>
-    <basecompoundref prot="public" virt="non-virtual">utils.EzPickle</basecompoundref>
+    <basecompoundref prot="public" virt="non-virtual">Env</basecompoundref>
+    <basecompoundref prot="public" virt="non-virtual">EzPickle</basecompoundref>
       <sectiondef kind="public-static-attrib">
       <memberdef kind="variable" id="classf110__gym_1_1envs_1_1f110__env__backup_1_1_f110_env_1a33621c905b3ce566450c77b923ef79ee" prot="public" static="yes" mutable="no">
         <type>dictionary</type>
@@ -17,7 +17,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="65" column="1" bodyfile="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="65" bodyend="-1"/>
+        <location file="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="65" column="1" bodyfile="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="65" bodyend="-1"/>
       </memberdef>
       </sectiondef>
       <sectiondef kind="public-attrib">
@@ -32,7 +32,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="69" column="1" bodyfile="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="69" bodyend="-1"/>
+        <location file="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="69" column="1" bodyfile="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="69" bodyend="-1"/>
       </memberdef>
       <memberdef kind="variable" id="classf110__gym_1_1envs_1_1f110__env__backup_1_1_f110_env_1a58740f3bf62a7bf263a13b47cdf5d797" prot="public" static="no" mutable="no">
         <type></type>
@@ -45,7 +45,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="70" column="1" bodyfile="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="70" bodyend="-1"/>
+        <location file="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="70" column="1" bodyfile="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="70" bodyend="-1"/>
       </memberdef>
       <memberdef kind="variable" id="classf110__gym_1_1envs_1_1f110__env__backup_1_1_f110_env_1a9e292f161315ed1a0f3c3886bf49ded9" prot="public" static="no" mutable="no">
         <type></type>
@@ -58,7 +58,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="72" column="1" bodyfile="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="72" bodyend="-1"/>
+        <location file="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="72" column="1" bodyfile="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="72" bodyend="-1"/>
       </memberdef>
       <memberdef kind="variable" id="classf110__gym_1_1envs_1_1f110__env__backup_1_1_f110_env_1ac6a6a423017697870d6f1c6828325336" prot="public" static="no" mutable="no">
         <type></type>
@@ -71,7 +71,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="74" column="1" bodyfile="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="74" bodyend="-1"/>
+        <location file="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="74" column="1" bodyfile="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="74" bodyend="-1"/>
       </memberdef>
       <memberdef kind="variable" id="classf110__gym_1_1envs_1_1f110__env__backup_1_1_f110_env_1a89f5296784405aeaa52325a8dac4420e" prot="public" static="no" mutable="no">
         <type></type>
@@ -84,7 +84,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="75" column="1" bodyfile="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="75" bodyend="-1"/>
+        <location file="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="75" column="1" bodyfile="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="75" bodyend="-1"/>
       </memberdef>
       <memberdef kind="variable" id="classf110__gym_1_1envs_1_1f110__env__backup_1_1_f110_env_1ad417d87c39e8046ab2a66fd11d5910b8" prot="public" static="no" mutable="no">
         <type></type>
@@ -97,7 +97,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="78" column="1" bodyfile="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="78" bodyend="-1"/>
+        <location file="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="78" column="1" bodyfile="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="78" bodyend="-1"/>
       </memberdef>
       <memberdef kind="variable" id="classf110__gym_1_1envs_1_1f110__env__backup_1_1_f110_env_1a52b5d0f196c9cd9e34464d3cf4cf1f34" prot="public" static="no" mutable="no">
         <type></type>
@@ -110,7 +110,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="79" column="1" bodyfile="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="79" bodyend="-1"/>
+        <location file="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="79" column="1" bodyfile="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="79" bodyend="-1"/>
       </memberdef>
       <memberdef kind="variable" id="classf110__gym_1_1envs_1_1f110__env__backup_1_1_f110_env_1ae4babdba55642fab735d03c5672ed5ad" prot="public" static="no" mutable="no">
         <type></type>
@@ -123,7 +123,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="85" column="1" bodyfile="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="85" bodyend="-1"/>
+        <location file="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="85" column="1" bodyfile="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="85" bodyend="-1"/>
       </memberdef>
       <memberdef kind="variable" id="classf110__gym_1_1envs_1_1f110__env__backup_1_1_f110_env_1ae2047312369a5e949b09e1c5b067412f" prot="public" static="no" mutable="no">
         <type></type>
@@ -136,7 +136,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="88" column="1" bodyfile="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="88" bodyend="-1"/>
+        <location file="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="88" column="1" bodyfile="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="88" bodyend="-1"/>
       </memberdef>
       <memberdef kind="variable" id="classf110__gym_1_1envs_1_1f110__env__backup_1_1_f110_env_1af3d3f69953f78a141b98f3d738a15530" prot="public" static="no" mutable="no">
         <type></type>
@@ -149,7 +149,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="90" column="1" bodyfile="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="90" bodyend="-1"/>
+        <location file="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="90" column="1" bodyfile="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="90" bodyend="-1"/>
       </memberdef>
       <memberdef kind="variable" id="classf110__gym_1_1envs_1_1f110__env__backup_1_1_f110_env_1a0a9dbd46041d336a1d6b28ea01418d91" prot="public" static="no" mutable="no">
         <type></type>
@@ -162,7 +162,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="95" column="1" bodyfile="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="95" bodyend="-1"/>
+        <location file="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="95" column="1" bodyfile="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="95" bodyend="-1"/>
       </memberdef>
       <memberdef kind="variable" id="classf110__gym_1_1envs_1_1f110__env__backup_1_1_f110_env_1a2fd95411b8a24759642863111ed0f513" prot="public" static="no" mutable="no">
         <type></type>
@@ -175,7 +175,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="96" column="1" bodyfile="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="96" bodyend="-1"/>
+        <location file="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="96" column="1" bodyfile="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="96" bodyend="-1"/>
       </memberdef>
       <memberdef kind="variable" id="classf110__gym_1_1envs_1_1f110__env__backup_1_1_f110_env_1a1dc4f5c9ab99353e2c364d42daf5a180" prot="public" static="no" mutable="no">
         <type></type>
@@ -188,7 +188,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="97" column="1" bodyfile="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="97" bodyend="-1"/>
+        <location file="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="97" column="1" bodyfile="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="97" bodyend="-1"/>
       </memberdef>
       <memberdef kind="variable" id="classf110__gym_1_1envs_1_1f110__env__backup_1_1_f110_env_1a68efc45c0a66e4652697146e18c8a570" prot="public" static="no" mutable="no">
         <type></type>
@@ -201,7 +201,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="99" column="1" bodyfile="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="99" bodyend="-1"/>
+        <location file="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="99" column="1" bodyfile="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="99" bodyend="-1"/>
       </memberdef>
       <memberdef kind="variable" id="classf110__gym_1_1envs_1_1f110__env__backup_1_1_f110_env_1a88dd2fd1f2dc0ef251a079d3e74622fe" prot="public" static="no" mutable="no">
         <type></type>
@@ -214,7 +214,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="100" column="1" bodyfile="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="100" bodyend="-1"/>
+        <location file="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="100" column="1" bodyfile="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="100" bodyend="-1"/>
       </memberdef>
       <memberdef kind="variable" id="classf110__gym_1_1envs_1_1f110__env__backup_1_1_f110_env_1a1c3ac639a2b0773d99043c2b911970d7" prot="public" static="no" mutable="no">
         <type></type>
@@ -227,7 +227,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="103" column="1" bodyfile="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="103" bodyend="-1"/>
+        <location file="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="103" column="1" bodyfile="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="103" bodyend="-1"/>
       </memberdef>
       <memberdef kind="variable" id="classf110__gym_1_1envs_1_1f110__env__backup_1_1_f110_env_1ac19a932655f1f9a6e8065df37bbe9f80" prot="public" static="no" mutable="no">
         <type></type>
@@ -240,7 +240,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="104" column="1" bodyfile="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="104" bodyend="-1"/>
+        <location file="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="104" column="1" bodyfile="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="104" bodyend="-1"/>
       </memberdef>
       <memberdef kind="variable" id="classf110__gym_1_1envs_1_1f110__env__backup_1_1_f110_env_1aa7af900e93ae4b180e89e7d48e242033" prot="public" static="no" mutable="no">
         <type></type>
@@ -253,7 +253,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="107" column="1" bodyfile="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="107" bodyend="-1"/>
+        <location file="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="107" column="1" bodyfile="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="107" bodyend="-1"/>
       </memberdef>
       <memberdef kind="variable" id="classf110__gym_1_1envs_1_1f110__env__backup_1_1_f110_env_1a3eb59d52fbc4d767e2c7ed0c64b8650f" prot="public" static="no" mutable="no">
         <type></type>
@@ -266,7 +266,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="108" column="1" bodyfile="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="108" bodyend="-1"/>
+        <location file="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="108" column="1" bodyfile="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="108" bodyend="-1"/>
       </memberdef>
       <memberdef kind="variable" id="classf110__gym_1_1envs_1_1f110__env__backup_1_1_f110_env_1a476dab30a81d8794d89f0bd85b3e7884" prot="public" static="no" mutable="no">
         <type></type>
@@ -279,7 +279,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="128" column="1" bodyfile="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="128" bodyend="-1"/>
+        <location file="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="128" column="1" bodyfile="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="128" bodyend="-1"/>
       </memberdef>
       <memberdef kind="variable" id="classf110__gym_1_1envs_1_1f110__env__backup_1_1_f110_env_1a2f4a85b1b83b203bc5549b6bff0bf2d1" prot="public" static="no" mutable="no">
         <type></type>
@@ -292,7 +292,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="129" column="1" bodyfile="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="129" bodyend="-1"/>
+        <location file="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="129" column="1" bodyfile="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="129" bodyend="-1"/>
       </memberdef>
       <memberdef kind="variable" id="classf110__gym_1_1envs_1_1f110__env__backup_1_1_f110_env_1a1ec9b2bc2142334a2b8a2d028adcace8" prot="public" static="no" mutable="no">
         <type></type>
@@ -305,7 +305,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="130" column="1" bodyfile="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="130" bodyend="-1"/>
+        <location file="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="130" column="1" bodyfile="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="130" bodyend="-1"/>
       </memberdef>
       <memberdef kind="variable" id="classf110__gym_1_1envs_1_1f110__env__backup_1_1_f110_env_1a7456387ff1b9e6832dd205ed891bc750" prot="public" static="no" mutable="no">
         <type></type>
@@ -318,7 +318,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="131" column="1" bodyfile="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="131" bodyend="-1"/>
+        <location file="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="131" column="1" bodyfile="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="131" bodyend="-1"/>
       </memberdef>
       <memberdef kind="variable" id="classf110__gym_1_1envs_1_1f110__env__backup_1_1_f110_env_1a2e1491609720111b7065748ad37e8512" prot="public" static="no" mutable="no">
         <type></type>
@@ -331,7 +331,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="132" column="1" bodyfile="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="132" bodyend="-1"/>
+        <location file="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="132" column="1" bodyfile="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="132" bodyend="-1"/>
       </memberdef>
       <memberdef kind="variable" id="classf110__gym_1_1envs_1_1f110__env__backup_1_1_f110_env_1a0e6a85d0de7165369ce8fcd18be9d885" prot="public" static="no" mutable="no">
         <type></type>
@@ -344,7 +344,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="150" column="1" bodyfile="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="150" bodyend="-1"/>
+        <location file="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="150" column="1" bodyfile="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="150" bodyend="-1"/>
       </memberdef>
       <memberdef kind="variable" id="classf110__gym_1_1envs_1_1f110__env__backup_1_1_f110_env_1aa3367f6570455c5311e075b4b9f91c56" prot="public" static="no" mutable="no">
         <type></type>
@@ -357,7 +357,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="151" column="1" bodyfile="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="151" bodyend="-1"/>
+        <location file="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="151" column="1" bodyfile="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="151" bodyend="-1"/>
       </memberdef>
       <memberdef kind="variable" id="classf110__gym_1_1envs_1_1f110__env__backup_1_1_f110_env_1afc0972d462163211e9b9e47a2844e64f" prot="public" static="no" mutable="no">
         <type></type>
@@ -370,7 +370,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="152" column="1" bodyfile="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="152" bodyend="-1"/>
+        <location file="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="152" column="1" bodyfile="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="152" bodyend="-1"/>
       </memberdef>
       <memberdef kind="variable" id="classf110__gym_1_1envs_1_1f110__env__backup_1_1_f110_env_1a23d4e3c74f19290571ce06f57c68de01" prot="public" static="no" mutable="no">
         <type></type>
@@ -383,7 +383,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="171" column="1" bodyfile="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="171" bodyend="-1"/>
+        <location file="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="171" column="1" bodyfile="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="171" bodyend="-1"/>
       </memberdef>
       <memberdef kind="variable" id="classf110__gym_1_1envs_1_1f110__env__backup_1_1_f110_env_1aeb9374dba01e21d5fd618d0736573f77" prot="public" static="no" mutable="no">
         <type></type>
@@ -396,7 +396,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="308" column="1" bodyfile="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="308" bodyend="-1"/>
+        <location file="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="308" column="1" bodyfile="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="308" bodyend="-1"/>
       </memberdef>
       <memberdef kind="variable" id="classf110__gym_1_1envs_1_1f110__env__backup_1_1_f110_env_1aebf4ff49efe573bdbe29b190528256f1" prot="public" static="no" mutable="no">
         <type></type>
@@ -409,7 +409,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="309" column="1" bodyfile="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="309" bodyend="-1"/>
+        <location file="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="309" column="1" bodyfile="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="309" bodyend="-1"/>
       </memberdef>
       <memberdef kind="variable" id="classf110__gym_1_1envs_1_1f110__env__backup_1_1_f110_env_1ab629b0d75ade059476f2bf4237798101" prot="public" static="no" mutable="no">
         <type></type>
@@ -422,7 +422,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="387" column="1" bodyfile="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="387" bodyend="-1"/>
+        <location file="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="387" column="1" bodyfile="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="387" bodyend="-1"/>
       </memberdef>
       <memberdef kind="variable" id="classf110__gym_1_1envs_1_1f110__env__backup_1_1_f110_env_1a34545b59df83e520f7c3031106c5c954" prot="public" static="no" mutable="no">
         <type></type>
@@ -435,7 +435,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="404" column="1" bodyfile="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="404" bodyend="-1"/>
+        <location file="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="404" column="1" bodyfile="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="404" bodyend="-1"/>
       </memberdef>
       <memberdef kind="variable" id="classf110__gym_1_1envs_1_1f110__env__backup_1_1_f110_env_1ab224af4cddca309ab854b9c26f40868f" prot="public" static="no" mutable="no">
         <type></type>
@@ -448,7 +448,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="407" column="1" bodyfile="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="407" bodyend="-1"/>
+        <location file="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="407" column="1" bodyfile="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="407" bodyend="-1"/>
       </memberdef>
       <memberdef kind="variable" id="classf110__gym_1_1envs_1_1f110__env__backup_1_1_f110_env_1ad6e649f8338d89746244b9e6c4bce71b" prot="public" static="no" mutable="no">
         <type></type>
@@ -461,7 +461,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="408" column="1" bodyfile="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="408" bodyend="-1"/>
+        <location file="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="408" column="1" bodyfile="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="408" bodyend="-1"/>
       </memberdef>
       <memberdef kind="variable" id="classf110__gym_1_1envs_1_1f110__env__backup_1_1_f110_env_1ab5e2d4e41534916caaa9fa2a94979053" prot="public" static="no" mutable="no">
         <type></type>
@@ -474,7 +474,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="413" column="1" bodyfile="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="413" bodyend="-1"/>
+        <location file="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="413" column="1" bodyfile="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="413" bodyend="-1"/>
       </memberdef>
       <memberdef kind="variable" id="classf110__gym_1_1envs_1_1f110__env__backup_1_1_f110_env_1a0959bbc593917d214789b9785a8f8b0c" prot="public" static="no" mutable="no">
         <type></type>
@@ -487,7 +487,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="414" column="1" bodyfile="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="414" bodyend="-1"/>
+        <location file="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="414" column="1" bodyfile="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="414" bodyend="-1"/>
       </memberdef>
       <memberdef kind="variable" id="classf110__gym_1_1envs_1_1f110__env__backup_1_1_f110_env_1a6f808319f37385f5f8f8e9198ad208f6" prot="public" static="no" mutable="no">
         <type></type>
@@ -500,7 +500,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="415" column="1" bodyfile="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="415" bodyend="-1"/>
+        <location file="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="415" column="1" bodyfile="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="415" bodyend="-1"/>
       </memberdef>
       <memberdef kind="variable" id="classf110__gym_1_1envs_1_1f110__env__backup_1_1_f110_env_1a894820aea9c0b9c750f165798ab60ba0" prot="public" static="no" mutable="no">
         <type></type>
@@ -513,7 +513,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="416" column="1" bodyfile="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="416" bodyend="-1"/>
+        <location file="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="416" column="1" bodyfile="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="416" bodyend="-1"/>
       </memberdef>
       <memberdef kind="variable" id="classf110__gym_1_1envs_1_1f110__env__backup_1_1_f110_env_1ae28edcae46735a4e684140aa05fd099b" prot="public" static="no" mutable="no">
         <type></type>
@@ -526,7 +526,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="417" column="1" bodyfile="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="417" bodyend="-1"/>
+        <location file="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="417" column="1" bodyfile="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="417" bodyend="-1"/>
       </memberdef>
       <memberdef kind="variable" id="classf110__gym_1_1envs_1_1f110__env__backup_1_1_f110_env_1a82dcb09e9adb3f73dc1c61a3e406dfe9" prot="public" static="no" mutable="no">
         <type></type>
@@ -539,7 +539,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="418" column="1" bodyfile="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="418" bodyend="-1"/>
+        <location file="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="418" column="1" bodyfile="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="418" bodyend="-1"/>
       </memberdef>
       <memberdef kind="variable" id="classf110__gym_1_1envs_1_1f110__env__backup_1_1_f110_env_1a50b6912954290c4c5fb9165fc0103628" prot="public" static="no" mutable="no">
         <type></type>
@@ -552,7 +552,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="419" column="1" bodyfile="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="419" bodyend="-1"/>
+        <location file="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="419" column="1" bodyfile="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="419" bodyend="-1"/>
       </memberdef>
       <memberdef kind="variable" id="classf110__gym_1_1envs_1_1f110__env__backup_1_1_f110_env_1a59e7a0edc30712fb482c246e01a72368" prot="public" static="no" mutable="no">
         <type></type>
@@ -565,7 +565,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="556" column="1" bodyfile="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="556" bodyend="-1"/>
+        <location file="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="556" column="1" bodyfile="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="556" bodyend="-1"/>
       </memberdef>
       </sectiondef>
       <sectiondef kind="public-func">
@@ -584,7 +584,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="67" column="1" bodyfile="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="67" bodyend="174"/>
+        <location file="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="67" column="1" bodyfile="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="67" bodyend="174"/>
       </memberdef>
       <memberdef kind="function" id="classf110__gym_1_1envs_1_1f110__env__backup_1_1_f110_env_1ab53974d19ae639eaa8d922db303d21c4" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type>def</type>
@@ -603,7 +603,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="175" column="1" bodyfile="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="175" bodyend="184"/>
+        <location file="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="175" column="1" bodyfile="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="175" bodyend="184"/>
       </memberdef>
       <memberdef kind="function" id="classf110__gym_1_1envs_1_1f110__env__backup_1_1_f110_env_1a5613fa6844441b3e94e6c75d2d6235e7" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type>def</type>
@@ -624,7 +624,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="327" column="1" bodyfile="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="327" bodyend="399"/>
+        <location file="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="327" column="1" bodyfile="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="327" bodyend="399"/>
       </memberdef>
       <memberdef kind="function" id="classf110__gym_1_1envs_1_1f110__env__backup_1_1_f110_env_1acc334d94e1a842ed26b8820a9730566e" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type>def</type>
@@ -646,7 +646,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="400" column="1" bodyfile="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="400" bodyend="462"/>
+        <location file="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="400" column="1" bodyfile="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="400" bodyend="462"/>
       </memberdef>
       <memberdef kind="function" id="classf110__gym_1_1envs_1_1f110__env__backup_1_1_f110_env_1acb0331bb92b190cdd592060385726160" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type>def</type>
@@ -684,7 +684,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="463" column="1" bodyfile="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="463" bodyend="507"/>
+        <location file="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="463" column="1" bodyfile="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="463" bodyend="507"/>
       </memberdef>
       <memberdef kind="function" id="classf110__gym_1_1envs_1_1f110__env__backup_1_1_f110_env_1ad8af92604458991c85e4714ea1db581d" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type>def</type>
@@ -711,7 +711,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="508" column="1" bodyfile="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="508" bodyend="510"/>
+        <location file="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="508" column="1" bodyfile="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="508" bodyend="510"/>
       </memberdef>
       <memberdef kind="function" id="classf110__gym_1_1envs_1_1f110__env__backup_1_1_f110_env_1afd60c71c7b15c805310a4ac3510d70d2" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type>def</type>
@@ -765,7 +765,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="541" column="1" bodyfile="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="541" bodyend="588"/>
+        <location file="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="541" column="1" bodyfile="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="541" bodyend="588"/>
       </memberdef>
       </sectiondef>
       <sectiondef kind="private-func">
@@ -788,7 +788,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="185" column="1" bodyfile="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="185" bodyend="195"/>
+        <location file="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="185" column="1" bodyfile="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="185" bodyend="195"/>
       </memberdef>
       <memberdef kind="function" id="classf110__gym_1_1envs_1_1f110__env__backup_1_1_f110_env_1a21067a7283751af26448552a976a9c71" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type>def</type>
@@ -807,7 +807,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="196" column="1" bodyfile="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="196" bodyend="229"/>
+        <location file="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="196" column="1" bodyfile="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="196" bodyend="229"/>
       </memberdef>
       <memberdef kind="function" id="classf110__gym_1_1envs_1_1f110__env__backup_1_1_f110_env_1a0fd67b8765be08da96125421849d3144" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type>def</type>
@@ -830,7 +830,7 @@ This assumes start is always (0, 0)</verbatim> </para>
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="230" column="1" bodyfile="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="230" bodyend="293"/>
+        <location file="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="230" column="1" bodyfile="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="230" bodyend="293"/>
       </memberdef>
       <memberdef kind="function" id="classf110__gym_1_1envs_1_1f110__env__backup_1_1_f110_env_1a1d022634e984cb72c21b0a4b097dd4bc" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type>def</type>
@@ -849,7 +849,7 @@ This assumes start is always (0, 0)</verbatim> </para>
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="294" column="1" bodyfile="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="294" bodyend="299"/>
+        <location file="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="294" column="1" bodyfile="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="294" bodyend="299"/>
       </memberdef>
       <memberdef kind="function" id="classf110__gym_1_1envs_1_1f110__env__backup_1_1_f110_env_1a2bf2e9b454b5088eee0cacfaf806ef5a" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type>def</type>
@@ -873,7 +873,7 @@ obs is observation dictionary
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="300" column="1" bodyfile="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="300" bodyend="314"/>
+        <location file="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="300" column="1" bodyfile="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="300" bodyend="314"/>
       </memberdef>
       <memberdef kind="function" id="classf110__gym_1_1envs_1_1f110__env__backup_1_1_f110_env_1a8c9a1d3421c51841565bee8a1f9a464c" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type>def</type>
@@ -894,7 +894,7 @@ obs is observation dictionary
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="318" column="1" bodyfile="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="318" bodyend="326"/>
+        <location file="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="318" column="1" bodyfile="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="318" bodyend="326"/>
       </memberdef>
       </sectiondef>
     <briefdescription>
@@ -918,10 +918,10 @@ should be initialized with a map, a timestep, and number of agents
         </childnode>
       </node>
       <node id="3">
-        <label>utils.EzPickle</label>
+        <label>utils::EzPickle</label>
       </node>
       <node id="2">
-        <label>gym.Env</label>
+        <label>gym::Env</label>
       </node>
     </inheritancegraph>
     <collaborationgraph>
@@ -934,13 +934,13 @@ should be initialized with a map, a timestep, and number of agents
         </childnode>
       </node>
       <node id="3">
-        <label>utils.EzPickle</label>
+        <label>utils::EzPickle</label>
       </node>
       <node id="2">
-        <label>gym.Env</label>
+        <label>gym::Env</label>
       </node>
     </collaborationgraph>
-    <location file="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="56" column="1" bodyfile="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="56" bodyend="588"/>
+    <location file="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" line="56" column="1" bodyfile="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/f110_env_backup.py" bodystart="56" bodyend="588"/>
     <listofallmembers>
       <member refid="classf110__gym_1_1envs_1_1f110__env__backup_1_1_f110_env_1ab53974d19ae639eaa8d922db303d21c4" prot="public" virt="non-virtual"><scope>f110_gym::envs::f110_env_backup::F110Env</scope><name>__del__</name></member>
       <member refid="classf110__gym_1_1envs_1_1f110__env__backup_1_1_f110_env_1a20cf7bc892fe043174eb7c656b49e54d" prot="public" virt="non-virtual"><scope>f110_gym::envs::f110_env_backup::F110Env</scope><name>__init__</name></member>

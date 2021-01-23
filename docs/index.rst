@@ -55,3 +55,4 @@ To build a physical 1/10th scale vehicle, following the guide here: https://f1te
    api/collision_models
    api/env
    api/obv
+   api/rendering

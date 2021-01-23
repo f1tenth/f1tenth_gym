@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['racecar_26',['RaceCar',['../classf110__gym_1_1envs_1_1base__classes_1_1_race_car.html',1,'f110_gym::envs::base_classes']]]
+  ['envrenderer_41',['EnvRenderer',['../classf110__gym_1_1envs_1_1rendering_1_1_env_renderer.html',1,'f110_gym::envs::rendering']]]
 ];

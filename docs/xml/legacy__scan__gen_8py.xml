@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='UTF-8' standalone='no'?>
-<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.1" xml:lang="en-US">
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
   <compounddef id="legacy__scan__gen_8py" kind="file" language="Python">
     <compoundname>legacy_scan_gen.py</compoundname>
     <innernamespace refid="namespacef110__gym_1_1unittest_1_1legacy__scan__gen">f110_gym::unittest::legacy_scan_gen</innernamespace>
@@ -111,6 +111,6 @@
 <codeline lineno="101"><highlight class="normal"></highlight><highlight class="comment">#<sp/>package<sp/>data</highlight><highlight class="normal"></highlight></codeline>
 <codeline lineno="102"><highlight class="normal">np.savez_compressed(</highlight><highlight class="stringliteral">&apos;legacy_scan.npz&apos;</highlight><highlight class="normal">,<sp/>vegas=vegas_scan,<sp/>berlin=berlin_scan,<sp/>skirk=skirk_scan)</highlight></codeline>
     </programlisting>
-    <location file="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/unittest/legacy_scan_gen.py"/>
+    <location file="/home/billyzheng/f1tenth_gym/gym/f110_gym/unittest/legacy_scan_gen.py"/>
   </compounddef>
 </doxygen>

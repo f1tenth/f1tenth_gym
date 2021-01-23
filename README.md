@@ -22,6 +22,21 @@ cd examples
 python3 waypoint_follow.py
 ```
 
+## Known issues
+- On MacOS Big Sur and above, when rendering is turned on, you might encounter the error:
+```
+ImportError: Can't find framework /System/Library/Frameworks/OpenGL.framework.
+```
+You can fix the error by installing a newer version of pyglet:
+```bash
+$ pip3 install pyglet==1.5.11
+```
+And you might see an error similar to
+```
+gym 0.17.3 requires pyglet<=1.5.0,>=1.4.0, but you'll have pyglet 1.5.11 which is incompatible.
+```
+which could be ignored. The environment should still work without error.
+
 ## Citing
 If you find this Gym environment useful, please consider citing:
 

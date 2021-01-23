@@ -218,7 +218,7 @@ class EnvRenderer(pyglet.window.Window):
         # Get scale factor
         f = ZOOM_IN_FACTOR if dy > 0 else ZOOM_OUT_FACTOR if dy < 0 else 1
 
-        # If zoom_level is in the proper range TODO: set max level
+        # If zoom_level is in the proper range
         if .01 < self.zoom_level * f < 10:
 
             self.zoom_level *= f
@@ -241,7 +241,7 @@ class EnvRenderer(pyglet.window.Window):
 
     def on_close(self):
         """
-        Callback functuion when the 'x' is clicked on the window, overrides inherited method. Also throws exception to end the python program when in a loop.
+        Callback function when the 'x' is clicked on the window, overrides inherited method. Also throws exception to end the python program when in a loop.
 
         Args:
             None
@@ -258,10 +258,13 @@ class EnvRenderer(pyglet.window.Window):
 
     def on_draw(self):
         """
-        TODO:
-            1. draw map
-            2. draw agents
-            3. draw info text
+        Function when the pyglet is drawing. The function draws the batch created that includes the map points, the agent polygons, and the information text, and the fps display.
+        
+        Args:
+            None
+
+        Returns:
+            None
         """
 
         # if map and poses doesn't exist, raise exception
@@ -294,11 +297,13 @@ class EnvRenderer(pyglet.window.Window):
 
     def update_obs(self, obs):
         """
-        TODO: update observation being drawn
-            1. update agent poses, should be kept as a array since size not fixed
-            2. get vertices
-            3. update data member vertices
-            4. (possibly) draw laserscan (annoying, will require transformation)
+        Updates the renderer with the latest observation from the gym environment, including the agent poses, and the information text.
+
+        Args:
+            obs (dict): observation dict from the gym env
+
+        Returns:
+            None
         """
 
         self.ego_idx = obs['ego_idx']
@@ -329,13 +334,3 @@ class EnvRenderer(pyglet.window.Window):
         self.poses = poses
 
         self.score_label.text = 'Lap Time: {laptime:.2f}, Ego Lap Count: {count:.0f}'.format(laptime=obs['lap_times'][0], count=obs['lap_counts'][obs['ego_idx']])
-
-if __name__ == '__main__':
-    app = EnvRenderer(800, 800)
-    app.update_map('/home/billyzheng/tunercar/es/maps/map_wide', '.png')
-    obs = {'ego_idx': 0, 'poses_x': [0.0, 2.0], 'poses_y': [0.0, 0.0], 'poses_theta': [1.5, 1.5], 'lap_times': [0.0, 0.0], 'lap_counts': [0.0, 0.0]}
-    while True:
-        app.update_obs(obs)
-        app.dispatch_events()
-        app.on_draw()
-        app.flip()

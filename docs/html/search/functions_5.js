@@ -1,8 +1,4 @@
 var searchData=
 [
-  ['update_5fmap_41',['update_map',['../classf110__gym_1_1envs_1_1f110__env_1_1_f110_env.html#afc210c3941c1548692c75c961ad443df',1,'f110_gym::envs::f110_env::F110Env']]],
-  ['update_5fopp_5fposes_42',['update_opp_poses',['../classf110__gym_1_1envs_1_1base__classes_1_1_race_car.html#a4800c5ac90ba93b79a0338e5e34ead43',1,'f110_gym::envs::base_classes::RaceCar']]],
-  ['update_5fparams_43',['update_params',['../classf110__gym_1_1envs_1_1base__classes_1_1_race_car.html#a6ab5b5dd420b182b5156ee9566c03411',1,'f110_gym.envs.base_classes.RaceCar.update_params()'],['../classf110__gym_1_1envs_1_1base__classes_1_1_simulator.html#a974c58957a6b14582149d704ef28a68c',1,'f110_gym.envs.base_classes.Simulator.update_params()'],['../classf110__gym_1_1envs_1_1f110__env_1_1_f110_env.html#a79d419bbf2ff0e377d808e4a8f41cc81',1,'f110_gym.envs.f110_env.F110Env.update_params()']]],
-  ['update_5fpose_44',['update_pose',['../classf110__gym_1_1envs_1_1base__classes_1_1_race_car.html#ae12c14c1353e6aab2f72036593d85518',1,'f110_gym::envs::base_classes::RaceCar']]],
-  ['update_5fscan_45',['update_scan',['../classf110__gym_1_1envs_1_1base__classes_1_1_race_car.html#a356ec05a0a0c056f4d43f5fb0451c83d',1,'f110_gym::envs::base_classes::RaceCar']]]
+  ['position_58',['position',['../classf110__gym_1_1unittest_1_1pyglet__test_1_1_camera.html#a3d2948dc5b1a9d2a6c597a2850ac989b',1,'f110_gym.unittest.pyglet_test.Camera.position(self)'],['../classf110__gym_1_1unittest_1_1pyglet__test_1_1_camera.html#ac8e5a2d90df8cd68463746be6e65bee8',1,'f110_gym.unittest.pyglet_test.Camera.position(self, value)']]]
 ];

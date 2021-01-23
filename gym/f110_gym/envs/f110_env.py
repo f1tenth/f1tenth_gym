@@ -64,7 +64,7 @@ class F110Env(gym.Env, utils.EzPickle):
         
             map_ext (str, default='png'): image extension of the map image file. For example 'png', 'pgm'
         
-            params (dict, default={'mu': 1.0489, 'C_Sf':, 'C_Sr':, 'lf': 0.15875, 'lr': 0.17145, 'h': 0.074, 'm': 3.74, 'I': 0.04712, 's_min': -0.4189, 's_max': 0.4189, 'sv_min': -3.2, 'sv_max': 3.2, 'v_switch':7.319, 'a_max': 9.51, 'v_min':-5.0, 'v_max': 20.0}): dictionary of vehicle parameters.
+            params (dict, default={'mu': 1.0489, 'C_Sf':, 'C_Sr':, 'lf': 0.15875, 'lr': 0.17145, 'h': 0.074, 'm': 3.74, 'I': 0.04712, 's_min': -0.4189, 's_max': 0.4189, 'sv_min': -3.2, 'sv_max': 3.2, 'v_switch':7.319, 'a_max': 9.51, 'v_min':-5.0, 'v_max': 20.0, 'width': 0.31, 'length': 0.58}): dictionary of vehicle parameters.
             mu: surface friction coefficient
             C_Sf: Cornering stiffness coefficient, front
             C_Sr: Cornering stiffness coefficient, rear
@@ -81,6 +81,8 @@ class F110Env(gym.Env, utils.EzPickle):
             a_max: Maximum longitudinal acceleration
             v_min: Minimum longitudinal velocity
             v_max: Maximum longitudinal velocity
+            width: width of the vehicle in meters
+            length: length of the vehicle in meters
 
             num_agents (int, default=2): number of agents in the environment
 

@@ -1,24 +1,21 @@
 var indexSectionsWithContent =
 {
-  0: "_cdfirsu",
-  1: "cdfrs",
-  2: "f",
-  3: "_cirsu"
+  0: "_acdefimoprsuz",
+  1: "acdefrs",
+  2: "_cimoprsuz"
 };
 
 var indexSectionNames =
 {
   0: "all",
   1: "classes",
-  2: "namespaces",
-  3: "functions"
+  2: "functions"
 };
 
 var indexSectionLabels =
 {
   0: "All",
   1: "Classes",
-  2: "Namespaces",
-  3: "Functions"
+  2: "Functions"
 };
 

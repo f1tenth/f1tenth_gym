@@ -1,8 +1,23 @@
 <?xml version='1.0' encoding='UTF-8' standalone='no'?>
-<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.1" xml:lang="en-US">
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
   <compounddef id="namespacef110__gym_1_1envs_1_1dynamic__models" kind="namespace" language="Python">
     <compoundname>f110_gym::envs::dynamic_models</compoundname>
     <innerclass refid="classf110__gym_1_1envs_1_1dynamic__models_1_1_dynamics_test" prot="public">f110_gym::envs::dynamic_models::DynamicsTest</innerclass>
+      <sectiondef kind="var">
+      <memberdef kind="variable" id="dynamic__models_8py_1ab8a10c74a1f1dbbfd4adf3d8b264647f" prot="public" static="no" mutable="no">
+        <type></type>
+        <definition>f110_gym::envs::dynamic_models.cache</definition>
+        <argsstring></argsstring>
+        <name>cache</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/dynamic_models.py" line="29" column="1" bodyfile="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/dynamic_models.py" bodystart="29" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
       <sectiondef kind="func">
       <memberdef kind="function" id="dynamic__models_8py_1a431101ae67a4c958eb02126cf2ee5e66" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type>def</type>
@@ -52,7 +67,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/dynamic_models.py" line="30" column="1" bodyfile="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/dynamic_models.py" bodystart="30" bodyend="62"/>
+        <location file="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/dynamic_models.py" line="30" column="1" bodyfile="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/dynamic_models.py" bodystart="30" bodyend="62"/>
       </memberdef>
       <memberdef kind="function" id="dynamic__models_8py_1a08dd4fc40f33742219b2798addf0aaf2" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type>def</type>
@@ -102,7 +117,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/dynamic_models.py" line="63" column="1" bodyfile="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/dynamic_models.py" bodystart="63" bodyend="90"/>
+        <location file="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/dynamic_models.py" line="63" column="1" bodyfile="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/dynamic_models.py" bodystart="63" bodyend="90"/>
       </memberdef>
       <memberdef kind="function" id="dynamic__models_8py_1a44ce97966ffccf3d94aad7e3a766cf91" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type>def</type>
@@ -203,7 +218,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/dynamic_models.py" line="91" column="1" bodyfile="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/dynamic_models.py" bodystart="91" bodyend="123"/>
+        <location file="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/dynamic_models.py" line="91" column="1" bodyfile="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/dynamic_models.py" bodystart="91" bodyend="123"/>
       </memberdef>
       <memberdef kind="function" id="dynamic__models_8py_1a2491848cc1db2e106c039da6ed7041c6" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type>def</type>
@@ -306,7 +321,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/dynamic_models.py" line="124" column="1" bodyfile="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/dynamic_models.py" bodystart="124" bodyend="178"/>
+        <location file="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/dynamic_models.py" line="124" column="1" bodyfile="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/dynamic_models.py" bodystart="124" bodyend="178"/>
       </memberdef>
       <memberdef kind="function" id="dynamic__models_8py_1acadb3628c14a8cc2a59509833762f9c5" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type>def</type>
@@ -361,7 +376,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/dynamic_models.py" line="179" column="1" bodyfile="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/dynamic_models.py" bodystart="179" bodyend="222"/>
+        <location file="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/dynamic_models.py" line="179" column="1" bodyfile="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/dynamic_models.py" bodystart="179" bodyend="222"/>
       </memberdef>
       <memberdef kind="function" id="dynamic__models_8py_1a57b901e4cb2e0ad2ff8df6ad2b6035b1" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type>def</type>
@@ -450,7 +465,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/dynamic_models.py" line="223" column="1" bodyfile="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/dynamic_models.py" bodystart="223" bodyend="226"/>
+        <location file="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/dynamic_models.py" line="223" column="1" bodyfile="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/dynamic_models.py" bodystart="223" bodyend="226"/>
       </memberdef>
       <memberdef kind="function" id="dynamic__models_8py_1a99b883cf5f7f438b805dcbc2cff6b4ef" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type>def</type>
@@ -539,13 +554,13 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/dynamic_models.py" line="227" column="1" bodyfile="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/dynamic_models.py" bodystart="227" bodyend="230"/>
+        <location file="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/dynamic_models.py" line="227" column="1" bodyfile="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/dynamic_models.py" bodystart="227" bodyend="230"/>
       </memberdef>
       </sectiondef>
     <briefdescription>
     </briefdescription>
     <detaileddescription>
     </detaileddescription>
-    <location file="/home/f1tenth-eval/f1tenth_gym/gym/f110_gym/envs/dynamic_models.py" line="1" column="1"/>
+    <location file="/home/billyzheng/f1tenth_gym/gym/f110_gym/envs/dynamic_models.py" line="1" column="1"/>
   </compounddef>
 </doxygen>
