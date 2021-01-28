@@ -58,7 +58,7 @@ class F110Env(gym.Env, utils.EzPickle):
 
     Args:
         kwargs:
-            seed (int): seed for random state and reproducibility
+            seed (int, default=12345): seed for random state and reproducibility
             
             map (str, default='vegas'): name of the map used for the environment. Currently, available environments include: 'berlin', 'vegas', 'skirk'. You could use a string of the absolute path to the yaml file of your custom map.
         
@@ -95,9 +95,9 @@ class F110Env(gym.Env, utils.EzPickle):
     def __init__(self, **kwargs):        
         # kwargs extraction
         try:
-            np.random.seed(kwargs['seed'])
+            self.seed = kwargs['seed']
         except:
-            pass
+            self.seed = 12345
         try:
             self.map_name = kwargs['map']
             # different default maps
@@ -170,7 +170,7 @@ class F110Env(gym.Env, utils.EzPickle):
         self.start_rot = np.eye(2)
 
         # initiate stuff
-        self.sim = Simulator(self.params, self.num_agents)
+        self.sim = Simulator(self.params, self.num_agents, self.seed)
         self.sim.set_map(self.map_path, self.map_ext)
 
         # rendering

@@ -53,7 +53,7 @@ class RaceCar(object):
 
     """
 
-    def __init__(self, params, is_ego=False, time_step=0.01, num_beams=1080, fov=4.7):
+    def __init__(self, params, seed, is_ego=False, time_step=0.01, num_beams=1080, fov=4.7):
         """
         Init function
 
@@ -70,7 +70,8 @@ class RaceCar(object):
 
         # initialization
         self.params = params
-        self.is_ego = False
+        self.seed = seed
+        self.is_ego = is_ego
         self.time_step = time_step
         self.num_beams = 1080
         self.fov = 4.7
@@ -96,7 +97,7 @@ class RaceCar(object):
         self.ttc_thresh = 0.005
 
         # initialize scan sim
-        self.scan_simulator = ScanSimulator2D(num_beams, fov)
+        self.scan_simulator = ScanSimulator2D(num_beams, fov, seed=self.seed)
         scan_ang_incr = self.scan_simulator.get_increment()
 
         # current scan
@@ -180,6 +181,8 @@ class RaceCar(object):
         self.state = np.zeros((7, ))
         self.state[0:2] = pose[0:2]
         self.state[4] = pose[2]
+        # reset scan random generator
+        self.scan_simulator.reset_rng(self.seed)
 
     def ray_cast_agents(self, scan):
         """
@@ -332,13 +335,14 @@ class Simulator(object):
 
     """
 
-    def __init__(self, params, num_agents, time_step=0.01, ego_idx=0):
+    def __init__(self, params, num_agents, seed, time_step=0.01, ego_idx=0):
         """
         Init function
 
         Args:
             params (dict): vehicle parameter dictionary, includes {'mu', 'C_Sf', 'C_Sr', 'lf', 'lr', 'h', 'm', 'I', 's_min', 's_max', 'sv_min', 'sv_max', 'v_switch', 'a_max', 'v_min', 'v_max', 'length', 'width'}
             num_agents (int): number of agents in the environment
+            seed (int): seed of the rng in scan simulation
             time_step (float, default=0.01): physics time step
             ego_idx (int, default=0): ego vehicle's index in list of agents
 
@@ -346,6 +350,7 @@ class Simulator(object):
             None
         """
         self.num_agents = num_agents
+        self.seed = seed
         self.time_step = time_step
         self.ego_idx = ego_idx
         self.params = params
@@ -357,10 +362,10 @@ class Simulator(object):
         # initializing agents
         for i in range(self.num_agents):
             if i == ego_idx:
-                ego_car = RaceCar(params, is_ego=True)
+                ego_car = RaceCar(params, self.seed, is_ego=True)
                 self.agents.append(ego_car)
             else:
-                agent = RaceCar(params)
+                agent = RaceCar(params, self.seed)
                 self.agents.append(agent)
 
     def set_map(self, map_path, map_ext):
