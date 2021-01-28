@@ -11,6 +11,8 @@ The F1TENTH Gym environment is created for research that needs a asynchronous, r
 
 The environment is designed with determinism in mind. All agents' physics simulation are stepped simultaneously, and all randomness are seeded and experiments can be reproduced. The explicit stepping also enables the physics engine to take advantage of faster than real-time execution (up to 30x realtime) and enable massively parallel applications.
 
+Github repo: https://github.com/f1tenth/f1tenth_gym
+
 Example Usecases
 ------------------
 
