@@ -361,9 +361,12 @@ class Simulator(object):
         self.collision_idx = -1 * np.ones((self.num_agents, ))
 
         # initializing agents
+        fov = np.pi 
+        n_beams = 540
+        #TODO: add in a parameter file for each car that can be passed on
         for i in range(self.num_agents):
             if i == ego_idx:
-                ego_car = RaceCar(params, self.seed, is_ego=True)
+                ego_car = RaceCar(params, self.seed, is_ego=True, num_beams=n_beams, fov=fov)
                 self.agents.append(ego_car)
             else:
                 agent = RaceCar(params, self.seed)
