@@ -354,7 +354,8 @@ class F110Env(gym.Env, utils.EzPickle):
             # first call, initialize everything
             from f110_gym.envs.rendering import EnvRenderer
             self.renderer = EnvRenderer(WINDOW_W, WINDOW_H)
-            self.renderer.update_map(self.map_name, self.map_ext)
+            map_img_path = os.path.dirname(os.path.abspath(__file__)) + '/maps/' + self.map_name
+            self.renderer.update_map(map_img_path, self.map_ext)
         self.renderer.update_obs(self.current_obs)
         self.renderer.dispatch_events()
         self.renderer.on_draw()
