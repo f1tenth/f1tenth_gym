@@ -73,8 +73,8 @@ class RaceCar(object):
         self.seed = seed
         self.is_ego = is_ego
         self.time_step = time_step
-        self.num_beams = 1080
-        self.fov = 4.7
+        self.num_beams = num_beams
+        self.fov = fov
 
         # state is [x, y, steer_angle, vel, yaw_angle, yaw_rate, slip_angle]
         self.state = np.zeros((7, ))
@@ -181,6 +181,7 @@ class RaceCar(object):
         self.state = np.zeros((7, ))
         self.state[0:2] = pose[0:2]
         self.state[4] = pose[2]
+        self.steer_buffer = np.empty((0, ))
         # reset scan random generator
         self.scan_simulator.reset_rng(self.seed)
 
