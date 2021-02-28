@@ -176,6 +176,7 @@ class F110Env(gym.Env, utils.EzPickle):
         # rendering
         self.renderer = None
         self.current_obs = None
+        self.path = None
 
     def __del__(self):
         """
@@ -337,6 +338,18 @@ class F110Env(gym.Env, utils.EzPickle):
         """
         self.sim.update_params(params, agent_idx=index)
 
+    def update_path(self, path):
+        """
+        Updates the visualized path for vehicle path planner
+        
+        Args:
+            path (array): list of x,y path coordinates in global frame
+            
+        Returns:
+            None        
+        """
+        self.path = path
+
     def render(self, mode='human'):
         """
         Renders the environment with pyglet. Use mouse scroll in the window to zoom in/out, use mouse click drag to pan. Shows the agents, the map, current fps (bottom left corner), and the race information near as text.
@@ -355,7 +368,9 @@ class F110Env(gym.Env, utils.EzPickle):
             from f110_gym.envs.rendering import EnvRenderer
             self.renderer = EnvRenderer(WINDOW_W, WINDOW_H)
             self.renderer.update_map(self.map_name, self.map_ext)
+        
         self.renderer.update_obs(self.current_obs)
+        self.renderer.update_waypoints(self.path)
         self.renderer.dispatch_events()
         self.renderer.on_draw()
         self.renderer.flip()

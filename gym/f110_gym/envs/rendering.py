@@ -62,10 +62,14 @@ class EnvRenderer(pyglet.window.Window):
         Returns:
             None
         """
-        conf = Config(sample_buffers=1,
-                      samples=4,
-                      depth_size=16,
-                      double_buffer=True)
+        
+        # automatically set correct config
+        display = pyglet.canvas.get_display()
+        screen = display.get_default_screen()
+        for config in screen.get_matching_configs(pyglet.gl.Config()):
+            if config.aux_buffers or config.accum_red_size:
+                conf = config  
+        
         super().__init__(width, height, config=conf, resizable=True, vsync=False, *args, **kwargs)
 
         # gl init
@@ -91,6 +95,9 @@ class EnvRenderer(pyglet.window.Window):
 
         # current env agent vertices, (num_agents, 4, 2), 2nd and 3rd dimensions are the 4 corners in 2D
         self.vertices = None
+        
+        # current agent path points
+        self.path = []
 
         # current score label
         self.score_label = pyglet.text.Label(
@@ -294,6 +301,42 @@ class EnvRenderer(pyglet.window.Window):
         self.fps_display.draw()
         # Remove default modelview matrix
         glPopMatrix()
+        
+    def update_waypoints(self, path):
+        """
+        Updates the renderer with the latest waypoint data from the gym environment for the ego vehicle
+        
+        Args:
+            path (array): list of waypoints from path planner
+            
+        Returns:
+            None
+        """
+        
+        # instantiate path w/ set vertex count as Pyglet does not like changing the 
+        # number of vertices for a given polygon after setting it
+        orig_path = [0.]*20
+        
+        if path is not None:
+            np_path = np.array(path)
+            np_path = np_path.flatten() 
+            
+            # add all points from path to orig_path and set leftover x,y values to
+            # be the final value of path
+            for i in range(0,len(orig_path),2):
+                if i >= len(np_path):
+                    orig_path[i] = 50.*np_path[-2]
+                    orig_path[i+1] = 50.*np_path[-1]
+                else:
+                    orig_path[i] = 50.*np_path[i]
+                    orig_path[i+1] = 50.*np_path[i+1]
+            
+            # add path to batch if first time or update it if not
+            if not self.path:
+                self.path = self.batch.add(10, GL_LINE_STRIP, None, ('v2f',orig_path))
+            else:
+                self.path.vertices = orig_path
+        
 
     def update_obs(self, obs):
         """
