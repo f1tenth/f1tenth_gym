@@ -360,6 +360,10 @@ class Simulator(object):
         self.collisions = np.zeros((self.num_agents, ))
         self.collision_idx = -1 * np.ones((self.num_agents, ))
 
+        # obs info
+        self.obs_locations = None
+        self.obs_size = None
+
         # initializing agents
         fov = np.pi 
         n_beams = 540
@@ -386,6 +390,19 @@ class Simulator(object):
         for agent in self.agents:
             agent.set_map(map_path, map_ext)
 
+    def update_map_img(self, map_img):
+        """
+        Updates the map image used in the scan simulator.
+        This function is intended for used when adding obstacles to the map.
+
+        Args:
+            map_img (np.ndarray(map_width, map_height)): new image to be used
+
+        Returns:
+            None
+        """
+        for agent in self.agents:
+            agent.scan_simulator.update_map_img(map_img)
 
     def update_params(self, params, agent_idx=-1):
         """

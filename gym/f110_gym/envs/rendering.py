@@ -92,6 +92,10 @@ class EnvRenderer(pyglet.window.Window):
         # current env agent vertices, (num_agents, 4, 2), 2nd and 3rd dimensions are the 4 corners in 2D
         self.vertices = None
 
+        # obstacles
+        self.obstacle_poses = None
+        self.obstacles = None
+
         # current score label
         self.score_label = pyglet.text.Label(
                 'Lap Time: {laptime:.2f}, Ego Lap Count: {count:.0f}'.format(
@@ -152,6 +156,37 @@ class EnvRenderer(pyglet.window.Window):
         for i in range(map_points.shape[0]):
             self.batch.add(1, GL_POINTS, None, ('v3f/stream', [map_points[i, 0], map_points[i, 1], map_points[i, 2]]), ('c3B/stream', [183, 193, 222]))
         self.map_points = map_points
+
+    def add_obstacles(self, obs_locations, obs_size):
+        """
+        Adds green obstacles to the map
+
+        Args:
+            obs_locations (np.ndarray(n_obstacles, 2)): coordinates of obstacles to add
+            obs_size (list(2)): size of obstacles
+        
+        Returns:
+            None
+        """
+        if self.obstacle_poses is None:
+            self.obstacles = []
+            for i in range(len(obs_locations)):
+                vertices_np = get_vertices(np.array([0., 0., 0.]), obs_size[0], obs_size[1])
+                vertices = list(vertices_np.flatten())
+                # obstacle = self.batch.add(4, GL_QUADS, None, ('v2f', vertices), ('c3B', [172, 97, 185, 172, 97, 185, 172, 97, 185, 172, 97, 185]))
+                obstacle = self.batch.add(4, GL_QUADS, None, ('v2f', vertices), ('c3B', [0, 225, 0, 0, 225, 0, 0, 225, 0, 0, 225, 0]))
+                self.obstacles.append(obstacle)
+
+        poses_x = obs_locations[:, 0]
+        poses_y = obs_locations[:, 1]
+        poses_theta = np.ones_like(poses_x) * np.pi/2
+
+        poses = np.stack((poses_x, poses_y, poses_theta)).T
+        for j in range(poses.shape[0]):
+            vertices_np = 50. * get_vertices(poses[j, :], obs_size[0], obs_size[1])
+            vertices = list(vertices_np.flatten())
+            self.obstacles[j].vertices = vertices
+        self.obstacle_poses = poses
 
     def on_resize(self, width, height):
         """

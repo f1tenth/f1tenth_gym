@@ -25,12 +25,14 @@ Author: Hongrui Zheng
 '''
 
 # gym imports
+from PIL import Image
 import gym
 from gym import error, spaces, utils
 from gym.utils import seeding
 
 # base classes
 from f110_gym.envs.base_classes import Simulator
+from f110_gym.envs.laser_models import get_dt
 
 # others
 import numpy as np
@@ -169,13 +171,22 @@ class F110Env(gym.Env, utils.EzPickle):
         self.start_thetas = np.zeros((self.num_agents, ))
         self.start_rot = np.eye(2)
 
+        # needed for obstacle addition
+        self.empty_map_img = None
+        self.original_dt = None
+        self.map_resolution = None
+        self.map_height = None
+        self.map_width = None
+
         # initiate stuff
         self.sim = Simulator(self.params, self.num_agents, self.seed)
         self.sim.set_map(self.map_path, self.map_ext)
+        self.set_map_params(self.map_path, self.map_ext)
 
         # rendering
         self.renderer = None
         self.current_obs = None
+
 
     def __del__(self):
         """
@@ -311,6 +322,48 @@ class F110Env(gym.Env, utils.EzPickle):
         obs, reward, done, info = self.step(action)
         return obs, reward, done, info
 
+    def add_obstacles(self, n_obstacles=4, obstacle_size=[0.5, 0.5]):
+        """
+        Adds a set number of obstacles to the envioronment. 
+        Updates the renderer and the map kept by the laser scaner for each vehicle in the simulator
+
+        Args:
+            n_obstacles (int): number of obstacles to add
+            obstacle_size (list(2)): rectangular size of obstacles
+            
+        Returns:
+            None
+        """
+        if self.renderer is None:
+            self.render()
+        map_img = np.copy(self.empty_map_img)
+
+        obs_size_m = np.array(obstacle_size)
+        obs_size_px = obs_size_m / self.map_resolution
+
+        obs_locations = []
+        while len(obs_locations) < n:
+            rand_x = int(np.random.random() * (self.map_width - obs_size_px[0]))
+            rand_y = int(np.random.random() * (self.map_height - obs_size_px[1]))
+
+            if self.original_dt[rand_y, rand_x] > 0.05:
+                obs_locations.append([rand_y, rand_x])
+
+        obs_locations = np.array(obs_locations)
+        for location in obs_locations:
+            x, y = location[0], location[1]
+            for i in range(0, int(obs_size_px[0])):
+                for j in range(0, int(obs_size_px[1])):
+                    map_img[x+i, y+j] = 0
+
+        self.sim.update_map_img(map_img)
+        obstacle_x = obs_locations[:, 0] * self.map_resolution + self.orig_y + obs_size_m[0] / 2
+        obstacle_y = obs_locations[:, 1] * self.map_resolution + self.orig_x + obs_size_m[1] / 2
+        obs_locations_m = np.concatenate([obstacle_y[:, None], obstacle_x[:, None]], axis=-1)
+
+        self.renderer.add_obstacles(obs_locations_m, obs_size_m)
+
+
     def update_map(self, map_path, map_ext):
         """
         Updates the map used by simulation
@@ -323,6 +376,34 @@ class F110Env(gym.Env, utils.EzPickle):
             None
         """
         self.sim.set_map(map_path, map_ext)
+        self.set_map_params(map_path, map_ext)
+
+    def set_map_params(self, map_path, map_ext):
+        # needed for obstacles
+
+        with open(map_path, 'r') as yaml_stream:
+            try:
+                map_metadata = yaml.safe_load(yaml_stream)
+                self.map_resolution = map_metadata['resolution']
+                self.origin = map_metadata['origin']
+            except yaml.YAMLError as ex:
+                print(ex)
+
+        # calculate map parameters
+        self.orig_x = self.origin[0]
+        self.orig_y = self.origin[1]
+
+        map_img_path = os.path.splitext(map_path)[0] + map_ext
+        self.map_img = np.array(Image.open(map_img_path).transpose(Image.FLIP_TOP_BOTTOM))
+        self.empty_map_img = self.map_img.astype(np.float64)
+
+        self.empty_map_img[self.empty_map_img <= 128.] = 0.
+        self.empty_map_img[self.empty_map_img > 128.] = 255.
+
+        self.map_height = self.empty_map_img.shape[0]
+        self.map_width = self.empty_map_img.shape[1]
+
+        self.original_dt = get_dt(self.empty_map_img, self.map_resolution)
 
     def update_params(self, params, index=-1):
         """
