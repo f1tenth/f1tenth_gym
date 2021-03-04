@@ -342,7 +342,7 @@ class F110Env(gym.Env, utils.EzPickle):
         obs_size_px = obs_size_m / self.map_resolution
 
         obs_locations = []
-        while len(obs_locations) < n:
+        while len(obs_locations) < n_obstacles:
             rand_x = int(np.random.random() * (self.map_width - obs_size_px[0]))
             rand_y = int(np.random.random() * (self.map_height - obs_size_px[1]))
 
