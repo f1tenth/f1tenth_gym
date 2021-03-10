@@ -363,6 +363,55 @@ class F110Env(gym.Env, utils.EzPickle):
 
         self.renderer.add_obstacles(obs_locations_m, obs_size_m)
 
+    def add_obstacles_centerline(self, n_obstacles, obstacle_size=[0.5, 0.5]):
+        """
+        Adds a set number of obstacles to the envioronment. 
+        Updates the renderer and the map kept by the laser scaner for each vehicle in the simulator
+
+        Args:
+            n_obstacles (int): number of obstacles to add
+            obstacle_size (list(2)): rectangular size of obstacles
+            
+        Returns:
+            None
+        """
+
+        map_img = np.copy(self.empty_map_img)
+
+        obs_size_m = np.array(obstacle_size)
+        obs_size_px = obs_size_m / self.map_resolution
+
+        #TODO: find a way to get the centerline and then add obstacles along the centerline
+
+        obs_locations = []
+        while len(obs_locations) < n_obstacles:
+            rand_x = int(np.random.random() * (self.map_width - obs_size_px[0]))
+            rand_y = int(np.random.random() * (self.map_height - obs_size_px[1]))
+
+            if self.original_dt[rand_y, rand_x] > 0.05:
+                obs_locations.append([rand_y, rand_x])
+
+        #TODO: vectorise this
+        obs_locations = np.array(obs_locations)
+        for location in obs_locations:
+            x, y = location[0], location[1]
+            map_img[x:x+obs_size_px[0], y:y+obs_size_px[1]] = 0
+
+
+        # obs_locations = np.array(obs_locations)
+        # for location in obs_locations:
+        #     x, y = location[0], location[1]
+        #     for i in range(0, int(obs_size_px[0])):
+        #         for j in range(0, int(obs_size_px[1])):
+        #             map_img[x+i, y+j] = 0
+
+        self.sim.update_map_img(map_img)
+
+        if self.renderer is not None:
+            obstacle_x = obs_locations[:, 0] * self.map_resolution + self.orig_y + obs_size_m[0] / 2
+            obstacle_y = obs_locations[:, 1] * self.map_resolution + self.orig_x + obs_size_m[1] / 2
+            obs_locations_m = np.concatenate([obstacle_y[:, None], obstacle_x[:, None]], axis=-1)
+            self.renderer.add_obstacles(obs_locations_m, obs_size_m)
 
     def update_map(self, map_path, map_ext):
         """
