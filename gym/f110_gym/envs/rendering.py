@@ -97,7 +97,12 @@ class EnvRenderer(pyglet.window.Window):
         self.vertices = None
         
         # current agent path points
-        self.path = []
+        self.paths = []
+        
+        self.group = []
+        
+        # current agent goal points
+        self.goals = []
 
         # current score label
         self.score_label = pyglet.text.Label(
@@ -302,40 +307,79 @@ class EnvRenderer(pyglet.window.Window):
         # Remove default modelview matrix
         glPopMatrix()
         
-    def update_waypoints(self, path):
+    def update_goal_pts(self, goal_pts):
         """
-        Updates the renderer with the latest waypoint data from the gym environment for the ego vehicle
+        Updates the renderer with the latest goal points from the gym environment
         
         Args:
-            path (array): list of waypoints from path planner
+            goal_pts (array(tuple)): list of tuples of goal points from path planner, one for each vehicle
+            
+        Returns:
+            None
+        """
+        num_agents = len(goal_pts)
+        
+        # go thru all agent goal points
+        for j in range(num_agents):
+            
+            if goal_pts[j] is not None:
+                np_goal_pt = np.array(goal_pts[j])
+                np_goal_pt = 50.*(np_goal_pt.flatten())
+                
+                # if the goal point hasn't been added to the batch list of goals yet,
+                # add them. Otherwise, update them
+                if len(self.goals)-1 < j:
+                    self.goals.append(self.batch.add(1, GL_POINTS, None, ('v2f',np_goal_pt), 
+                                                                         ('c3B', (255, 0, 0))))
+                else:
+                    self.goals[j].vertices = np_goal_pt
+                
+        
+        
+    def update_waypoints(self, paths, num_vertices):
+        """
+        Updates the renderer with the latest waypoint data from the gym environment for multiple vehicles
+        
+        Args:
+            path (array(array)): list of lists of waypoints from path planner, one for each vehicle
             
         Returns:
             None
         """
         
-        # instantiate path w/ set vertex count as Pyglet does not like changing the 
-        # number of vertices for a given polygon after setting it
-        orig_path = [0.]*20
+        np_paths = np.array(paths)
+        num_agents = np.shape(np_paths)[0]
         
-        if path is not None:
-            np_path = np.array(path)
-            np_path = np_path.flatten() 
+        # add all agent waypoints to the self.paths array
+        for j in range(num_agents):
             
-            # add all points from path to orig_path and set leftover x,y values to
-            # be the final value of path
-            for i in range(0,len(orig_path),2):
-                if i >= len(np_path):
-                    orig_path[i] = 50.*np_path[-2]
-                    orig_path[i+1] = 50.*np_path[-1]
+            # instantiate path w/ set vertex count as Pyglet does not like changing the 
+            # number of vertices for a given polygon after setting it
+            orig_path = [0.]*num_vertices
+                
+            np_path = np.array(np_paths[j])
+            np_path = np_path.flatten()
+            
+            if len(np_path) > 0:
+            
+                # add all points from path to orig_path and set leftover x,y values to
+                # be the final value of path
+                # multiplied by 50 for the scaling factor
+                for i in range(0,len(orig_path),2):
+                    if i >= len(np_path):
+                        orig_path[i] = 50.*np_path[-2]
+                        orig_path[i+1] = 50.*np_path[-1]
+                    else:
+                        orig_path[i] = 50.*np_path[i]
+                        orig_path[i+1] = 50.*np_path[i+1]
+                
+                # add path to batch if first time or update it if not
+                if len(self.paths)-1 < j:
+                    self.group.append(pyglet.graphics.Group())
+                    self.paths.append(self.batch.add(int(num_vertices/2), GL_LINE_STRIP, self.group[j], ('v2f',orig_path)))
+                    
                 else:
-                    orig_path[i] = 50.*np_path[i]
-                    orig_path[i+1] = 50.*np_path[i+1]
-            
-            # add path to batch if first time or update it if not
-            if not self.path:
-                self.path = self.batch.add(10, GL_LINE_STRIP, None, ('v2f',orig_path))
-            else:
-                self.path.vertices = orig_path
+                    self.paths[j].vertices = orig_path
         
 
     def update_obs(self, obs):
