@@ -33,7 +33,7 @@
             console.log(frame_counter);
             var batch = batch_poses[frame_counter];
             batch.forEach((car_pose, index) => {
-                var car = cars[`car-${{ index }}`];
+                var car = cars[`car-${index}`];
                 car.style.left = car_pose[0] + "px";
                 car.style.top = car_pose[1] + "px";
                 car.style.transform = "rotate(" + car_pose[2] + "deg)";

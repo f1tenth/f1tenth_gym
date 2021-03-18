@@ -28,6 +28,7 @@ Author: Eoin Gogarty
 # imports
 import os
 import yaml
+import cv2
 import IPython
 import numpy as np
 
@@ -43,13 +44,18 @@ class Colab(object):
 
     def __init__(self, map_path, map_extension, num_agents, start_poses=None):
 
-        def load_binary(file):
-            with open(file, 'rb') as file:
-                return file.read()
+        def load_binary(filename):
+            with open(filename, 'rb') as f:
+                return f.read()
 
-        def load_html(file):
-            with open(file, 'r') as file:
-                return file.read()
+        def load_html(filename):
+            with open(filename, 'r') as f:
+                return f.read()
+
+        def get_bytes(image):
+          _, image_buffer_array = cv2.imencode(".jpg", np.array(image))
+          byte_image = image_buffer_array.tobytes()
+          return byte_image
 
         self.map_path = map_path
         self.map_extension = map_extension
@@ -60,21 +66,24 @@ class Colab(object):
         self.car_width = self.CAR_WIDTH / self.map_resolution
 
         html_code = load_html('/content/f1tenth_gym/gym/f110_gym/envs/colab.html')
-        map_image_binary = load_binary(map_path + map_extension)
+        map_image_binary = get_bytes(self.map_image)
         car_replace_tag = 'insert_cars_here'
         image_replace_tag = '"insert_binary_image_here"'
-        html_code.replace(car_replace_tag, ''.join([f'<div class="car" id="car-{i}"></div>' for i in range(num_agents)])) 
-        html_code.replace(image_replace_tag, map_image_binary)
+        html_code = html_code.replace(car_replace_tag, ''.join([f'<div class="car" id="car-{i}"></div>' for i in range(num_agents)])) 
+        html_code = html_code.replace("{","{{")
+        html_code = html_code.replace("}","}}")
+        html_code = html_code.replace(image_replace_tag,"{map_image_binary}")
+        html_code = html_code.format(map_image_binary=map_image_binary)
         html_code = html_code.replace('btoa(b', 'btoa(')
         # and start the display
-        IPython.display.HTML(html_code)
+        display(IPython.display.HTML(html_code))
 
         # batch poses together
         self.batch_poses = []
         self.frame_counter = 0
 
-    def update_cars(self, poses):
-        self.batch_poses.append([self.frame_counter, self.adjust_car_poses()])
+    def update_cars(self, p_x, p_y, p_t):
+        self.batch_poses.append([self.frame_counter, self.adjust_car_poses(p_x, p_y, p_t)])
         self.frame_counter += 1
         if len(self.batch_poses) >= self.MIN_BATCH:
             js_code = '''
@@ -105,4 +114,4 @@ class Colab(object):
         poses_scaled = poses_offset / self.map_resolution
         poses_cropped = poses_scaled - self.crop_offset
         poses_inverted = poses_cropped * [1, -1] + [0, self.map_image.size[1]]
-        return [[x, y, t] for (x, y), t in zip(poses_inverted, self.poses_theta)]
+        return [[x, y, t] for (x, y), t in zip(poses_inverted, poses_theta)]
