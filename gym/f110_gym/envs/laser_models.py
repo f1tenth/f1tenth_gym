@@ -342,6 +342,7 @@ class ScanSimulator2D(object):
         self.map_width = None
         self.map_resolution = None
         self.dt = None
+        self.map_img = None
         
         # white noise generator
         self.rng = np.random.default_rng(seed=seed)

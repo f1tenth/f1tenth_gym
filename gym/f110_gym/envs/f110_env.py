@@ -172,17 +172,10 @@ class F110Env(gym.Env, utils.EzPickle):
         self.start_thetas = np.zeros((self.num_agents, ))
         self.start_rot = np.eye(2)
 
-        # needed for obstacle addition
-        self.empty_map_img = None
-        self.original_dt = None
-        self.map_resolution = None
-        self.map_height = None
-        self.map_width = None
-
         # initiate stuff
         self.sim = Simulator(self.params, self.num_agents, self.seed)
         self.sim.set_map(self.map_path, self.map_ext)
-        self.set_map_params(self.map_path, self.map_ext)
+        self.empty_map_img = np.copy(self.sim.agents[0].scan_simulator.map_img)
 
         # rendering
         self.renderer = None
@@ -322,50 +315,10 @@ class F110Env(gym.Env, utils.EzPickle):
         obs, reward, done, info = self.step(action)
         return obs, reward, done, info
 
-    def add_obstacles(self, n_obstacles=4, obstacle_size=[0.5, 0.5]):
-        """
-        Adds a set number of obstacles to the envioronment. 
-        Updates the renderer and the map kept by the laser scaner for each vehicle in the simulator
-
-        Args:
-            n_obstacles (int): number of obstacles to add
-            obstacle_size (list(2)): rectangular size of obstacles
-            
-        Returns:
-            None
-        """
-        if self.renderer is None:
-            self.render()
-        map_img = np.copy(self.empty_map_img)
-
-        obs_size_m = np.array(obstacle_size)
-        obs_size_px = obs_size_m / self.map_resolution
-
-        obs_locations = []
-        while len(obs_locations) < n_obstacles:
-            rand_x = int(np.random.random() * (self.map_width - obs_size_px[0]))
-            rand_y = int(np.random.random() * (self.map_height - obs_size_px[1]))
-
-            if self.original_dt[rand_y, rand_x] > 0.05:
-                obs_locations.append([rand_y, rand_x])
-
-        obs_locations = np.array(obs_locations)
-        for location in obs_locations:
-            x, y = location[0], location[1]
-            for i in range(0, int(obs_size_px[0])):
-                for j in range(0, int(obs_size_px[1])):
-                    map_img[x+i, y+j] = 0
-
-        self.sim.update_map_img(map_img)
-        obstacle_x = obs_locations[:, 0] * self.map_resolution + self.orig_y + obs_size_m[0] / 2
-        obstacle_y = obs_locations[:, 1] * self.map_resolution + self.orig_x + obs_size_m[1] / 2
-        obs_locations_m = np.concatenate([obstacle_y[:, None], obstacle_x[:, None]], axis=-1)
-
-        self.renderer.add_obstacles(obs_locations_m, obs_size_m)
-
     def load_centerline(self, file_name=None):
         """
         Loads a centerline from a csv file. 
+        Note: the file must be in the same folder as the map which the simulator loads.
 
         Args:
             file_name (string): the name of a csv file with the centerline of the track in the form [x_i, y_i, w_l_i, w_r_i], location and width
@@ -375,7 +328,8 @@ class F110Env(gym.Env, utils.EzPickle):
             widths (np.ndarray): the widths of the track
         """
         if file_name is None:
-            file_name = self.map_path + self.map_name + '_centerline.csv'
+            map_path = os.path.splitext(self.map_path)[0]
+            file_name = map_path + '_centerline.csv'
         else:
             file_name = self.map_path + file_name
 
@@ -391,9 +345,10 @@ class F110Env(gym.Env, utils.EzPickle):
 
         return center_pts, widths
 
-    def add_obstacles_centerline(self, n_obstacles, obstacle_size=[0.5, 0.5]):
+    def add_obstacles(self, n_obstacles, obstacle_size=[0.5, 0.5]):
         """
-        Adds a set number of obstacles to the envioronment. 
+        Adds a set number of obstacles to the envioronment using the track centerline. 
+        Note: this function requires a csv file with the centerline points in it which can be loaded. 
         Updates the renderer and the map kept by the laser scaner for each vehicle in the simulator
 
         Args:
@@ -403,41 +358,35 @@ class F110Env(gym.Env, utils.EzPickle):
         Returns:
             None
         """
-
         map_img = np.copy(self.empty_map_img)
+        scan_sim = self.sim.agents[0].scan_simulator
 
         obs_size_m = np.array(obstacle_size)
-        obs_size_px = obs_size_m / self.map_resolution
-
-        obs_locations = []
+        obs_size_px = np.array(obs_size_m / scan_sim.map_resolution, dtype=int)
+        
         center_pts, widths = self.load_centerline()
 
         # randomly select certain idx's
-        rand_idxs = np.random.randint(1, len(center_pts)-1)
+        rand_idxs = np.random.randint(1, len(center_pts)-1, n_obstacles)
         
         # randomly select location within box of minimum_width around the center point
         rands = np.random.uniform(-1, 1, size=(n_obstacles, 2))
-        min_widths = np.min(widths, axis=0)
-        rand_xs = rands[:, 0] * min_widths
-        rand_ys = rands[:, 1] * min_widths
-        rand_boxes = np.concatenate([rand_xs, rand_ys], axis=-1)
-        obs_locations + center_pts[rand_idxs, :] + rand_boxes
+        obs_locations = center_pts[rand_idxs, :] + rands * widths[rand_idxs]
 
         # change the values of the img at each obstacle location
         obs_locations = np.array(obs_locations)
         for location in obs_locations:
-            x, y = location[0], location[1]
-            map_img[x:x+obs_size_px[0], y:y+obs_size_px[1]] = 0
+            # convert the location to the pixel coordinates
+            x = int((location[0] - scan_sim.orig_x) / scan_sim.map_resolution)
+            y = int((location[1] - scan_sim.orig_y) / scan_sim.map_resolution)
+            map_img[y:y+obs_size_px[0], x:x+obs_size_px[1]] = 0
 
         # update the image in the simulator
         self.sim.update_map_img(map_img)
 
         # if rendering is on, then add obstacles to the renderer
         if self.renderer is not None:
-            obstacle_x = obs_locations[:, 0] * self.map_resolution + self.orig_y + obs_size_m[0] / 2
-            obstacle_y = obs_locations[:, 1] * self.map_resolution + self.orig_x + obs_size_m[1] / 2
-            obs_locations_m = np.concatenate([obstacle_y[:, None], obstacle_x[:, None]], axis=-1)
-            self.renderer.add_obstacles(obs_locations_m, obs_size_m)
+            self.renderer.add_obstacles(obs_locations, obs_size_m)
 
     def update_map(self, map_path, map_ext):
         """
@@ -451,34 +400,6 @@ class F110Env(gym.Env, utils.EzPickle):
             None
         """
         self.sim.set_map(map_path, map_ext)
-        self.set_map_params(map_path, map_ext)
-
-    def set_map_params(self, map_path, map_ext):
-        # needed for obstacles
-
-        with open(map_path, 'r') as yaml_stream:
-            try:
-                map_metadata = yaml.safe_load(yaml_stream)
-                self.map_resolution = map_metadata['resolution']
-                self.origin = map_metadata['origin']
-            except yaml.YAMLError as ex:
-                print(ex)
-
-        # calculate map parameters
-        self.orig_x = self.origin[0]
-        self.orig_y = self.origin[1]
-
-        map_img_path = os.path.splitext(map_path)[0] + map_ext
-        self.map_img = np.array(Image.open(map_img_path).transpose(Image.FLIP_TOP_BOTTOM))
-        self.empty_map_img = self.map_img.astype(np.float64)
-
-        self.empty_map_img[self.empty_map_img <= 128.] = 0.
-        self.empty_map_img[self.empty_map_img > 128.] = 255.
-
-        self.map_height = self.empty_map_img.shape[0]
-        self.map_width = self.empty_map_img.shape[1]
-
-        self.original_dt = get_dt(self.empty_map_img, self.map_resolution)
 
     def update_params(self, params, index=-1):
         """
@@ -510,7 +431,7 @@ class F110Env(gym.Env, utils.EzPickle):
             # first call, initialize everything
             from f110_gym.envs.rendering import EnvRenderer
             self.renderer = EnvRenderer(WINDOW_W, WINDOW_H)
-            map_img_path = os.path.dirname(os.path.abspath(__file__)) + '/maps/' + self.map_name
+            map_img_path = os.path.splitext(self.map_path)[0]
             self.renderer.update_map(map_img_path, self.map_ext)
         self.renderer.update_obs(self.current_obs)
         self.renderer.dispatch_events()
