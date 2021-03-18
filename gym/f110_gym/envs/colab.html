@@ -22,7 +22,7 @@
         document.getElementById("map").src = 'data:image/jpeg;base64,' + btoa("insert_binary_image_here");
         const listenerChannel = new BroadcastChannel('channel');
         const cars = document.getElementsByClassName("car");
-        const start_threshold = 60;
+        const start_threshold = 200;
         var waiting = true;
         var frame_counter = 0;
         var batch_poses = {};
@@ -41,7 +41,7 @@
             delete batch_poses[frame_counter++];
         }
         listenerChannel.onmessage = (msg) => msg.data.forEach((poses) => batch_poses[poses[0]] = poses[1]);
-        let timerId = setInterval(updateCars, 1000 / 60);
+        let timerId = setInterval(updateCars, 1000 / 100);
     </script>
 </body>
 

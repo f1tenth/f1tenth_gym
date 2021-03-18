@@ -149,6 +149,7 @@ class F110Env(gym.Env, utils.EzPickle):
         self.start_thresh = 0.5  # 10cm
 
         # env states
+        self.done = True
         self.poses_x = []
         self.poses_y = []
         self.poses_theta = []
@@ -277,10 +278,10 @@ class F110Env(gym.Env, utils.EzPickle):
         self._update_state(obs)
 
         # check done
-        done, toggle_list = self._check_done()
+        self.done, toggle_list = self._check_done()
         info = {'checkpoint_done': toggle_list}
 
-        return obs, reward, done, info
+        return obs, reward, self.done, info
 
     def reset(self, poses):
         """
@@ -314,8 +315,8 @@ class F110Env(gym.Env, utils.EzPickle):
 
         # get no input observations
         action = np.zeros((self.num_agents, 2))
-        obs, reward, done, info = self.step(action)
-        return obs, reward, done, info
+        obs, reward, self.done, info = self.step(action)
+        return obs, reward, self.done, info
 
     def update_map(self, map_path, map_ext):
         """
@@ -361,7 +362,7 @@ class F110Env(gym.Env, utils.EzPickle):
                 # first call, initialize everything
                 from f110_gym.envs.colab import Colab
                 self.renderer = Colab(self.map_name, self.map_ext, self.num_agents)
-            self.renderer.update_cars(self.poses_x, self.poses_y, self.poses_theta)
+            self.renderer.update_cars(self.poses_x, self.poses_y, self.poses_theta, self.done)
             # if mode == 'human':
             #     time.sleep(0.005)
             # elif mode == 'human_fast':

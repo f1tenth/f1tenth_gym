@@ -40,13 +40,9 @@ class Colab(object):
     CAR_LENGTH = 0.58
     CAR_WIDTH = 0.31
 
-    MIN_BATCH = 100
+    MIN_BATCH = 200
 
     def __init__(self, map_path, map_extension, num_agents, start_poses=None):
-
-        def load_binary(filename):
-            with open(filename, 'rb') as f:
-                return f.read()
 
         def load_html(filename):
             with open(filename, 'r') as f:
@@ -82,10 +78,10 @@ class Colab(object):
         self.batch_poses = []
         self.frame_counter = 0
 
-    def update_cars(self, p_x, p_y, p_t):
+    def update_cars(self, p_x, p_y, p_t, done):
         self.batch_poses.append([self.frame_counter, self.adjust_car_poses(p_x, p_y, p_t)])
         self.frame_counter += 1
-        if len(self.batch_poses) >= self.MIN_BATCH:
+        if (len(self.batch_poses) >= self.MIN_BATCH) or done:
             js_code = '''
             const senderChannel = new BroadcastChannel('channel');
             senderChannel.postMessage({poses});
