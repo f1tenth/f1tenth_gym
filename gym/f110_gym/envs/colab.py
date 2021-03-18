@@ -26,8 +26,9 @@ Author: Eoin Gogarty
 """
 
 # imports
-import IPython
+import os
 import yaml
+import IPython
 import numpy as np
 
 from PIL import Image
