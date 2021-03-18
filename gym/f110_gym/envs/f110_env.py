@@ -177,6 +177,14 @@ class F110Env(gym.Env, utils.EzPickle):
         self.renderer = None
         self.current_obs = None
 
+        # colab
+        # self.colab = 'google.colab' in str(get_ipython()) # maybe this will work after importing IPython
+        try:
+            import google.colab
+            self.colab = True
+        except:
+            self.colab = False
+
     def __del__(self):
         """
         Finalizer, does cleanup
