@@ -178,7 +178,6 @@ class F110Env(gym.Env, utils.EzPickle):
         self.current_obs = None
 
         # colab
-        # self.colab = 'google.colab' in str(get_ipython()) # maybe this will work after importing IPython
         try:
             import google.colab
             self.colab = True
@@ -358,16 +357,27 @@ class F110Env(gym.Env, utils.EzPickle):
             None
         """
         assert mode in ['human', 'human_fast']
-        if self.renderer is None:
-            # first call, initialize everything
-            from f110_gym.envs.rendering import EnvRenderer
-            self.renderer = EnvRenderer(WINDOW_W, WINDOW_H)
-            self.renderer.update_map(self.map_name, self.map_ext)
-        self.renderer.update_obs(self.current_obs)
-        self.renderer.dispatch_events()
-        self.renderer.on_draw()
-        self.renderer.flip()
-        if mode == 'human':
-            time.sleep(0.005)
-        elif mode == 'human_fast':
-            pass
+        if self.colab:
+            if self.renderer is None:
+                # first call, initialize everything
+                from f110_gym.envs.colab import Colab
+                self.renderer = Colab(self.map_name, self.map_ext, self.num_agents)
+            self.renderer.update_cars(self.poses_x, self.poses_y, self.poses_theta)
+            # if mode == 'human':
+            #     time.sleep(0.005)
+            # elif mode == 'human_fast':
+            #     pass
+        else:
+            if self.renderer is None:
+                # first call, initialize everything
+                from f110_gym.envs.rendering import EnvRenderer
+                self.renderer = EnvRenderer(WINDOW_W, WINDOW_H)
+                self.renderer.update_map(self.map_name, self.map_ext)
+            self.renderer.update_obs(self.current_obs)
+            self.renderer.dispatch_events()
+            self.renderer.on_draw()
+            self.renderer.flip()
+            if mode == 'human':
+                time.sleep(0.005)
+            elif mode == 'human_fast':
+                pass

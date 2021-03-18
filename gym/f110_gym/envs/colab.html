@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        .car {
+            width: 15px;
+            height: 30px;
+            position: absolute;
+            background-color: red;
+        }
+    </style>
+</head>
+
+<body>
+    <img id="map">insert_cars_here</img>
+    <script>
+        document.getElementById("map").src = 'data:image/jpeg;base64,' + btoa("insert_binary_image_here");
+        const listenerChannel = new BroadcastChannel('channel');
+        const cars = document.getElementsByClassName("car");
+        const start_threshold = 60;
+        var waiting = true;
+        var frame_counter = 0;
+        var batch_poses = {};
+        function updateCars() {
+            if (!(start_threshold in batch_poses) && waiting) return;
+            waiting = false;
+            if (!(frame_counter in batch_poses)) return;
+            console.log(frame_counter);
+            var batch = batch_poses[frame_counter];
+            batch.forEach((car_pose, index) => {
+                var car = cars[`car-${{ index }}`];
+                car.style.left = car_pose[0] + "px";
+                car.style.top = car_pose[1] + "px";
+                car.style.transform = "rotate(" + car_pose[2] + "deg)";
+            });
+            delete batch_poses[frame_counter++];
+        }
+        listenerChannel.onmessage = (msg) => msg.data.forEach((poses) => batch_poses[poses[0]] = poses[1]);
+        let timerId = setInterval(updateCars, 1000 / 60);
+    </script>
+</body>
+
+</html>
