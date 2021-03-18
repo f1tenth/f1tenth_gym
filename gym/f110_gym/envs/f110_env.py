@@ -37,10 +37,16 @@ import numpy as np
 import os
 import time
 
-# gl
-import pyglet
-pyglet.options['debug_gl'] = False
-from pyglet import gl
+# colab and gl
+try:
+    import google.colab
+    IN_COLAB = True
+except:
+    IN_COLAB = False
+    # gl
+    import pyglet
+    pyglet.options['debug_gl'] = False
+    from pyglet import gl
 
 # constants
 
@@ -176,13 +182,6 @@ class F110Env(gym.Env, utils.EzPickle):
         # rendering
         self.renderer = None
         self.current_obs = None
-
-        # colab
-        try:
-            import google.colab
-            self.colab = True
-        except:
-            self.colab = False
 
     def __del__(self):
         """
@@ -357,7 +356,7 @@ class F110Env(gym.Env, utils.EzPickle):
             None
         """
         assert mode in ['human', 'human_fast']
-        if self.colab:
+        if IN_COLAB:
             if self.renderer is None:
                 # first call, initialize everything
                 from f110_gym.envs.colab import Colab
