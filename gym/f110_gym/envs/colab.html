@@ -8,8 +8,8 @@
     <title>Document</title>
     <style>
         .car {
-            width: var(--car-width);
-            height: var(--car-length);
+            width: var(--car-length);
+            height: var(--car-width);
             position: absolute;
             background-color: red;
         }
@@ -46,7 +46,7 @@
                 var car = cars[`car-${index}`];
                 car.style.left = car_pose[0] + "px";
                 car.style.top = car_pose[1] + "px";
-                car.style.transform = "rotate(" + car_pose[2] + "deg)";
+                car.style.transform = "rotate(" + car_pose[2] + "rad)";
             });
             delete batch_poses[frame_counter++];
         }
