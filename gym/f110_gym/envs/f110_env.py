@@ -37,16 +37,17 @@ import numpy as np
 import os
 import time
 
-# colab and gl
+# gl
+import pyglet
+pyglet.options['debug_gl'] = False
+from pyglet import gl
+
+# colab
 try:
     import google.colab
     IN_COLAB = True
 except:
     IN_COLAB = False
-    # gl
-    import pyglet
-    pyglet.options['debug_gl'] = False
-    from pyglet import gl
 
 # constants
 
