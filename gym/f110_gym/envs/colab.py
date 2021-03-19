@@ -113,7 +113,6 @@ class Colab(object):
         poses_offset = np.array(poses) - self.map_origin[:2]
         poses_scaled = poses_offset / self.map_resolution
         poses_cropped = poses_scaled - self.crop_offset
-        poses_inverted = poses_cropped * [1, -1] + [0, self.map_image.size[1]]
         # check for theta overflow and have to negate angle (not sure why)
         poses_theta = [- t % np.pi for t in poses_theta]
-        return [[x, y, t] for (x, y), t in zip(poses_inverted, poses_theta)]
+        return [[x, y, t] for (x, y), t in zip(poses_cropped, poses_theta)]
