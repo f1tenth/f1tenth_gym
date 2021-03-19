@@ -361,7 +361,7 @@ class F110Env(gym.Env, utils.EzPickle):
             if self.renderer is None:
                 # first call, initialize everything
                 from f110_gym.envs.colab import Colab
-                self.renderer = Colab(self.map_name, self.map_ext, self.num_agents)
+                self.renderer = Colab(self.map_name, self.map_ext, self.num_agents, [self.start_xs, self.start_ys, self.start_thetas])
             self.renderer.update_cars(self.poses_x, self.poses_y, self.poses_theta, self.done)
             # if mode == 'human':
             #     time.sleep(0.005)

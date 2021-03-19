@@ -8,8 +8,8 @@
     <title>Document</title>
     <style>
         .car {
-            width: 15px;
-            height: 30px;
+            width: var(--car-width);
+            height: var(--car-length);
             position: absolute;
             background-color: red;
         }
@@ -17,15 +17,25 @@
 </head>
 
 <body>
-    <img id="map">insert_cars_here</img>
+    <img id="map">"insert_cars_here"</img>
     <script>
-        document.getElementById("map").src = 'data:image/jpeg;base64,' + btoa("insert_binary_image_here");
         const listenerChannel = new BroadcastChannel('channel');
         const cars = document.getElementsByClassName("car");
         const start_threshold = 200;
         var waiting = true;
-        var frame_counter = 0;
+        var frame_counter = start_threshold;
         var batch_poses = {};
+        // set map image and car dimensions
+        document.getElementById("map").src = 'data:image/jpeg;base64,' + btoa("insert_binary_image_here");
+        document.documentElement.style.setProperty('--car-width', "insert_car_width_here" + "px");
+        document.documentElement.style.setProperty('--car-length', "insert_car_length_here" + "px");
+        // set starting poses (by tricking update car function)
+        batch_poses[start_threshold] = "insert_start_poses_here";
+        updateCars()
+        // reset frame flags and counters after setting initial poses
+        frame_counter = 0;
+        waiting = true;
+        // function for moving cars based off poses received
         function updateCars() {
             if (!(start_threshold in batch_poses) && waiting) return;
             waiting = false;

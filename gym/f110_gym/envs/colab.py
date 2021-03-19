@@ -60,15 +60,19 @@ class Colab(object):
         # scale car dimensions accordingly
         self.car_length = self.CAR_LENGTH / self.map_resolution
         self.car_width = self.CAR_WIDTH / self.map_resolution
+        self.start_poses = start_poses
 
+        # load in HTML code as string
         html_code = load_html('/content/f1tenth_gym/gym/f110_gym/envs/colab.html')
         map_image_binary = get_bytes(self.map_image)
-        car_replace_tag = 'insert_cars_here'
-        image_replace_tag = '"insert_binary_image_here"'
-        html_code = html_code.replace(car_replace_tag, ''.join([f'<div class="car" id="car-{i}"></div>' for i in range(num_agents)])) 
+        # substitute in all runtime variables as strings
         html_code = html_code.replace("{","{{")
         html_code = html_code.replace("}","}}")
-        html_code = html_code.replace(image_replace_tag,"{map_image_binary}")
+        html_code = html_code.replace('"insert_cars_here"', ''.join([f'<div class="car" id="car-{i}"></div>' for i in range(num_agents)]))
+        html_code = html_code.replace('"insert_car_width_here"', str(self.car_width))
+        html_code = html_code.replace('"insert_car_length_here"', str(self.car_length))
+        html_code = html_code.replace('"insert_binary_image_here"',"{map_image_binary}")
+        html_code = html_code.replace('"insert_start_poses_here"', str(self.adjust_car_poses(*self.start_poses)))
         html_code = html_code.format(map_image_binary=map_image_binary)
         html_code = html_code.replace('btoa(b', 'btoa(')
         # and start the display
