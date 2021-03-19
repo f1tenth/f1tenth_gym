@@ -32,8 +32,6 @@ import cv2
 import IPython
 import numpy as np
 
-from PIL import Image
-
 class Colab(object):
 
     # car constants
@@ -48,8 +46,8 @@ class Colab(object):
             with open(filename, 'r') as f:
                 return f.read()
 
-        def get_bytes(image):
-          _, image_buffer_array = cv2.imencode(".jpg", np.array(image))
+        def get_bytes(image_array):
+          _, image_buffer_array = cv2.imencode(".png", image_array)
           byte_image = image_buffer_array.tobytes()
           return byte_image
 
@@ -64,7 +62,7 @@ class Colab(object):
 
         # load in HTML code as string
         html_code = load_html('/content/f1tenth_gym/gym/f110_gym/envs/colab.html')
-        map_image_binary = get_bytes(self.map_image)
+        map_image_binary = get_bytes(self.map_image_array)
         # substitute in all runtime variables as strings
         html_code = html_code.replace("{","{{")
         html_code = html_code.replace("}","}}")
@@ -101,11 +99,11 @@ class Colab(object):
             self.map_resolution = self.map_config['resolution']
             self.map_origin = self.map_config['origin']
         # load map image
-        map_image_array = np.array(Image.open(self.map_path + self.map_extension))
+        map_image_array = cv2.imread(self.map_path + self.map_extension, 0)
         # crop whitespace bordering map
         crop_horizontal = ~np.all(map_image_array == 255, axis=1)
         crop_vertical = ~np.all(map_image_array == 255, axis=0)
-        self.map_image = Image.fromarray((map_image_array[crop_horizontal])[:, crop_vertical])
+        self.map_image_array = (map_image_array[crop_horizontal])[:, crop_vertical]
         self.crop_offset = np.argmax(crop_vertical), np.argmax(crop_horizontal)
 
     def adjust_car_poses(self, poses_x, poses_y, poses_theta):
