@@ -34,11 +34,18 @@ import numpy as np
 
 class Colab(object):
 
+    # static variable for unique broadcast channel
+    CHANNEL_ID = "CH0"
+
     # car constants
     CAR_LENGTH = 0.58
     CAR_WIDTH = 0.31
 
+    # batch size for sending poses
     MIN_BATCH = 200
+
+    def get_id(self):
+      return self.CHANNEL_ID
 
     def __init__(self, map_path, map_extension, num_agents, start_poses=None):
 
@@ -51,6 +58,11 @@ class Colab(object):
           byte_image = image_buffer_array.tobytes()
           return byte_image
 
+        # assign unique channel to this class instance (then increment)
+        self.channel_id = Colab.CHANNEL_ID
+        Colab.CHANNEL_ID = Colab.CHANNEL_ID[:2] + str(1 + int(Colab.CHANNEL_ID[2:]))
+
+        # load map
         self.map_path = map_path
         self.map_extension = map_extension
         self.load_map()
@@ -58,6 +70,7 @@ class Colab(object):
         # scale car dimensions accordingly
         self.car_length = self.CAR_LENGTH / self.map_resolution
         self.car_width = self.CAR_WIDTH / self.map_resolution
+
         self.start_poses = start_poses
 
         # load in HTML code as string
@@ -66,6 +79,7 @@ class Colab(object):
         # substitute in all runtime variables as strings
         html_code = html_code.replace("{","{{")
         html_code = html_code.replace("}","}}")
+        html_code = html_code.replace('insert_channel_here', self.channel_id)
         html_code = html_code.replace('"insert_cars_here"', ''.join([f'<div class="car" id="car-{i}"></div>' for i in range(num_agents)]))
         html_code = html_code.replace('"insert_car_width_here"', str(self.car_width))
         html_code = html_code.replace('"insert_car_length_here"', str(self.car_length))
@@ -85,9 +99,9 @@ class Colab(object):
         self.frame_counter += 1
         if (len(self.batch_poses) >= self.MIN_BATCH) or done:
             js_code = '''
-            const senderChannel = new BroadcastChannel('channel');
+            const senderChannel = new BroadcastChannel("{channel_id}");
             senderChannel.postMessage({poses});
-            '''.format(poses=self.batch_poses)
+            '''.format(poses=self.batch_poses, channel_id=self.channel_id)
             display(IPython.display.Javascript(js_code))
             self.batch_poses = []
 
