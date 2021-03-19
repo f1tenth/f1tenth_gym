@@ -74,7 +74,8 @@ class Colab(object):
         self.start_poses = start_poses
 
         # load in HTML code as string
-        html_code = load_html('/content/f1tenth_gym/gym/f110_gym/envs/colab.html')
+        html_code = load_html(os.path.dirname(os.path.abspath(__file__)) + '/colab.html')
+        # get map as binary image array
         map_image_binary = get_bytes(self.map_image_array)
         # substitute in all runtime variables as strings
         html_code = html_code.replace("{","{{")
