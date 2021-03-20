@@ -60,6 +60,7 @@ class Colab(object):
 
         # assign unique channel to this class instance (then increment)
         self.channel_id = Colab.CHANNEL_ID
+        self.channel_id_extra = -1
         Colab.CHANNEL_ID = Colab.CHANNEL_ID[:2] + str(1 + int(Colab.CHANNEL_ID[2:]))
 
         # load map
@@ -88,21 +89,31 @@ class Colab(object):
         html_code = html_code.replace('"insert_start_poses_here"', str(self.adjust_car_poses(*self.start_poses)))
         html_code = html_code.format(map_image_binary=map_image_binary)
         html_code = html_code.replace('btoa(b', 'btoa(')
+        self.html_code = html_code
         # and start the display
-        display(IPython.display.HTML(html_code))
+        self.start()
 
+    def start(self):
         # batch poses together
         self.batch_poses = []
         self.frame_counter = 0
+        # append extra ID to channel ID
+        self.channel_id_extra += 1
+        html_code = self.html_code.replace(self.channel_id, self.channel_id + '-' + str(self.channel_id_extra))
+        # start display
+        display(IPython.display.HTML(html_code))
 
     def update_cars(self, p_x, p_y, p_t, done):
         self.batch_poses.append([self.frame_counter, self.adjust_car_poses(p_x, p_y, p_t)])
         self.frame_counter += 1
         if (len(self.batch_poses) >= self.MIN_BATCH) or done:
             js_code = '''
+            console.log("Sending poses on {channel_id} [{frames}]");
             const senderChannel = new BroadcastChannel("{channel_id}");
             senderChannel.postMessage({poses});
-            '''.format(poses=self.batch_poses, channel_id=self.channel_id)
+            '''.format(poses=self.batch_poses,
+                       frames=self.frame_counter,
+                       channel_id=(self.channel_id + '-' + str(self.channel_id_extra)))
             display(IPython.display.Javascript(js_code))
             self.batch_poses = []
 

@@ -345,7 +345,7 @@ class F110Env(gym.Env, utils.EzPickle):
         """
         self.sim.update_params(params, agent_idx=index)
 
-    def render(self, mode='human'):
+    def render(self, mode='human', colab_start=False):
         """
         Renders the environment with pyglet. Use mouse scroll in the window to zoom in/out, use mouse click drag to pan. Shows the agents, the map, current fps (bottom left corner), and the race information near as text.
 
@@ -363,7 +363,12 @@ class F110Env(gym.Env, utils.EzPickle):
                 # first call, initialize everything
                 from f110_gym.envs.colab import Colab
                 self.renderer = Colab(self.map_name, self.map_ext, self.num_agents, [self.start_xs, self.start_ys, self.start_thetas])
-            self.renderer.update_cars(self.poses_x, self.poses_y, self.poses_theta, self.done)
+            elif colab_start:
+                # reloading Colab display
+                self.renderer.start()
+            else:
+                # updating cars
+                self.renderer.update_cars(self.poses_x, self.poses_y, self.poses_theta, self.done)
             # if mode == 'human':
             #     time.sleep(0.005)
             # elif mode == 'human_fast':
