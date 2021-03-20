@@ -103,9 +103,13 @@ class Colab(object):
         # start display
         display(IPython.display.HTML(html_code))
 
-    def update_cars(self, p_x, p_y, p_t, done):
+    def update_cars(self, p_x, p_y, p_t, done, mode):
         self.batch_poses.append([self.frame_counter, self.adjust_car_poses(p_x, p_y, p_t)])
         self.frame_counter += 1
+        # repeat frame to slow down simulation to realtime
+        if mode == "human":
+          self.batch_poses.append([self.frame_counter, self.adjust_car_poses(p_x, p_y, p_t)])
+          self.frame_counter += 1
         if (len(self.batch_poses) >= self.MIN_BATCH) or done:
             js_code = '''
             console.log("Sending poses on {channel_id} [{frames}]");

@@ -51,7 +51,8 @@
             delete batch_poses[frame_counter++];
         }
         listenerChannel.onmessage = (msg) => msg.data.forEach((poses) => batch_poses[poses[0]] = poses[1]);
-        let timerId = setInterval(updateCars, 1000 / 100);
+        // basically an infinite loop to update the cars as quickly as the frames arrive
+        let timerId = setInterval(updateCars, 0);
     </script>
 </body>
 

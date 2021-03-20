@@ -368,11 +368,7 @@ class F110Env(gym.Env, utils.EzPickle):
                 self.renderer.start([self.start_xs, self.start_ys, self.start_thetas])
             else:
                 # updating cars
-                self.renderer.update_cars(self.poses_x, self.poses_y, self.poses_theta, self.done)
-            # if mode == 'human':
-            #     time.sleep(0.005)
-            # elif mode == 'human_fast':
-            #     pass
+                self.renderer.update_cars(self.poses_x, self.poses_y, self.poses_theta, self.done, mode)
         else:
             if self.renderer is None:
                 # first call, initialize everything
