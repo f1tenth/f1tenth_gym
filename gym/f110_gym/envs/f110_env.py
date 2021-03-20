@@ -365,7 +365,7 @@ class F110Env(gym.Env, utils.EzPickle):
                 self.renderer = Colab(self.map_name, self.map_ext, self.num_agents, [self.start_xs, self.start_ys, self.start_thetas])
             elif colab_start:
                 # reloading Colab display
-                self.renderer.start()
+                self.renderer.start([self.start_xs, self.start_ys, self.start_thetas])
             else:
                 # updating cars
                 self.renderer.update_cars(self.poses_x, self.poses_y, self.poses_theta, self.done)

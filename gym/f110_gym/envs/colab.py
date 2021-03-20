@@ -47,7 +47,7 @@ class Colab(object):
     def get_id(self):
       return self.CHANNEL_ID
 
-    def __init__(self, map_path, map_extension, num_agents, start_poses=None):
+    def __init__(self, map_path, map_extension, num_agents, start_poses):
 
         def load_html(filename):
             with open(filename, 'r') as f:
@@ -72,8 +72,6 @@ class Colab(object):
         self.car_length = self.CAR_LENGTH / self.map_resolution
         self.car_width = self.CAR_WIDTH / self.map_resolution
 
-        self.start_poses = start_poses
-
         # load in HTML code as string
         html_code = load_html(os.path.dirname(os.path.abspath(__file__)) + '/colab.html')
         # get map as binary image array
@@ -86,20 +84,22 @@ class Colab(object):
         html_code = html_code.replace('"insert_car_width_here"', str(self.car_width))
         html_code = html_code.replace('"insert_car_length_here"', str(self.car_length))
         html_code = html_code.replace('"insert_binary_image_here"',"{map_image_binary}")
-        html_code = html_code.replace('"insert_start_poses_here"', str(self.adjust_car_poses(*self.start_poses)))
         html_code = html_code.format(map_image_binary=map_image_binary)
         html_code = html_code.replace('btoa(b', 'btoa(')
         self.html_code = html_code
         # and start the display
-        self.start()
+        self.start(start_poses)
 
-    def start(self):
+    def start(self, start_poses):
+        # reset starting poses
+        self.start_poses = start_poses
+        html_code = self.html_code.replace('"insert_start_poses_here"', str(self.adjust_car_poses(*self.start_poses)))
         # batch poses together
         self.batch_poses = []
         self.frame_counter = 0
         # append extra ID to channel ID
         self.channel_id_extra += 1
-        html_code = self.html_code.replace(self.channel_id, self.channel_id + '-' + str(self.channel_id_extra))
+        html_code = html_code.replace(self.channel_id, self.channel_id + '-' + str(self.channel_id_extra))
         # start display
         display(IPython.display.HTML(html_code))
 
