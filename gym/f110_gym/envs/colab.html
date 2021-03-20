@@ -11,8 +11,7 @@
             width: var(--car-length);
             height: var(--car-width);
             position: absolute;
-            background-color: red;
-            transform-origin: center left;
+            background-color: darkcyan;
         }
     </style>
 </head>
@@ -46,7 +45,7 @@
             var batch = batch_poses[frame_counter];
             batch.forEach((car_pose, index) => {
                 var car = cars[`car-${index}`];
-                car.style.transform = "translate(" + car_pose[0] + "px, -" + car_pose[1] + "px) ";
+                car.style.transform = "translate(" + (car_pose[0] - car.offsetWidth / 2) + "px, -" + car_pose[1] + "px) ";
                 car.style.transform += "rotate(" + car_pose[2] + "rad)";
             });
             delete batch_poses[frame_counter++];
