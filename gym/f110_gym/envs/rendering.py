@@ -103,6 +103,10 @@ class EnvRenderer(pyglet.window.Window):
         
         # current agent goal points
         self.goals = []
+        self.lookahead_pts = []
+        
+        # occupancy grid
+        self.laser_scan = None
 
         # current score label
         self.score_label = pyglet.text.Label(
@@ -318,7 +322,6 @@ class EnvRenderer(pyglet.window.Window):
             None
         """
         num_agents = len(goal_pts)
-        
         # go thru all agent goal points
         for j in range(num_agents):
             
@@ -329,14 +332,57 @@ class EnvRenderer(pyglet.window.Window):
                 # if the goal point hasn't been added to the batch list of goals yet,
                 # add them. Otherwise, update them
                 if len(self.goals)-1 < j:
+                    
                     self.goals.append(self.batch.add(1, GL_POINTS, None, ('v2f',np_goal_pt), 
                                                                          ('c3B', (255, 0, 0))))
+                    
                 else:
                     self.goals[j].vertices = np_goal_pt
+                    
+    def update_lookahead_pts(self, lookahead_pts):
+        """
+        Updates the renderer with the lookahead point from the Pure Pursuit algorithm
+        Args:
+            lookahead_pts (array(tuple)): list of tuples of lookahead points, one for each vehicle
+            
+        Returns:
+            None
+        """
+        num_agents = len(lookahead_pts)
+        pyglet.gl.glPointSize(5.0)
+        for j in range(num_agents):
+            if lookahead_pts[j] is not None:
+                np_goal_pt = np.array(lookahead_pts[j])
+                np_goal_pt = 50.*(np_goal_pt[0:2])
                 
+                if len(self.lookahead_pts)-1 < j:
+                                                     
+                    self.lookahead_pts.append(self.batch.add(1, 
+                                              GL_POINTS, 
+                                              None, 
+                                              ('v2f', np_goal_pt),
+                                              ('c3B', (0, 255, 0))))
+                else:
+                    self.lookahead_pts[j].vertices = np_goal_pt
+                    
+    def update_laser_scan_obst(self, laser_scan_obst, num_cars):
+        """
+        """
+        length = len(laser_scan_obst)
+        color = np.tile([255, 255, 0], int(length/2))
+        laser_scan_obst = 50.*np.array(laser_scan_obst)
+        if self.laser_scan is None:
+            
+            self.laser_scan = self.batch.add(int(length/2), GL_POINTS, None, 
+                                              ('v2f', laser_scan_obst),
+                                              ('c3B', color))
+        else:
+            self.laser_scan.resize(int(length/2))
+            self.laser_scan.vertices = laser_scan_obst
+            self.laser_scan.colors = color
         
         
-    def update_waypoints(self, paths, num_vertices):
+    def update_waypoints(self, paths):
         """
         Updates the renderer with the latest waypoint data from the gym environment for multiple vehicles
         
@@ -355,31 +401,28 @@ class EnvRenderer(pyglet.window.Window):
             
             # instantiate path w/ set vertex count as Pyglet does not like changing the 
             # number of vertices for a given polygon after setting it
-            orig_path = [0.]*num_vertices
                 
-            np_path = np.array(np_paths[j])
+            np_path = 50.*np.array(np_paths[j])
             np_path = np_path.flatten()
             
-            if len(np_path) > 0:
+            length = len(np_path)
+            color = np.tile([155, 0, 155], int(length/2))
             
-                # add all points from path to orig_path and set leftover x,y values to
-                # be the final value of path
-                # multiplied by 50 for the scaling factor
-                for i in range(0,len(orig_path),2):
-                    if i >= len(np_path):
-                        orig_path[i] = 50.*np_path[-2]
-                        orig_path[i+1] = 50.*np_path[-1]
-                    else:
-                        orig_path[i] = 50.*np_path[i]
-                        orig_path[i+1] = 50.*np_path[i+1]
+            if length > 0:
                 
                 # add path to batch if first time or update it if not
                 if len(self.paths)-1 < j:
                     self.group.append(pyglet.graphics.Group())
-                    self.paths.append(self.batch.add(int(num_vertices/2), GL_LINE_STRIP, self.group[j], ('v2f',orig_path)))
+                    self.paths.append(self.batch.add(int(length/2), 
+                                                     GL_LINE_STRIP, 
+                                                     self.group[j], 
+                                                     ('v2f',np_path),
+                                                     ('c3B',color)))
                     
                 else:
-                    self.paths[j].vertices = orig_path
+                    self.paths[j].resize(int(length/2))
+                    self.paths[j].vertices = np_path
+                    self.paths[j].colors = color
         
 
     def update_obs(self, obs):
