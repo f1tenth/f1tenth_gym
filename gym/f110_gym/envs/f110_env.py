@@ -42,13 +42,6 @@ import pyglet
 pyglet.options['debug_gl'] = False
 from pyglet import gl
 
-# colab
-try:
-    import google.colab
-    IN_COLAB = True
-except:
-    IN_COLAB = False
-
 # constants
 
 # rendering
@@ -146,11 +139,18 @@ class F110Env(gym.Env, utils.EzPickle):
         except:
             self.ego_idx = 0
 
+        # colab
+        try:
+            import google.colab
+            self.in_colab = True
+            self.done = False
+        except:
+            self.in_colab = False
+
         # radius to consider done
         self.start_thresh = 0.5  # 10cm
 
         # env states
-        self.done = True
         self.poses_x = []
         self.poses_y = []
         self.poses_theta = []
@@ -358,13 +358,14 @@ class F110Env(gym.Env, utils.EzPickle):
             None
         """
         assert mode in ['human', 'human_fast']
-        if IN_COLAB:
+        if self.in_colab:
             if self.renderer is None:
                 # first call, initialize everything
                 from f110_gym.envs.colab import Colab
                 self.renderer = Colab(self.map_name, self.map_ext, self.num_agents,
                                      [self.start_xs, self.start_ys, self.start_thetas],
-                                     [self.params['width'], self.params['length']])
+                                     [self.params['width'], self.params['length']],
+                                     self.timestep)
             elif colab_start:
                 # reloading Colab display
                 self.renderer.start([self.start_xs, self.start_ys, self.start_thetas],

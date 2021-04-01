@@ -29,18 +29,18 @@ Author: Eoin Gogarty
 import os
 import yaml
 import cv2
+import time
 import IPython
 import numpy as np
 
 class Colab(object):
 
-    # static variable for unique broadcast channel
-    CHANNEL_ID = "CH0"
+    CHANNEL_ID = "CH0"          # static variable for unique broadcast channel
+    BATCH_SEND_INTERVAL = 0.25  # timing interval for sending poses
+    MAX_BATCH = 100             # maximum data bandwidth
+    JS_FRAME_RATE = 60          # frame rate of Javascript display
 
-    # batch size for sending poses
-    MIN_BATCH = 200
-
-    def __init__(self, map_path, map_extension, num_agents, start_poses, car_dimensions):
+    def __init__(self, map_path, map_extension, num_agents, start_poses, car_dimensions, timestep):
 
         def load_html(filename):
             with open(filename, 'r') as f:
@@ -77,6 +77,11 @@ class Colab(object):
         # and start the display
         self.start(start_poses, car_dimensions)
 
+        # initialise timers for updating visuals
+        self.timestep = timestep
+        self.last_send = time.time()
+        self.preprocess_max_length = int(self.MAX_BATCH / (self.timestep * self.JS_FRAME_RATE))
+
     def start(self, start_poses, car_dimensions):
         # make a temporary copy of main HTML
         html_code = self.html_code
@@ -90,7 +95,7 @@ class Colab(object):
         html_code = html_code.replace('"insert_start_poses_here"', str(self.adjust_car_poses(*self.start_poses)))
         # batch poses together
         self.batch_poses = []
-        self.frame_counter = 0
+        self.frame_counter = 1
         # append extra ID to channel ID
         self.channel_id_extra += 1
         html_code = html_code.replace(self.channel_id, self.channel_id + '-' + str(self.channel_id_extra))
@@ -98,22 +103,32 @@ class Colab(object):
         display(IPython.display.HTML(html_code))
 
     def update_cars(self, p_x, p_y, p_t, done, mode):
-        self.batch_poses.append([self.frame_counter, self.adjust_car_poses(p_x, p_y, p_t)])
-        self.frame_counter += 1
-        # repeat frame to slow down simulation to realtime
-        if mode == "human":
-          self.batch_poses.append([self.frame_counter, self.adjust_car_poses(p_x, p_y, p_t)])
-          self.frame_counter += 1
-        if (len(self.batch_poses) >= self.MIN_BATCH) or done:
-            js_code = '''
-            console.log("Sending poses on {channel_id} [{frames}]");
-            const senderChannel = new BroadcastChannel("{channel_id}");
-            senderChannel.postMessage({poses});
-            '''.format(poses=self.batch_poses,
-                       frames=self.frame_counter,
-                       channel_id=(self.channel_id + '-' + str(self.channel_id_extra)))
-            display(IPython.display.Javascript(js_code))
-            self.batch_poses = []
+        self.batch_poses.append(self.adjust_car_poses(p_x, p_y, p_t))
+        # set to True to run one loop
+        done_flag = True
+        while done_flag and (len(self.batch_poses) > 0):
+            # if simulation is done, then run loop till no poses
+            done_flag = done
+            # send poses at given time interval
+            if (time.time() - self.last_send) > self.BATCH_SEND_INTERVAL:
+                self.last_send = time.time()
+                # convert to realtime at 60fps
+                batch_poses = self.batch_poses[:self.preprocess_max_length]
+                batch_poses = self.convert_poses_realtime(batch_poses)
+                # enumerate list with frame indices
+                batch_poses = [[i + self.frame_counter, poses] for i, poses in enumerate(batch_poses)]
+                # increment frame counter
+                self.frame_counter += len(batch_poses)
+                js_code = '''
+                console.log("Sending poses on {channel_id} [{frames}]");
+                const senderChannel = new BroadcastChannel("{channel_id}");
+                senderChannel.postMessage({poses});
+                '''.format(poses=batch_poses,
+                        frames=self.frame_counter,
+                        channel_id=(self.channel_id + '-' + str(self.channel_id_extra)))
+                display(IPython.display.Javascript(js_code))
+                # remove sent poses
+                self.batch_poses = self.batch_poses[self.preprocess_max_length:]
 
     def load_map(self):
         # load map config
@@ -138,3 +153,26 @@ class Colab(object):
         # check for theta overflow and have to negate angle (not sure why)
         poses_theta = [- t % np.pi for t in poses_theta]
         return [[x, y, t] for (x, y), t in zip(poses_cropped, poses_theta)]
+
+    def convert_poses_realtime(self, batch_poses):
+        # store lengths for calculations
+        old_length = len(batch_poses)
+        new_length = int(np.ceil(old_length * self.timestep * self.JS_FRAME_RATE))
+        # temporary array for new mapped values
+        altered_poses = [-1] * new_length
+        # fractional indices for mapping
+        mapping = np.linspace(0, new_length - 1, old_length)
+        # for each index in new array, find nearest element in old array
+        for i in range(new_length):
+            nearest = self.find_nearest(mapping, i)
+            altered_poses[i] = batch_poses[nearest]
+        # save new poses in class variable
+        return altered_poses
+
+    def find_nearest(self, array, value):
+        # return index of element in array that is nearest to value
+        idx = np.searchsorted(array, value, side="left")
+        if idx > 0 and (idx == len(array) or (np.abs(value - array[idx - 1]) < np.abs(value - array[idx]))):
+            return idx - 1
+        else:
+            return idx
