@@ -37,8 +37,11 @@ class Colab(object):
 
     CHANNEL_ID = "CH0"          # static variable for unique broadcast channel
     BATCH_SEND_INTERVAL = 0.25  # timing interval for sending poses
-    MAX_BATCH = 100             # maximum data bandwidth
     JS_FRAME_RATE = 60          # frame rate of Javascript display
+    MAX_BATCH_SIZE = 100        # keep this small to prevent any JS delays
+    
+    # this is the minimum number of poses that need to be sent every second
+    MIN_BATCH_SIZE = int(np.ceil(BATCH_SEND_INTERVAL * JS_FRAME_RATE))
 
     def __init__(self, map_path, map_extension, num_agents, start_poses, car_dimensions, timestep):
 
@@ -80,7 +83,6 @@ class Colab(object):
         # initialise timers for updating visuals
         self.timestep = timestep
         self.last_send = time.time()
-        self.preprocess_max_length = int(self.MAX_BATCH / (self.timestep * self.JS_FRAME_RATE))
 
     def start(self, start_poses, car_dimensions):
         # make a temporary copy of main HTML
@@ -112,6 +114,13 @@ class Colab(object):
             # send poses at given time interval
             if (time.time() - self.last_send) > self.BATCH_SEND_INTERVAL:
                 self.last_send = time.time()
+                # check for mode
+                if mode == "human":
+                    self.batch_size = self.MAX_BATCH_SIZE
+                    self.preprocess_max_length = int(self.batch_size / (self.timestep * self.JS_FRAME_RATE))
+                else:
+                    self.batch_size = self.MIN_BATCH_SIZE
+                    self.preprocess_max_length = len(self.batch_poses)
                 # convert to realtime at 60fps
                 batch_poses = self.batch_poses[:self.preprocess_max_length]
                 batch_poses = self.convert_poses_realtime(batch_poses)
@@ -155,18 +164,15 @@ class Colab(object):
         return [[x, y, t] for (x, y), t in zip(poses_cropped, poses_theta)]
 
     def convert_poses_realtime(self, batch_poses):
-        # store lengths for calculations
-        old_length = len(batch_poses)
-        new_length = int(np.ceil(old_length * self.timestep * self.JS_FRAME_RATE))
         # temporary array for new mapped values
-        altered_poses = [-1] * new_length
+        altered_poses = [-1] * self.batch_size
         # fractional indices for mapping
-        mapping = np.linspace(0, new_length - 1, old_length)
+        mapping = np.linspace(0, self.batch_size - 1, len(batch_poses))
         # for each index in new array, find nearest element in old array
-        for i in range(new_length):
+        for i in range(self.batch_size):
             nearest = self.find_nearest(mapping, i)
             altered_poses[i] = batch_poses[nearest]
-        # save new poses in class variable
+        # return stretched/dilated poses
         return altered_poses
 
     def find_nearest(self, array, value):
