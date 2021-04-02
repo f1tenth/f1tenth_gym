@@ -41,7 +41,7 @@ class Colab(object):
     MAX_BATCH_SIZE = 100        # keep this small to prevent any JS delays
     
     # this is the minimum number of poses that need to be sent every second
-    MIN_BATCH_SIZE = int(np.ceil(BATCH_SEND_INTERVAL * JS_FRAME_RATE))
+    MIN_BATCH_SIZE = int(np.ceil(BATCH_SEND_INTERVAL * JS_FRAME_RATE * 2))
 
     def __init__(self, map_path, map_extension, num_agents, start_poses, car_dimensions, timestep):
 
