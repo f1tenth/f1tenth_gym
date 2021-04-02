@@ -41,7 +41,7 @@ class Colab(object):
     MAX_BATCH_SIZE = 100        # keep this small to prevent any JS delays
     
     # this is the minimum number of poses that need to be sent every second
-    MIN_BATCH_SIZE = int(np.ceil(BATCH_SEND_INTERVAL * JS_FRAME_RATE * 2))
+    MIN_BATCH_SIZE = int(np.ceil(BATCH_SEND_INTERVAL * JS_FRAME_RATE))
 
     def __init__(self, map_path, map_extension, num_agents, start_poses, car_dimensions, timestep):
 
@@ -116,14 +116,16 @@ class Colab(object):
                 self.last_send = time.time()
                 # check for mode
                 if mode == "human":
-                    self.batch_size = max(self.MAX_BATCH_SIZE, len(self.batch_poses))
-                    self.preprocess_max_length = int(self.batch_size / (self.timestep * self.JS_FRAME_RATE))
+                    self.preprocess_max_length = int(self.MAX_BATCH_SIZE / (self.timestep * self.JS_FRAME_RATE))
+                    # convert to realtime at 60fps
+                    batch_poses = self.batch_poses[:self.preprocess_max_length]
+                    batch_poses = self.change_frame_rate(batch_poses, 1 / self.timestep, self.JS_FRAME_RATE)
                 else:
-                    self.batch_size = self.MIN_BATCH_SIZE
                     self.preprocess_max_length = len(self.batch_poses)
-                # convert to realtime at 60fps
-                batch_poses = self.batch_poses[:self.preprocess_max_length]
-                batch_poses = self.convert_poses_realtime(batch_poses)
+                    speed_up = self.preprocess_max_length * self.timestep *  self.JS_FRAME_RATE / self.MIN_BATCH_SIZE
+                    # convert to fastest frame rate
+                    batch_poses = self.batch_poses
+                    batch_poses = self.change_frame_rate(batch_poses, 1 / self.timestep, self.JS_FRAME_RATE / speed_up)
                 # enumerate list with frame indices
                 batch_poses = [[i + self.frame_counter, poses] for i, poses in enumerate(batch_poses)]
                 # increment frame counter
@@ -163,13 +165,16 @@ class Colab(object):
         poses_theta = [- t % np.pi for t in poses_theta]
         return [[x, y, t] for (x, y), t in zip(poses_cropped, poses_theta)]
 
-    def convert_poses_realtime(self, batch_poses):
+    def change_frame_rate(self, batch_poses, in_frame_rate, out_frame_rate):
+        # store and calculate batch lengths
+        in_length = len(batch_poses)
+        out_length = int(np.ceil(in_length * out_frame_rate / in_frame_rate))
         # temporary array for new mapped values
-        altered_poses = [-1] * self.batch_size
+        altered_poses = [-1] * out_length
         # fractional indices for mapping
-        mapping = np.linspace(0, self.batch_size - 1, len(batch_poses))
+        mapping = np.linspace(0, out_length - 1, in_length)
         # for each index in new array, find nearest element in old array
-        for i in range(self.batch_size):
+        for i in range(out_length):
             nearest = self.find_nearest(mapping, i)
             altered_poses[i] = batch_poses[nearest]
         # return stretched/dilated poses

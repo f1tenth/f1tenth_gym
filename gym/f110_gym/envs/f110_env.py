@@ -361,7 +361,7 @@ class F110Env(gym.Env, utils.EzPickle):
         if self.in_colab:
             if self.renderer is None:
                 # first call, initialize everything
-                from f110_gym.envs.colab import Colab
+                from f110_gym.envs.rendering_colab import Colab
                 self.renderer = Colab(self.map_name, self.map_ext, self.num_agents,
                                      [self.start_xs, self.start_ys, self.start_thetas],
                                      [self.params['width'], self.params['length']],
