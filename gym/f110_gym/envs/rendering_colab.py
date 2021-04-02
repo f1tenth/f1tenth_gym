@@ -65,7 +65,7 @@ class Colab(object):
         self.load_map()
 
         # load in HTML code as string
-        html_code = load_html(os.path.dirname(os.path.abspath(__file__)) + '/colab.html')
+        html_code = load_html(os.path.dirname(os.path.abspath(__file__)) + '/rendering_colab.html')
         # get map as binary image array
         map_image_binary = get_bytes(self.map_image_array)
         # substitute in all runtime variables as strings
@@ -116,7 +116,7 @@ class Colab(object):
                 self.last_send = time.time()
                 # check for mode
                 if mode == "human":
-                    self.batch_size = self.MAX_BATCH_SIZE
+                    self.batch_size = max(self.MAX_BATCH_SIZE, len(self.batch_poses))
                     self.preprocess_max_length = int(self.batch_size / (self.timestep * self.JS_FRAME_RATE))
                 else:
                     self.batch_size = self.MIN_BATCH_SIZE

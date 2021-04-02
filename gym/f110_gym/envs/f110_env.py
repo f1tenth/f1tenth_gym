@@ -365,7 +365,7 @@ class F110Env(gym.Env, utils.EzPickle):
                 self.renderer = Colab(self.map_name, self.map_ext, self.num_agents,
                                      [self.start_xs, self.start_ys, self.start_thetas],
                                      [self.params['width'], self.params['length']],
-                                     self.timestep)
+                                      self.timestep)
             elif colab_start:
                 # reloading Colab display
                 self.renderer.start([self.start_xs, self.start_ys, self.start_thetas],
