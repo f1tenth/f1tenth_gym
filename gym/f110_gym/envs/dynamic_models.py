@@ -13,7 +13,7 @@
 
 
 """
-Prototype of vehicle dynamics functions and classes for simulating 2D Single 
+Prototype of vehicle dynamics functions and classes for simulating 2D Single
 Track dynamic model
 Following the implementation of commanroad's Single Track Dynamics model
 Original implementation: https://gitlab.lrz.de/tum-cps/commonroad-vehicle-models/
@@ -101,7 +101,7 @@ def vehicle_dynamics_ks(x, u_init, mu, C_Sf, C_Sr, lf, lr, h, m, I, s_min, s_max
                 x5: yaw angle
             u (numpy.ndarray (2, )): control input vector (u1, u2)
                 u1: steering angle velocity of front wheels
-                u2: longitudinal acceleration 
+                u2: longitudinal acceleration
 
         Returns:
             f (numpy.ndarray): right hand side of differential equations
@@ -136,7 +136,7 @@ def vehicle_dynamics_st(x, u_init, mu, C_Sf, C_Sr, lf, lr, h, m, I, s_min, s_max
                 x7: slip angle at vehicle center
             u (numpy.ndarray (2, )): control input vector (u1, u2)
                 u1: steering angle velocity of front wheels
-                u2: longitudinal acceleration 
+                u2: longitudinal acceleration
 
         Returns:
             f (numpy.ndarray): right hand side of differential equations
@@ -149,26 +149,26 @@ def vehicle_dynamics_st(x, u_init, mu, C_Sf, C_Sr, lf, lr, h, m, I, s_min, s_max
     u = np.array([steering_constraint(x[2], u_init[0], s_min, s_max, sv_min, sv_max), accl_constraints(x[3], u_init[1], v_switch, a_max, v_min, v_max)])
 
     # switch to kinematic model for small velocities
-    if abs(x[3]) < 0.1:
+    if abs(x[3]) < 0.5:
         # wheelbase
         lwb = lf + lr
 
         # system dynamics
         x_ks = x[0:5]
         f_ks = vehicle_dynamics_ks(x_ks, u, mu, C_Sf, C_Sr, lf, lr, h, m, I, s_min, s_max, sv_min, sv_max, v_switch, a_max, v_min, v_max)
-        f = np.hstack((f_ks, np.array([u[1]/lwb*np.tan(x[2])+x[3]/(lwb*np.cos(x[2])**2)*u[0], 
+        f = np.hstack((f_ks, np.array([u[1]/lwb*np.tan(x[2])+x[3]/(lwb*np.cos(x[2])**2)*u[0],
         0])))
 
     else:
         # system dynamics
-        f = np.array([x[3]*np.cos(x[6] + x[4]), 
-            x[3]*np.sin(x[6] + x[4]), 
-            u[0], 
-            u[1], 
-            x[5], 
+        f = np.array([x[3]*np.cos(x[6] + x[4]),
+            x[3]*np.sin(x[6] + x[4]),
+            u[0],
+            u[1],
+            x[5],
             -mu*m/(x[3]*I*(lr+lf))*(lf**2*C_Sf*(g*lr-u[1]*h) + lr**2*C_Sr*(g*lf + u[1]*h))*x[5] \
                 +mu*m/(I*(lr+lf))*(lr*C_Sr*(g*lf + u[1]*h) - lf*C_Sf*(g*lr - u[1]*h))*x[6] \
-                +mu*m/(I*(lr+lf))*lf*C_Sf*(g*lr - u[1]*h)*x[2], 
+                +mu*m/(I*(lr+lf))*lf*C_Sf*(g*lr - u[1]*h)*x[2],
             (mu/(x[3]**2*(lr+lf))*(C_Sr*(g*lf + u[1]*h)*lr - C_Sf*(g*lr - u[1]*h)*lf)-1)*x[5] \
                 -mu/(x[3]*(lr+lf))*(C_Sr*(g*lf + u[1]*h) + C_Sf*(g*lr-u[1]*h))*x[6] \
                 +mu/(x[3]*(lr+lf))*(C_Sf*(g*lr-u[1]*h))*x[2]])
