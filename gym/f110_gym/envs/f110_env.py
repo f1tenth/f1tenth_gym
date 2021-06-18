@@ -50,7 +50,7 @@ VIDEO_H = 400
 WINDOW_W = 1000
 WINDOW_H = 800
 
-class F110Env(gym.Env, utils.EzPickle):
+class F110Env(gym.Env):
     """
     OpenAI gym environment for F1TENTH
     
@@ -91,6 +91,11 @@ class F110Env(gym.Env, utils.EzPickle):
             ego_idx (int, default=0): ego's index in list of agents
     """
     metadata = {'render.modes': ['human', 'human_fast']}
+
+    # rendering
+    renderer = None
+    current_obs = None
+    render_callbacks = []
 
     def __init__(self, **kwargs):        
         # kwargs extraction
@@ -173,10 +178,8 @@ class F110Env(gym.Env, utils.EzPickle):
         self.sim = Simulator(self.params, self.num_agents, self.seed)
         self.sim.set_map(self.map_path, self.map_ext)
 
-        # rendering
-        self.renderer = None
-        self.current_obs = None
-        self.render_callbacks = []
+        # stateful observations for rendering
+        self.render_obs = None
 
     def __del__(self):
         """
@@ -211,7 +214,7 @@ class F110Env(gym.Env, utils.EzPickle):
         temp_y[idx2] = -right_t - temp_y[idx2]
         temp_y[np.invert(np.logical_or(idx1, idx2))] = 0
 
-        dist2 = delta_pt[0,:]**2 + temp_y**2
+        dist2 = delta_pt[0, :]**2 + temp_y**2
         closes = dist2 <= 0.1
         for i in range(self.num_agents):
             if closes[i] and not self.near_starts[i]:
@@ -262,7 +265,16 @@ class F110Env(gym.Env, utils.EzPickle):
         obs['lap_times'] = self.lap_times
         obs['lap_counts'] = self.lap_counts
 
-        self.current_obs = obs
+        F110Env.current_obs = obs
+
+        self.render_obs = {
+            'ego_idx': obs['ego_idx'],
+            'poses_x': obs['poses_x'],
+            'poses_y': obs['poses_y'],
+            'poses_theta': obs['poses_theta'],
+            'lap_times': obs['lap_times'],
+            'lap_counts': obs['lap_counts']
+            }
 
         # times
         reward = self.timestep
@@ -310,6 +322,16 @@ class F110Env(gym.Env, utils.EzPickle):
         # get no input observations
         action = np.zeros((self.num_agents, 2))
         obs, reward, done, info = self.step(action)
+
+        self.render_obs = {
+            'ego_idx': obs['ego_idx'],
+            'poses_x': obs['poses_x'],
+            'poses_y': obs['poses_y'],
+            'poses_theta': obs['poses_theta'],
+            'lap_times': obs['lap_times'],
+            'lap_counts': obs['lap_counts']
+            }
+        
         return obs, reward, done, info
 
     def update_map(self, map_path, map_ext):
@@ -346,7 +368,7 @@ class F110Env(gym.Env, utils.EzPickle):
             callback_func (function (EnvRenderer) -> None): custom function to called during render()
         """
 
-        self.render_callbacks.append(callback_func)
+        F110Env.render_callbacks.append(callback_func)
 
     def render(self, mode='human'):
         """
@@ -361,19 +383,21 @@ class F110Env(gym.Env, utils.EzPickle):
             None
         """
         assert mode in ['human', 'human_fast']
-        if self.renderer is None:
+        
+        if F110Env.renderer is None:
             # first call, initialize everything
             from f110_gym.envs.rendering import EnvRenderer
-            self.renderer = EnvRenderer(WINDOW_W, WINDOW_H)
-            self.renderer.update_map(self.map_name, self.map_ext)
-        self.renderer.update_obs(self.current_obs)
+            F110Env.renderer = EnvRenderer(WINDOW_W, WINDOW_H)
+            F110Env.renderer.update_map(self.map_name, self.map_ext)
+            
+        F110Env.renderer.update_obs(self.render_obs)
 
-        for render_callback in self.render_callbacks:
-            render_callback(self.renderer)
+        for render_callback in F110Env.render_callbacks:
+            render_callback(F110Env.renderer)
         
-        self.renderer.dispatch_events()
-        self.renderer.on_draw()
-        self.renderer.flip()
+        F110Env.renderer.dispatch_events()
+        F110Env.renderer.on_draw()
+        F110Env.renderer.flip()
         if mode == 'human':
             time.sleep(0.005)
         elif mode == 'human_fast':

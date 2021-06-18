@@ -1,3 +1,4 @@
+import pickle
 import time
 import yaml
 import gym
@@ -245,6 +246,7 @@ def main():
         obs, step_reward, done, info = env.step(np.array([[steer, speed]]))
         laptime += step_reward
         env.render(mode='human')
+        
     print('Sim elapsed time:', laptime, 'Real elapsed time:', time.time()-start)
 
 if __name__ == '__main__':

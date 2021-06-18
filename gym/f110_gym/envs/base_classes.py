@@ -53,6 +53,12 @@ class RaceCar(object):
 
     """
 
+    # static objects that don't need to be stored in class instances
+    scan_simulator = None
+    cosines = None
+    scan_angles = None
+    side_distances = None
+
     def __init__(self, params, seed, is_ego=False, time_step=0.01, num_beams=1080, fov=4.7):
         """
         Init function
@@ -97,47 +103,46 @@ class RaceCar(object):
         self.ttc_thresh = 0.005
 
         # initialize scan sim
-        self.scan_simulator = ScanSimulator2D(num_beams, fov, seed=self.seed)
-        scan_ang_incr = self.scan_simulator.get_increment()
+        if RaceCar.scan_simulator is None:
+            RaceCar.scan_simulator = ScanSimulator2D(num_beams, fov, seed=self.seed)
 
-        # current scan
-        self.current_scan = np.zeros((num_beams, ))
+            scan_ang_incr = RaceCar.scan_simulator.get_increment()
 
-        # angles of each scan beam, distance from lidar to edge of car at each beam, and precomputed cosines of each angle
-        self.cosines = np.zeros((num_beams, ))
-        self.scan_angles = np.zeros((num_beams, ))
-        self.side_distances = np.zeros((num_beams, ))
+            # angles of each scan beam, distance from lidar to edge of car at each beam, and precomputed cosines of each angle
+            RaceCar.cosines = np.zeros((num_beams, ))
+            RaceCar.scan_angles = np.zeros((num_beams, ))
+            RaceCar.side_distances = np.zeros((num_beams, ))
 
-        dist_sides = params['width']/2.
-        dist_fr = (params['lf']+params['lr'])/2.
+            dist_sides = params['width']/2.
+            dist_fr = (params['lf']+params['lr'])/2.
 
-        for i in range(num_beams):
-            angle = -fov/2. + i*scan_ang_incr
-            self.scan_angles[i] = angle
-            self.cosines[i] = np.cos(angle)
+            for i in range(num_beams):
+                angle = -fov/2. + i*scan_ang_incr
+                RaceCar.scan_angles[i] = angle
+                RaceCar.cosines[i] = np.cos(angle)
 
-            if angle > 0:
-                if angle < np.pi/2:
-                    # between 0 and pi/2
-                    to_side = dist_sides / np.sin(angle)
-                    to_fr = dist_fr / np.cos(angle)
-                    self.side_distances[i] = min(to_side, to_fr)
+                if angle > 0:
+                    if angle < np.pi/2:
+                        # between 0 and pi/2
+                        to_side = dist_sides / np.sin(angle)
+                        to_fr = dist_fr / np.cos(angle)
+                        RaceCar.side_distances[i] = min(to_side, to_fr)
+                    else:
+                        # between pi/2 and pi
+                        to_side = dist_sides / np.cos(angle - np.pi/2.)
+                        to_fr = dist_fr / np.sin(angle - np.pi/2.)
+                        RaceCar.side_distances[i] = min(to_side, to_fr)
                 else:
-                    # between pi/2 and pi
-                    to_side = dist_sides / np.cos(angle - np.pi/2.)
-                    to_fr = dist_fr / np.sin(angle - np.pi/2.)
-                    self.side_distances[i] = min(to_side, to_fr)
-            else:
-                if angle > -np.pi/2:
-                    # between 0 and -pi/2
-                    to_side = dist_sides / np.sin(-angle)
-                    to_fr = dist_fr / np.cos(-angle)
-                    self.side_distances[i] = min(to_side, to_fr)
-                else:
-                    # between -pi/2 and -pi
-                    to_side = dist_sides / np.cos(-angle - np.pi/2)
-                    to_fr = dist_fr / np.sin(-angle - np.pi/2)
-                    self.side_distances[i] = min(to_side, to_fr)
+                    if angle > -np.pi/2:
+                        # between 0 and -pi/2
+                        to_side = dist_sides / np.sin(-angle)
+                        to_fr = dist_fr / np.cos(-angle)
+                        RaceCar.side_distances[i] = min(to_side, to_fr)
+                    else:
+                        # between -pi/2 and -pi
+                        to_side = dist_sides / np.cos(-angle - np.pi/2)
+                        to_fr = dist_fr / np.sin(-angle - np.pi/2)
+                        RaceCar.side_distances[i] = min(to_side, to_fr)
 
     def update_params(self, params):
         """
@@ -160,7 +165,7 @@ class RaceCar(object):
             map_path (str): absolute path to the map yaml file
             map_ext (str): extension of the map image file
         """
-        self.scan_simulator.set_map(map_path, map_ext)
+        RaceCar.scan_simulator.set_map(map_path, map_ext)
 
     def reset(self, pose):
         """
@@ -183,7 +188,7 @@ class RaceCar(object):
         self.state[4] = pose[2]
         self.steer_buffer = np.empty((0, ))
         # reset scan random generator
-        self.scan_simulator.reset_rng(self.seed)
+        RaceCar.scan_simulator.reset_rng(self.seed)
 
     def ray_cast_agents(self, scan):
         """
@@ -203,11 +208,12 @@ class RaceCar(object):
         for opp_pose in self.opp_poses:
             # get vertices of current oppoenent
             opp_vertices = get_vertices(opp_pose, self.params['length'], self.params['width'])
+
             new_scan = ray_cast(np.append(self.state[0:2], self.state[4]), new_scan, self.scan_angles, opp_vertices)
 
         return new_scan
 
-    def check_ttc(self):
+    def check_ttc(self, current_scan):
         """
         Check iTTC against the environment, sets vehicle states accordingly if collision occurs.
         Note that this does NOT check collision with other agents.
@@ -215,13 +221,13 @@ class RaceCar(object):
         state is [x, y, steer_angle, vel, yaw_angle, yaw_rate, slip_angle]
 
         Args:
-            None
+            current_scan
 
         Returns:
             None
         """
         
-        in_collision = check_ttc_jit(self.current_scan, self.state[3], self.scan_angles, self.cosines, self.side_distances, self.ttc_thresh)
+        in_collision = check_ttc_jit(current_scan, self.state[3], self.scan_angles, self.cosines, self.side_distances, self.ttc_thresh)
 
         # if in collision stop vehicle
         if in_collision:
@@ -243,7 +249,7 @@ class RaceCar(object):
             vel (float): desired longitudinal velocity
 
         Returns:
-            None
+            current_scan
         """
 
         # state is [x, y, steer_angle, vel, yaw_angle, yaw_rate, slip_angle]
@@ -293,7 +299,9 @@ class RaceCar(object):
             self.state[4] = self.state[4] + 2*np.pi
 
         # update scan
-        self.current_scan = self.scan_simulator.scan(np.append(self.state[0:2], self.state[4]))
+        current_scan = RaceCar.scan_simulator.scan(np.append(self.state[0:2], self.state[4]))
+
+        return current_scan
 
     def update_opp_poses(self, opp_poses):
         """
@@ -308,25 +316,28 @@ class RaceCar(object):
         self.opp_poses = opp_poses
 
 
-    def update_scan(self):
+    def update_scan(self, agent_scans, agent_index):
         """
         Steps the vehicle's laser scan simulation
         Separated from update_pose because needs to update scan based on NEW poses of agents in the environment
 
         Args:
-            None
+            agent scans list (modified in-place),
+            agent index (int)
 
         Returns:
             None
         """
-        
+
+        current_scan = agent_scans[agent_index]
+
         # check ttc
-        self.check_ttc()
+        self.check_ttc(current_scan)
 
         # ray cast other agents to modify scan
-        self.current_scan = self.ray_cast_agents(self.current_scan)
+        new_scan = self.ray_cast_agents(current_scan)
 
-
+        agent_scans[agent_index] = new_scan
 
 class Simulator(object):
     """
@@ -439,11 +450,15 @@ class Simulator(object):
         Returns:
             observations (dict): dictionary for observations: poses of agents, current laser scan of each agent, collision indicators, etc.
         """
-        
+
+
+        agent_scans = []
+
         # looping over agents
         for i, agent in enumerate(self.agents):
             # update each agent's pose
-            agent.update_pose(control_inputs[i, 0], control_inputs[i, 1])
+            current_scan = agent.update_pose(control_inputs[i, 0], control_inputs[i, 1])
+            agent_scans.append(current_scan)
 
             # update sim's information of agent poses
             self.agent_poses[i, :] = np.append(agent.state[0:2], agent.state[4])
@@ -451,14 +466,13 @@ class Simulator(object):
         # check collisions between all agents
         self.check_collision()
 
-
         for i, agent in enumerate(self.agents):
             # update agent's information on other agents
             opp_poses = np.concatenate((self.agent_poses[0:i, :], self.agent_poses[i+1:, :]), axis=0)
             agent.update_opp_poses(opp_poses)
 
             # update each agent's current scan based on other agents
-            agent.update_scan()
+            agent.update_scan(agent_scans, i)
 
             # update agent collision with environment
             if agent.in_collision:
@@ -476,8 +490,8 @@ class Simulator(object):
             'linear_vels_y': [],
             'ang_vels_z': [],
             'collisions': self.collisions}
-        for agent in self.agents:
-            observations['scans'].append(agent.current_scan)
+        for i, agent in enumerate(self.agents):
+            observations['scans'].append(agent_scans[i])
             observations['poses_x'].append(agent.state[0])
             observations['poses_y'].append(agent.state[1])
             observations['poses_theta'].append(agent.state[4])
