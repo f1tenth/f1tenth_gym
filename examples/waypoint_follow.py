@@ -155,7 +155,7 @@ class PurePursuitPlanner:
         self.waypoints = np.loadtxt(conf.wpt_path, delimiter=conf.wpt_delim, skiprows=conf.wpt_rowskip)
 
     def render_waypoints(self, env_renderer):
-        'draw waypoints using EnvRenderer'
+        # draw waypoints using EnvRenderer
 
         e = env_renderer
         #points = self.waypoints
