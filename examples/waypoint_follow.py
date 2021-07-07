@@ -204,7 +204,7 @@ class PurePursuitPlanner:
         return speed, steering_angle
 
 def main():
-    'main entry point'
+    # main entry point
 
     work = {'mass': 3.463388126201571, 'lf': 0.15597534362552312, 'tlad': 0.82461887897713965, 'vgain': 0.90338203837889}
     
@@ -215,7 +215,7 @@ def main():
     planner = PurePursuitPlanner(conf, 0.17145+0.15875)
 
     def render_callback(env_renderer):
-        'custom extra drawing function'
+        # custom extra drawing function
 
         e = env_renderer
 
