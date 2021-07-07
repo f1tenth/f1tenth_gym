@@ -5,5 +5,5 @@ setup(name='f110_gym',
       author='Hongrui Zheng',
       author_email='billyzheng.bz@gmail.com',
       url='https://f1tenth.org',
-      install_requires=['gym', 'numpy', 'Pillow', 'scipy', 'numba', 'pyyaml']
+      install_requires=['gym', 'numpy', 'Pillow', 'scipy', 'numba', 'pyyaml', 'pyglet', 'pyopengl']
       )
