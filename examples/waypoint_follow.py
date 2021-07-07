@@ -1,4 +1,3 @@
-import pickle
 import time
 import yaml
 import gym
