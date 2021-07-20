@@ -104,7 +104,8 @@ class RaceCar(object):
 
         # initialize scan sim
         if RaceCar.scan_simulator is None:
-            RaceCar.scan_simulator = ScanSimulator2D(num_beams, fov, seed=self.seed)
+            self.scan_rng = np.random.default_rng(seed=self.seed)
+            RaceCar.scan_simulator = ScanSimulator2D(num_beams, fov)
 
             scan_ang_incr = RaceCar.scan_simulator.get_increment()
 
@@ -188,7 +189,7 @@ class RaceCar(object):
         self.state[4] = pose[2]
         self.steer_buffer = np.empty((0, ))
         # reset scan random generator
-        RaceCar.scan_simulator.reset_rng(self.seed)
+        self.scan_rng = np.random.default_rng(seed=self.seed)
 
     def ray_cast_agents(self, scan):
         """
@@ -299,7 +300,7 @@ class RaceCar(object):
             self.state[4] = self.state[4] + 2*np.pi
 
         # update scan
-        current_scan = RaceCar.scan_simulator.scan(np.append(self.state[0:2], self.state[4]))
+        current_scan = RaceCar.scan_simulator.scan(np.append(self.state[0:2], self.state[4]), self.scan_rng)
 
         return current_scan
 

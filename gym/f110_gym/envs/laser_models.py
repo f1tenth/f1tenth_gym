@@ -317,18 +317,15 @@ class ScanSimulator2D(object):
     Init params:
         num_beams (int): number of beams in the scan
         fov (float): field of view of the laser scan
-        std_dev (float, default=0.01): standard deviation of the generated whitenoise in the scan
         eps (float, default=0.0001): ray tracing iteration termination condition
         theta_dis (int, default=2000): number of steps to discretize the angles between 0 and 2pi for look up
         max_range (float, default=30.0): maximum range of the laser
-        seed (int, default=123): seed for random number generator for the whitenoise in scan
     """
 
-    def __init__(self, num_beams, fov, std_dev=0.01, eps=0.0001, theta_dis=2000, max_range=30.0, seed=12345):
+    def __init__(self, num_beams, fov, eps=0.0001, theta_dis=2000, max_range=30.0):
         # initialization 
         self.num_beams = num_beams
         self.fov = fov
-        self.std_dev = std_dev
         self.eps = eps
         self.theta_dis = theta_dis
         self.max_range = max_range
@@ -343,9 +340,6 @@ class ScanSimulator2D(object):
         self.map_resolution = None
         self.dt = None
         
-        # white noise generator
-        self.rng = np.random.default_rng(seed=seed)
-
         # precomputing corresponding cosines and sines of the angle array
         theta_arr = np.linspace(0.0, 2*np.pi, num=theta_dis)
         self.sines = np.sin(theta_arr)
@@ -397,25 +391,14 @@ class ScanSimulator2D(object):
 
         return True
 
-    def reset_rng(self, seed):
-        """
-        Resets the generator object's random sequence by re-constructing the generator.
-
-        Args:
-            seed (int): seed for the generator
-
-        Returns:
-            None
-        """
-        self.rng = None
-        self.rng = np.random.default_rng(seed=seed)
-
-    def scan(self, pose):
+    def scan(self, pose, rng, std_dev=0.01):
         """
         Perform simulated 2D scan by pose on the given map
 
             Args:
                 pose (numpy.ndarray (3, )): pose of the scan frame (x, y, theta)
+                rng (numpy.random.Generator): random number generator to use for whitenoise in scan, or None
+                std_dev (float, default=0.01): standard deviation of the generated whitenoise in the scan
 
             Returns:
                 scan (numpy.ndarray (n, )): data array of the laserscan, n=num_beams
@@ -423,12 +406,17 @@ class ScanSimulator2D(object):
             Raises:
                 ValueError: when scan is called before a map is set
         """
+        
         if self.map_height is None:
             raise ValueError('Map is not set for scan simulator.')
+        
         scan = get_scan(pose, self.theta_dis, self.fov, self.num_beams, self.theta_index_increment, self.sines, self.cosines, self.eps, self.orig_x, self.orig_y, self.orig_c, self.orig_s, self.map_height, self.map_width, self.map_resolution, self.dt, self.max_range)
-        noise = self.rng.normal(0., self.std_dev, size=self.num_beams)
-        final_scan = scan + noise
-        return final_scan
+
+        if rng is not None:
+            noise = rng.normal(0., std_dev, size=self.num_beams)
+            scan += noise
+            
+        return scan
 
     def get_increment(self):
         return self.angle_increment
@@ -460,6 +448,7 @@ class ScanTests(unittest.TestCase):
         # self.skirk_scan = sample_scan['skirk']
 
     # def test_map_berlin(self):
+    #     scan_rng = np.random.default_rng(seed=12345)
     #     scan_sim = ScanSimulator2D(self.num_beams, self.fov)
     #     new_berlin = np.empty((self.num_test, self.num_beams))
     #     map_path = '../../../maps/berlin.yaml'
@@ -468,7 +457,7 @@ class ScanTests(unittest.TestCase):
     #     # scan gen loop
     #     for i in range(self.num_test):
     #         test_pose = self.test_poses[i]
-    #         new_berlin[i,:] = scan_sim.scan(test_pose)
+    #         new_berlin[i,:] = scan_sim.scan(test_pose, scan_rng)
     #     diff = self.berlin_scan - new_berlin
     #     mse = np.mean(diff**2)
     #     # print('Levine distance test, norm: ' + str(norm))
@@ -483,6 +472,7 @@ class ScanTests(unittest.TestCase):
     #     self.assertLess(mse, 2.)
 
     # def test_map_skirk(self):
+    #     scan_rng = np.random.default_rng(seed=12345)
     #     scan_sim = ScanSimulator2D(self.num_beams, self.fov)
     #     new_skirk = np.empty((self.num_test, self.num_beams))
     #     map_path = '../../../maps/skirk.yaml'
@@ -492,7 +482,7 @@ class ScanTests(unittest.TestCase):
     #     # scan gen loop
     #     for i in range(self.num_test):
     #         test_pose = self.test_poses[i]
-    #         new_skirk[i,:] = scan_sim.scan(test_pose)
+    #         new_skirk[i,:] = scan_sim.scan(test_pose, scan_rng)
     #     diff = self.skirk_scan - new_skirk
     #     mse = np.mean(diff**2)
     #     print('skirk distance test, mse: ' + str(mse))
@@ -508,6 +498,8 @@ class ScanTests(unittest.TestCase):
 
     def test_fps(self):
         # scan fps should be greater than 500
+
+        scan_rng = np.random.default_rng(seed=12345)
         scan_sim = ScanSimulator2D(self.num_beams, self.fov)
         map_path = '../envs/maps/berlin.yaml'
         map_ext = '.png'
@@ -517,7 +509,7 @@ class ScanTests(unittest.TestCase):
         start = time.time()
         for i in range(10000):
             x_test = i/10000
-            scan = scan_sim.scan(np.array([x_test, 0., 0.]))
+            scan = scan_sim.scan(np.array([x_test, 0., 0.]), scan_rng)
         end = time.time()
         fps = 10000/(end-start)
         # print('FPS test')
@@ -531,19 +523,22 @@ class ScanTests(unittest.TestCase):
         map_ext = '.png'
         it = 100
 
-        scan_sim = ScanSimulator2D(num_beams, fov, seed=12345)
+        scan_rng = np.random.default_rng(seed=12345)
+        scan_sim = ScanSimulator2D(num_beams, fov)
         scan_sim.set_map(map_path, map_ext)
-        scan1 = scan_sim.scan(np.array([0., 0., 0.]))
-        scan2 = scan_sim.scan(np.array([0., 0., 0.]))
+        scan1 = scan_sim.scan(np.array([0., 0., 0.]), scan_rng)
+        scan2 = scan_sim.scan(np.array([0., 0., 0.]), scan_rng)
         for i in range(it):
-            scan3 = scan_sim.scan(np.array([0., 0., 0.]))
-        scan4 = scan_sim.scan(np.array([0., 0., 0.]))
-        scan_sim.reset_rng(12345)
-        scan5 = scan_sim.scan(np.array([0., 0., 0.]))
-        scan2 = scan_sim.scan(np.array([0., 0., 0.]))
+            scan3 = scan_sim.scan(np.array([0., 0., 0.]), scan_rng)
+        scan4 = scan_sim.scan(np.array([0., 0., 0.]), scan_rng)
+        
+        scan_rng = np.random.default_rng(seed=12345)
+        scan5 = scan_sim.scan(np.array([0., 0., 0.]), scan_rng)
+        scan2 = scan_sim.scan(np.array([0., 0., 0.]), scan_rng)
         for i in range(it):
-            _ = scan_sim.scan(np.array([0., 0., 0.]))
-        scan6 = scan_sim.scan(np.array([0., 0., 0.]))
+            _ = scan_sim.scan(np.array([0., 0., 0.]), scan_rng)
+        scan6 = scan_sim.scan(np.array([0., 0., 0.]), scan_rng)
+        
         self.assertTrue(np.allclose(scan1, scan5))
         self.assertFalse(np.allclose(scan1, scan2))
         self.assertFalse(np.allclose(scan1, scan3))
@@ -554,18 +549,19 @@ def main():
     num_beams = 1080
     fov = 4.7
     # map_path = '../envs/maps/berlin.yaml'
-    map_path = '/home/f1tenth-eval/tunercar/es/maps/map0.yaml'
+    map_path = '../../../examples/example_map.yaml'
     map_ext = '.png'
+    scan_rng = np.random.default_rng(seed=12345)
     scan_sim = ScanSimulator2D(num_beams, fov)
     scan_sim.set_map(map_path, map_ext)
-    scan = scan_sim.scan(np.array([0., 0., 0.]))
+    scan = scan_sim.scan(np.array([0., 0., 0.]), scan_rng)
 
     # fps test
     import time
     start = time.time()
     for i in range(10000):
         x_test = i/10000
-        scan = scan_sim.scan(np.array([x_test, 0., 0.]))
+        scan = scan_sim.scan(np.array([x_test, 0., 0.]), scan_rng)
     end = time.time()
     fps = (end-start)/10000
     print('FPS test')
@@ -584,7 +580,7 @@ def main():
         # x_ani = i * 3. / num_iter
         theta_ani = -i * 2 * np.pi / num_iter
         x_ani = 0.
-        current_scan = scan_sim.scan(np.array([x_ani, 0., theta_ani]))
+        current_scan = scan_sim.scan(np.array([x_ani, 0., theta_ani]), scan_rng)
         print(np.max(current_scan))
         line.set_data(theta, current_scan)
         return line, 
@@ -593,7 +589,7 @@ def main():
 
 if __name__ == '__main__':
     unittest.main()
-    # main()
+    #main()
 
     # import time 
     # pt_a = np.array([1., 1.])
