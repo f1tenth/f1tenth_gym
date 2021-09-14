@@ -22,6 +22,35 @@ cd examples
 python3 waypoint_follow.py
 ```
 
+## Environment Details
+### Observation
+```python
+{
+  "edo_idx": 0
+  "scans": [array([0.215, ..., 30.028], shape=(1080,))],
+  "poses_x": [-46.76866474190183],
+  "poses_y": [16.821669212305586],
+  "poses_theta": [5.140745068338013], # radian: (0~2π),
+  "linear_vels_x": [5.31381482205777],
+  "linear_vels_y": [0.0],
+  "ang_vels_z": [0.22991898368161137],
+  "collisions": array([0.]),
+  "lap_times": array([11.14]),
+  "lap_counts": array([0.])
+}
+```
+## Action
+```python
+{
+  "steer": 0.0316930846048194,
+  "speed": 5.393091216421344
+}
+```
+## Reward
+```python
+reward = 0.01
+```
+
 ## Known issues
 - On MacOS Big Sur and above, when rendering is turned on, you might encounter the error:
 ```
