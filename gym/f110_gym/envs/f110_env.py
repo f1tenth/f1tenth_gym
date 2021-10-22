@@ -225,7 +225,7 @@ class F110Env(gym.Env, utils.EzPickle):
         
         done = (self.collisions[self.ego_idx]) or np.all(self.toggle_list >= 4)
         
-        return done, self.toggle_list >= 4
+        return bool(done), self.toggle_list >= 4
 
     def _update_state(self, obs_dict):
         """
