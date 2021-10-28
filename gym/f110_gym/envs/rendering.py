@@ -85,7 +85,9 @@ class EnvRenderer(pyglet.window.Window):
 
         # current env map
         self.map_points = None
-        
+
+        self.waypoints = None
+
         # current env agent poses, (num_agents, 3), columns are (x, y, theta)
         self.poses = None
 
@@ -259,7 +261,7 @@ class EnvRenderer(pyglet.window.Window):
     def on_draw(self):
         """
         Function when the pyglet is drawing. The function draws the batch created that includes the map points, the agent polygons, and the information text, and the fps display.
-        
+
         Args:
             None
 
@@ -334,3 +336,33 @@ class EnvRenderer(pyglet.window.Window):
         self.poses = poses
 
         self.score_label.text = 'Lap Time: {laptime:.2f}, Ego Lap Count: {count:.0f}'.format(laptime=obs['lap_times'][0], count=obs['lap_counts'][obs['ego_idx']])
+        # update camera
+        x = self.cars[0].vertices[::2]
+        y = self.cars[0].vertices[1::2]
+        top, bottom, left, right = max(y), min(y), min(x), max(x)
+        self.score_label.x = left
+        self.score_label.y = top - 700
+        self.left = left - 800
+        self.right = right + 800
+        self.top = top + 800
+        self.bottom = bottom - 800
+
+    def update_waypoints(self, points):
+        """
+        Add points to render
+
+        Args:
+            points (np.ndarray(n, 2)): vector of x, y points
+
+        Returns:
+            None
+        """
+
+        scaled_points = 50.*points
+        if self.waypoints is None:
+            self.waypoints = []
+        for i in range(points.shape[0]):
+            if len(self.waypoints) < points.shape[0]:
+                self.waypoints.append(self.batch.add(1, GL_POINTS, None, ('v3f/stream', [scaled_points[i, 0], scaled_points[i, 1], 0.]), ('c3B/stream', [183, 193, 222])))
+            else:
+                self.waypoints[i].vertices = [scaled_points[i, 0], scaled_points[i, 1], 0.]

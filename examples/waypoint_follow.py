@@ -9,6 +9,8 @@ from numba import njit
 """
 Planner Helpers
 """
+
+
 @njit(fastmath=False, cache=True)
 def nearest_point_on_trajectory(point, trajectory):
     '''
@@ -42,6 +44,7 @@ def nearest_point_on_trajectory(point, trajectory):
         dists[i] = np.sqrt(np.sum(temp*temp))
     min_dist_segment = np.argmin(dists)
     return projections[min_dist_segment], dists[min_dist_segment], t[min_dist_segment], min_dist_segment
+
 
 @njit(fastmath=False, cache=True)
 def first_point_on_trajectory_intersecting_circle(point, radius, trajectory, t=0.0, wrap=False):
@@ -126,6 +129,7 @@ def first_point_on_trajectory_intersecting_circle(point, radius, trajectory, t=0
 
     return first_p, first_i, first_t
 
+
 @njit(fastmath=False, cache=True)
 def get_actuation(pose_theta, lookahead_point, position, lookahead_distance, wheelbase):
     waypoint_y = np.dot(np.array([np.sin(-pose_theta), np.cos(-pose_theta)]), lookahead_point[0:2]-position)
@@ -135,7 +139,6 @@ def get_actuation(pose_theta, lookahead_point, position, lookahead_distance, whe
     radius = 1/(2.0*waypoint_y/lookahead_distance**2)
     steering_angle = np.arctan(wheelbase/radius)
     return speed, steering_angle
-
 
 
 class PurePursuitPlanner:
@@ -156,7 +159,8 @@ class PurePursuitPlanner:
         wpts = np.vstack((self.waypoints[:, self.conf.wpt_xind], self.waypoints[:, self.conf.wpt_yind])).T
         nearest_point, nearest_dist, t, i = nearest_point_on_trajectory(position, wpts)
         if nearest_dist < lookahead_distance:
-            lookahead_point, i2, t2 = first_point_on_trajectory_intersecting_circle(position, lookahead_distance, wpts, i+t, wrap=True)
+            lookahead_point, i2, t2 = first_point_on_trajectory_intersecting_circle(position, lookahead_distance,
+                                                                                    wpts, i+t, wrap=True)
             if i2 == None:
                 return None
             current_waypoint = np.empty((3, ))
