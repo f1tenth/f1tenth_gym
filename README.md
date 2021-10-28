@@ -23,6 +23,7 @@ python3 waypoint_follow.py
 ```
 
 ## Known issues
+- Library support issues on Windows. You must use Python 3.8 as of 10-2021
 - On MacOS Big Sur and above, when rendering is turned on, you might encounter the error:
 ```
 ImportError: Can't find framework /System/Library/Frameworks/OpenGL.framework.
