@@ -1,3 +1,4 @@
+![Python 3.8 3.9](https://github.com/f1tenth/f1tenth_gym/actions/workflows/ci.yml/badge.svg)
 # The F1TENTH Gym environment
 
 This is the repository of the F1TENTH Gym environment.
@@ -12,7 +13,6 @@ You can install the environment by running:
 ```bash
 git clone https://github.com/f1tenth/f1tenth_gym.git
 cd f1tenth_gym
-git checkout exp_py
 pip3 install --user -e gym/
 ```
 
