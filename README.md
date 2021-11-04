@@ -1,3 +1,4 @@
+![Python 3.8 3.9](https://github.com/f1tenth/f1tenth_gym/actions/workflows/ci.yml/badge.svg)
 # The F1TENTH Gym environment
 
 This is the repository of the F1TENTH Gym environment.
