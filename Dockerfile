@@ -22,17 +22,14 @@
 
 FROM ubuntu:20.04
 
-RUN DEBIAN_FRONTEND="noninteractive" apt-get update --fix-missing && \
-    DEBIAN_FRONTEND="noninteractive" apt-get install -y \
+ARG DEBIAN_FRONTEND="noninteractive"
+
+RUN apt-get update --fix-missing && \
+    apt-get install -y \
     python3-dev python3-pip
 
-RUN DEBIAN_FRONTEND="noninteractive" apt-get install -y nano \
+RUN apt-get install -y nano \
                        git \
-                       unzip \
-                       build-essential \
-                       autoconf \
-                       libtool \
-                       cmake \
                        vim
 
 RUN pip3 install --upgrade pip
