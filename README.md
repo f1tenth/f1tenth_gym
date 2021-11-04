@@ -13,7 +13,6 @@ You can install the environment by running:
 ```bash
 $ git clone https://github.com/f1tenth/f1tenth_gym.git
 $ cd f1tenth_gym
-$ git checkout exp_py
 $ pip3 install --user -e gym/
 ```
 
