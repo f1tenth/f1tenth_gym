@@ -279,6 +279,42 @@ def get_range(pose, beam_theta, va, vb):
     return distance
 
 @njit(cache=True)
+def get_blocked_view_indices(pose, vertices, scan_angles):
+    """
+    Get the indices of the start and end of blocked fov in scans by another vehicle
+
+    Args:
+        pose (np.ndarray(3, )): pose of the scanning vehicle
+        vertices (np.ndarray(4, 2)): four vertices of a vehicle pose
+        scan_angles (np.ndarray(num_beams, )): corresponding beam angles
+    """
+    # find four vectors formed by pose and 4 vertices:
+    vecs = vertices - pose[:2]
+    vec_sq = np.square(vecs)
+    norms = np.sqrt(vec_sq[:, 0] + vec_sq[:, 1])
+    unit_vecs = vecs / norms.reshape(norms.shape[0], 1)
+
+    # find angles between all four and pose vector
+    ego_x_vec = np.array([[np.cos(pose[2])], [np.sin(pose[2])]])
+    
+    angles_with_x = np.empty((4, ))
+    for i in range(4):
+        angle = np.arctan2(ego_x_vec[1], ego_x_vec[0]) - np.arctan2(unit_vecs[i, 1], unit_vecs[i, 0])
+        if angle > np.pi:
+            angle = angle - 2*np.pi
+        elif angle < -np.pi:
+            angle = angle + 2*np.pi
+        angles_with_x[i] = -angle[0]
+
+    ind1 = int(np.argmin(np.abs(scan_angles - angles_with_x[0])))
+    ind2 = int(np.argmin(np.abs(scan_angles - angles_with_x[1])))
+    ind3 = int(np.argmin(np.abs(scan_angles - angles_with_x[2])))
+    ind4 = int(np.argmin(np.abs(scan_angles - angles_with_x[3])))
+    inds = [ind1, ind2, ind3, ind4]
+    return min(inds), max(inds)
+
+
+@njit(cache=True)
 def ray_cast(pose, scan, scan_angles, vertices):
     """
     Modify a scan by ray casting onto another agent's four vertices
@@ -292,22 +328,20 @@ def ray_cast(pose, scan, scan_angles, vertices):
     Returns:
         new_scan (np.ndarray(num_beams, )): modified scan
     """
-    num_beams = scan.shape[0]
-
     # pad vertices so loops around
     looped_vertices = np.empty((5, 2))
     looped_vertices[0:4, :] = vertices
     looped_vertices[4, :] = vertices[0, :]
 
+    min_ind, max_ind = get_blocked_view_indices(pose, vertices, scan_angles)
     # looping over beams
-    for i in range(num_beams):
+    for i in range(min_ind, max_ind):
         # looping over vertices
         for j in range(4):
             # check if original scan is longer than ray casted distance
             scan_range = get_range(pose, pose[2]+scan_angles[i], looped_vertices[j,:], looped_vertices[j+1,:])
             if scan_range < scan[i]:
                 scan[i] = scan_range
-
     return scan
 
 class ScanSimulator2D(object):
