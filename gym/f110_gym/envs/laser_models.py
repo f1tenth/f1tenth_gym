@@ -335,7 +335,7 @@ def ray_cast(pose, scan, scan_angles, vertices):
 
     min_ind, max_ind = get_blocked_view_indices(pose, vertices, scan_angles)
     # looping over beams
-    for i in range(min_ind, max_ind):
+    for i in range(min_ind, max_ind + 1):
         # looping over vertices
         for j in range(4):
             # check if original scan is longer than ray casted distance
