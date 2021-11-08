@@ -125,7 +125,7 @@ class EnvRenderer(pyglet.window.Window):
         """
 
         # load map metadata
-        with open(map_path + '.yaml', 'r') as yaml_stream:
+        with open("maps/" + map_path + '.yaml', 'r') as yaml_stream:
             try:
                 map_metadata = yaml.safe_load(yaml_stream)
                 map_resolution = map_metadata['resolution']
@@ -136,7 +136,7 @@ class EnvRenderer(pyglet.window.Window):
                 print(ex)
 
         # load map image
-        map_img = np.array(Image.open(map_path + map_ext).transpose(Image.FLIP_TOP_BOTTOM)).astype(np.float64)
+        map_img = np.array(Image.open("maps/" + map_path + map_ext).transpose(Image.FLIP_TOP_BOTTOM)).astype(np.float64)
         map_height = map_img.shape[0]
         map_width = map_img.shape[1]
 

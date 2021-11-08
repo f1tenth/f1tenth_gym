@@ -1,0 +1,20 @@
+
+free_thresh: 0.196
+image: porto.pgm
+image: porto_filled.png
+negate: 0
+occupied_thresh: 0.65
+origin:
+- -10.3
+- -2.824999
+- 0.0
+# origin:
+# - -12.824999
+# - -12.824999
+# - 0.0
+resolution: 0.05
+
+start_pose: [0, -0.6, 1.6]
+n_obs: 4
+obs_size: 0.4
+start_orientation: 1.6
