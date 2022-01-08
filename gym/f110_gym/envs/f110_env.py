@@ -368,7 +368,7 @@ class F110Env(gym.Env):
             callback_func (function (EnvRenderer) -> None): custom function to called during render()
         """
 
-        F110Env.render_callbacks.append(callback_func)
+        self.render_callbacks.append(callback_func)
 
     def render(self, mode='human'):
         """
@@ -384,20 +384,20 @@ class F110Env(gym.Env):
         """
         assert mode in ['human', 'human_fast']
         
-        if F110Env.renderer is None:
+        if self.renderer is None:
             # first call, initialize everything
             from f110_gym.envs.rendering import EnvRenderer
-            F110Env.renderer = EnvRenderer(WINDOW_W, WINDOW_H)
-            F110Env.renderer.update_map(self.map_name, self.map_ext)
+            self.renderer = EnvRenderer(WINDOW_W, WINDOW_H)
+            self.renderer.update_map(self.map_name, self.map_ext)
             
-        F110Env.renderer.update_obs(self.render_obs)
+        self.renderer.update_obs(self.render_obs)
 
-        for render_callback in F110Env.render_callbacks:
-            render_callback(F110Env.renderer)
+        for render_callback in self.render_callbacks:
+            render_callback(self.renderer)
         
-        F110Env.renderer.dispatch_events()
-        F110Env.renderer.on_draw()
-        F110Env.renderer.flip()
+        self.renderer.dispatch_events()
+        self.renderer.on_draw()
+        self.renderer.flip()
         if mode == 'human':
             time.sleep(0.005)
         elif mode == 'human_fast':
