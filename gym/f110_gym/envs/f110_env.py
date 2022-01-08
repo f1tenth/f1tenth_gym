@@ -187,6 +187,14 @@ class F110Env(gym.Env):
         """
         pass
 
+    def __getstate__(self):
+        """
+        Override get state to specify items passed to pickle.
+        https://docs.python.org/3/library/pickle.html
+        """
+        del self.renderer
+        return self.__dict__
+
     def _check_done(self):
         """
         Check if the current rollout is done
