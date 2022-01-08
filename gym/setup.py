@@ -10,7 +10,7 @@ setup(name='f110_gym',
                         'Pillow>=8.3.2',
                         'scipy<1.8.0',
                         'numba==0.54.1',
-                        'pyyaml>=5.4',
+                        'pyyaml>=5.3.1',
                         'pyglet',
                         'pyopengl']
       )
