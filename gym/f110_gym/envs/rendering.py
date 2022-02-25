@@ -82,6 +82,7 @@ class EnvRenderer(pyglet.window.Window):
 
         # current batch that keeps track of all graphics
         self.batch = pyglet.graphics.Batch()
+        self.graphics = pyglet.graphics
 
         # current env map
         self.map_points = None
@@ -94,11 +95,24 @@ class EnvRenderer(pyglet.window.Window):
 
         # current score label
         self.score_label = pyglet.text.Label(
-                'Lap Time: {laptime:.2f}, Ego Lap Count: {count:.0f}'.format(
+                '1Lap Time: {laptime:.2f}, Ego Lap Count: {count:.0f}'.format(
                     laptime=0.0, count=0.0),
                 font_size=36,
                 x=0,
                 y=-800,
+                anchor_x='center',
+                anchor_y='center',
+                # width=0.01,
+                # height=0.01,
+                color=(255, 255, 255, 255),
+                batch=self.batch)
+
+        self.state_label = pyglet.text.Label(
+                'State Label: {laptime:.2f}, Ego Lap Count: {count:.0f}'.format(
+                    laptime=0.0, count=0.0),
+                font_size=36,
+                x=0,
+                y=-600,
                 anchor_x='center',
                 anchor_y='center',
                 # width=0.01,
@@ -333,4 +347,4 @@ class EnvRenderer(pyglet.window.Window):
             self.cars[j].vertices = vertices
         self.poses = poses
 
-        self.score_label.text = 'Lap Time: {laptime:.2f}, Ego Lap Count: {count:.0f}'.format(laptime=obs['lap_times'][0], count=obs['lap_counts'][obs['ego_idx']])
+        self.score_label.text = '2Lap Time: {laptime:.2f}, Ego Lap Count: {count:.0f}'.format(laptime=obs['lap_times'][0], count=obs['lap_counts'][obs['ego_idx']])

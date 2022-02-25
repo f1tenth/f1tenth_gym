@@ -87,7 +87,6 @@ def steering_constraint(steering_angle, steering_velocity, s_min, s_max, sv_min,
     return steering_velocity
 
 
-@njit(cache=True)
 def vehicle_dynamics_ks(x, u_init, mu, C_Sf, C_Sr, lf, lr, h, m, I, s_min, s_max, sv_min, sv_max, v_switch, a_max, v_min, v_max):
     """
     Single Track Kinematic Vehicle Dynamics.
@@ -120,7 +119,6 @@ def vehicle_dynamics_ks(x, u_init, mu, C_Sf, C_Sr, lf, lr, h, m, I, s_min, s_max
          x[3]/lwb*np.tan(x[2])])
     return f
 
-@njit(cache=True)
 def vehicle_dynamics_st(x, u_init, mu, C_Sf, C_Sr, lf, lr, h, m, I, s_min, s_max, sv_min, sv_max, v_switch, a_max, v_min, v_max):
     """
     Single Track Dynamic Vehicle Dynamics.
@@ -149,7 +147,7 @@ def vehicle_dynamics_st(x, u_init, mu, C_Sf, C_Sr, lf, lr, h, m, I, s_min, s_max
     u = np.array([steering_constraint(x[2], u_init[0], s_min, s_max, sv_min, sv_max), accl_constraints(x[3], u_init[1], v_switch, a_max, v_min, v_max)])
 
     # switch to kinematic model for small velocities
-    if abs(x[3]) < 0.5:
+    if abs(x[3]) < 0.1:
         # wheelbase
         lwb = lf + lr
 

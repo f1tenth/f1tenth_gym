@@ -125,7 +125,26 @@ class F110Env(gym.Env):
         try:
             self.params = kwargs['params']
         except:
-            self.params = {'mu': 1.0489, 'C_Sf': 4.718, 'C_Sr': 5.4562, 'lf': 0.15875, 'lr': 0.17145, 'h': 0.074, 'm': 3.74, 'I': 0.04712, 's_min': -0.4189, 's_max': 0.4189, 'sv_min': -3.2, 'sv_max': 3.2, 'v_switch': 7.319, 'a_max': 9.51, 'v_min':-5.0, 'v_max': 20.0, 'width': 0.31, 'length': 0.58}
+            self.params = {
+                'mu': 1.0489,       # friction coefficient  [-]
+                'C_Sf': 4.718,      # cornering stiffness front [1/rad]
+                'C_Sr': 5.4562,     # cornering stiffness rear [1/rad]
+                'lf': 0.15875,      # distance from venter of gracity to front axle [m]
+                'lr': 0.17145,      # distance from venter of gracity to rear axle [m]
+                'h': 0.074,         # center of gravity height of toal mass [m]
+                'm': 3.74,          # Total Mass of car [kg]
+                'I': 0.04712,       # Moment of inertia for entire mass about z axis  [kgm^2]
+                's_min': -0.4189,   # Min steering angle [rad]
+                's_max': 0.4189,    # Max steering angle [rad]
+                'sv_min': -3.2,     # Min steering velocity [rad/s]
+                'sv_max': 3.2,      # Max steering velocity [rad/s]
+                'v_switch': 7.319,  # switching velocity [m/s]
+                'a_max': 9.51,      # Max acceleration [m/s^2]
+                'v_min':-5.0,       # Min velocity [m/s]
+                'v_max': 20.0,      # Max velocity [m/s]
+                'width': 0.31,      # Width of car [m]
+                'length': 0.58      # Length of car [m]
+                }
 
         # simulation parameters
         try:
@@ -259,6 +278,8 @@ class F110Env(gym.Env):
             done (bool): if the simulation is done
             info (dict): auxillary information dictionary
         """
+
+        # print("Simulator step...", action)
         
         # call simulation step
         obs = self.sim.step(action)
