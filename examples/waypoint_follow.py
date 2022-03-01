@@ -398,12 +398,13 @@ class PurePursuitPlanner:
                 # print("next_control_sequence",next_control_sequence)
 
             mppi_steering = next_control_sequence[0][0]
+            # speed = next_control_sequence[0][1]
 
         # print("Costs", costs)
         # print("Min index",min_index)
 
         # self.car_controller.draw_simulated_history(0, trajectories[min_index])
-        print("MPPI Steering", mppi_steering)
+        print("MPPI Steering", mppi_steering, speed)
 
 
        
@@ -417,7 +418,7 @@ def main():
     """
 
     work = {'mass': 3.463388126201571, 'lf': 0.15597534362552312,
-            'tlad': 1.82461887897713965, 'vgain': 0.90338203837889}
+            'tlad': 1.82461887897713965, 'vgain': 1.30338203837889}
 
     with open('config_example_map.yaml') as file:
         conf_dict = yaml.load(file, Loader=yaml.FullLoader)

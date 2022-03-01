@@ -387,7 +387,7 @@ class CarController:
         """
 
         distance_cost_weight = 1
-        terminal_speed_cost_weight = 00
+        terminal_speed_cost_weight = 0
         terminal_position_cost_weight = 0
         angle_cost_weight = 0
 
@@ -433,7 +433,10 @@ class CarController:
         # Terminal Speed cost
         terminal_state = trajectory[-1]
         terminal_speed = terminal_state[3]
-        terminal_speed_cost += abs(1 / terminal_speed)
+        if(terminal_speed != 0):
+            terminal_speed_cost += abs(1 / terminal_speed)
+        else:
+            terminal_speed_cost = 1
 
         if terminal_state[3] < 5:  # Min speed  = 5
             terminal_speed_cost += 3 * abs(5 - terminal_speed)
