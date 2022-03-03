@@ -1,6 +1,11 @@
-# The F1TENTH Gym environment
+# The F1TENTH Gym environment with Google Colab
 
-This is the repository of the F1TENTH Gym environment.
+This is the repository of the F1TENTH Gym environment with Google Colaboratory integration.
+
+#### F1TENTH Gym with Reinforcement Learning implementation:
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](colab/F1TenthGymRL.ipynb)
+#### Basic F1Tenth Gym integration with Colab:
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](colab/F1TenthGym.ipynb)
 
 This project is still under heavy developement.
 
