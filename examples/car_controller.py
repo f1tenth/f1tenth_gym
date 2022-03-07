@@ -459,60 +459,112 @@ class CarController:
 
         return cost
 
-    def control_step(self):
-        """
-        Calculate an aprocimation to the optimal next control sequence
-        @returns: next_control_sequence{list<control input>} The optimal control sequnce
-        """
+    def plan(self):
+        # dist = self.sample_control_inputs()
+
+        # dist = self.sample_control_inputs_history_based(self.best_control_sequenct)
+        dist = self.sample_control_inputs()
+
         self.update_trackline()
+        
+        trajectories, costs = self.simulate_trajectory_distribution(dist)
 
-        # Do not overshoot the car's steering contraints
-        self.last_control_input[0] = min(self.last_control_input[0], 1)
-        self.last_control_input[1] = min(self.last_control_input[1], 0.5)
+        if(math.isnan(costs[0])):
+            min_index = 0
+            mppi_steering = dist[min_index][0][0]
 
-        # History based sampling due to the last optimal control sequence
-        control_sequences = self.sample_control_inputs_history_based(
-            self.best_control_sequenct
-        )
-
-        simulated_history, costs = self.simulate_trajectory_distribution(
-            control_sequences
-        )
-
-        lowest_cost = 100000
-        best_index = 0
-
-        weights = np.zeros(len(control_sequences))
-
-        for i in range(len(control_sequences)):
-            cost = costs[i]
-            # find best
-            if cost < lowest_cost:
-                best_index = i
-                lowest_cost = cost
-
-            if cost < MAX_COST:
-                weight = math.exp((-1 / INVERSE_TEMP) * cost)
-            else:
-                weight = 0
-            weights[i] = weight
-
-        best_conrol_sequence = control_sequences[best_index]
-
-        # Finding weighted avg input
-        # If all trajectories are bad (weights = 0), go for the best one
-        if weights.max() != 0:
-            next_control_sequence = np.average(
-                control_sequences, axis=0, weights=weights
-            )
         else:
-            next_control_sequence = best_conrol_sequence
+            min_index = np.argmin(costs)
 
-        # Optional, just take best anyway
-        next_control_sequence = best_conrol_sequence
+            mppi_steering =  dist[min_index][0][0]
 
-        self.best_control_sequenct = next_control_sequence
-        return next_control_sequence
+            weights = np.zeros(len(dist))
+            for i in range(len(dist)):
+                lowest_cost = 100000
+
+                cost = costs[i]
+                # find best
+                # if cost < lowest_cost:
+                #     best_index = i
+                #     lowest_cost = cost
+
+                weight = math.exp((-1 / INVERSE_TEMP) * cost)
+                
+                weights[i] = weight
+
+                next_control_sequence = np.average(dist, axis=0, weights=weights)
+
+
+            mppi_steering = next_control_sequence[0][0]
+            mppi_speed = next_control_sequence[0][1]
+
+
+            print("next_control_sequence", next_control_sequence.shape)
+
+            self.best_control_sequenct = next_control_sequence
+
+        # best_route, best_cost = np.array(self.simulate_trajectory(next_control_sequence))
+        # self.draw_simulated_history(0,best_route)
+
+
+        print("Planning in Car Controller", mppi_steering, mppi_speed)
+
+        return mppi_speed, mppi_steering
+
+    # def control_step(self):
+    #     """
+    #     Calculate an aprocimation to the optimal next control sequence
+    #     @returns: next_control_sequence{list<control input>} The optimal control sequnce
+    #     """
+    #     self.update_trackline()
+
+    #     # Do not overshoot the car's steering contraints
+    #     self.last_control_input[0] = min(self.last_control_input[0], 1)
+    #     self.last_control_input[1] = min(self.last_control_input[1], 0.5)
+
+    #     # History based sampling due to the last optimal control sequence
+    #     control_sequences = self.sample_control_inputs_history_based(
+    #         self.best_control_sequenct
+    #     )
+
+    #     simulated_history, costs = self.simulate_trajectory_distribution(
+    #         control_sequences
+    #     )
+
+    #     lowest_cost = 100000
+    #     best_index = 0
+
+    #     weights = np.zeros(len(control_sequences))
+
+    #     for i in range(len(control_sequences)):
+    #         cost = costs[i]
+    #         # find best
+    #         if cost < lowest_cost:
+    #             best_index = i
+    #             lowest_cost = cost
+
+    #         if cost < MAX_COST:
+    #             weight = math.exp((-1 / INVERSE_TEMP) * cost)
+    #         else:
+    #             weight = 0
+    #         weights[i] = weight
+
+    #     best_conrol_sequence = control_sequences[best_index]
+
+    #     # Finding weighted avg input
+    #     # If all trajectories are bad (weights = 0), go for the best one
+    #     if weights.max() != 0:
+    #         next_control_sequence = np.average(
+    #             control_sequences, axis=0, weights=weights
+    #         )
+    #     else:
+    #         next_control_sequence = best_conrol_sequence
+
+    #     # Optional, just take best anyway
+    #     next_control_sequence = best_conrol_sequence
+
+    #     self.best_control_sequenct = next_control_sequence
+    #     return next_control_sequence
 
     """
     draws the simulated history (position and speed) of the car into a plot for a trajectory distribution resp. the history of all trajectory distributions
@@ -576,14 +628,14 @@ class CarController:
         position_ax.scatter(w_x, w_y, c="#000000", label="Next waypoints")
 
         # Plot Chosen Trajectory
-        # t_x = []
-        # t_y = []
-        # plt.savefig("live_rollouts_without_optimal.png")
-        # for state in chosen_trajectory:
-        #     t_x.append(state[0])
-        #     t_y.append(state[1])
+        t_x = []
+        t_y = []
+        plt.savefig("live_rollouts_without_optimal.png")
+        for state in chosen_trajectory:
+            t_x.append(state[0])
+            t_y.append(state[1])
 
-        # plt.scatter(t_x, t_y, c="#D94496", label="Chosen control")
+        plt.scatter(t_x, t_y, c="#D94496", label="Chosen control")
 
         plt.savefig("live_rollouts.png")
         plt.legend(fancybox=True, shadow=True, loc="best")

@@ -1,10 +1,11 @@
 import time
+from matplotlib.font_manager import json_dump
 from matplotlib.pyplot import sca
 import yaml
 import gym
 import numpy as np
 from argparse import Namespace
-
+import json
 from track import *
 from car import *
 from car_controller import *
@@ -190,6 +191,7 @@ class PurePursuitPlanner:
         self.nextPositions = [[0.0, 0.0]]
 
         self.drawn_waypoints = []
+        self.lidar_border_points = 1080 * [[0,0]]
 
     def load_waypoints(self, conf):
         """
@@ -205,20 +207,6 @@ class PurePursuitPlanner:
 
 
     def render_test(self, e):
-
-        # return
-
-        # Render Grid
-        # for i in range (-50, 50):
-        #     e.batch.add(2, GL_LINES, None,
-        #             ('v2f', (50*i, -3000, 50*i, 1000)),
-        #             ('c3B', (0, 255, 0, 0, 255, 0)))
-
-        #     e.batch.add(2, GL_LINES, None,
-        #         ('v2f', (-1000, 50*i, 3000, 50*i)),
-        #         ('c3B', (0, 255, 0, 0, 255, 0)))
-
-
         
 
         points = np.array(self.currentPosition)
@@ -226,41 +214,44 @@ class PurePursuitPlanner:
 
         # print("Scaled Points", scaled_points)
 
-        e.batch.add(1, GL_POINTS, None, ('v3f/stream', [scaled_points[0], scaled_points[1], 0.]),
-                    ('c3B', (255, 0, 0)))
+        # e.batch.add(1, GL_POINTS, None, ('v3f/stream', [scaled_points[0], scaled_points[1], 0.]),
+        #             ('c3B', (255, 0, 0)))
+
+        # Render lidar data
+        for i in range(1080):
+            e.batch.add(1, GL_POINTS, None, ('v3f/stream', [self.lidar_border_points[i][0], self.lidar_border_points[i][1], 0.]),
+                        ('c3B', (255, 0, 255)))
+
 
         points = np.array(self.nextPosition)
         scaled_points = 50.*points
         # self.vertex_list.delete()
 
         self.vertex_list.delete()
-        self.vertex_list =  e.batch.add(1, GL_POINTS, None, ('v3f/stream', [scaled_points[0], scaled_points[1], 0.]),
-                    ('c3B', (0, 255, 0)))
-
-
-        points = np.array(self.car_controller.simulated_history)
+        self.vertex_list =  e.batch.add(1, GL_POINTS, None, ('v3f/stream', [scaled_points[0], scaled_points[1], 0.]), ('c3B', (0, 255, 0)))
         
 
 
+        points = np.array(self.car_controller.simulated_history)
+        chosen_trajectory = points[0][:][:]
+        chosen_trajectory_positions = chosen_trajectory[:][:]
         c = 0
+
+        
 
         if(points.shape[0] != 1):
 
+            print(points.shape)
 
             points = points.reshape((points.shape[0] * points.shape[1],7))
-
-
             trajectory = points[:,:2]
-
 
             scaled_points = 50.*trajectory
 
             howmany = scaled_points.shape[0]
             scaled_points_flat = scaled_points.flatten()
 
-
-
-            c = c + 40
+            c = c + 140
             self.vertex_list = e.batch.add(howmany, GL_POINTS, None, ('v2f/stream', scaled_points_flat),
                         ('c3B', (0, c, 255 -c) * howmany ))
 
@@ -330,84 +321,9 @@ class PurePursuitPlanner:
             pose_theta, lookahead_point, position, lookahead_distance, self.wheelbase)
         speed = vgain * speed
 
-        # print("speed, steering_angle ", speed, steering_angle)
-        next_positions = []
-
-
-        # for i in range(50):
-        #     self.car_model.step([-3, 0])
-        #     self.nextPositions.append(self.car_model.state[:2])
             
-    
         self.nextPosition = self.car_model.state[:2]
-
-        dist = [
-            NUMBER_OF_STEPS_PER_TRAJECTORY * [[0, 0]],  # No input
-            NUMBER_OF_STEPS_PER_TRAJECTORY * [[0.2, 0]],  # hard right
-            NUMBER_OF_STEPS_PER_TRAJECTORY * [[0.4, 0]],  # hard right
-            NUMBER_OF_STEPS_PER_TRAJECTORY * [[0.6, 0]],  # hard right
-            NUMBER_OF_STEPS_PER_TRAJECTORY * [[0.8, 0]],  # hard right
-            NUMBER_OF_STEPS_PER_TRAJECTORY * [[1, 0]],  # little right
-            NUMBER_OF_STEPS_PER_TRAJECTORY * [[2, 0]],  # hard right
-            NUMBER_OF_STEPS_PER_TRAJECTORY * [[3, 0]],  # hard right
-            # NUMBER_OF_STEPS_PER_TRAJECTORY * [[4, 0]],  # hard right
-            NUMBER_OF_STEPS_PER_TRAJECTORY * [[-0.2, 0]],  # hard right
-            NUMBER_OF_STEPS_PER_TRAJECTORY * [[-0.4, 0]],  # hard right
-            NUMBER_OF_STEPS_PER_TRAJECTORY * [[-0.6, 0]],  # hard right
-            NUMBER_OF_STEPS_PER_TRAJECTORY * [[-0.8, 0]],  # hard right
-            NUMBER_OF_STEPS_PER_TRAJECTORY * [[-1, 0]],  # little left
-            NUMBER_OF_STEPS_PER_TRAJECTORY * [[-2, 0]],  # hard left
-            NUMBER_OF_STEPS_PER_TRAJECTORY * [[-3, 0]],  # hard left
-            # NUMBER_OF_STEPS_PER_TRAJECTORY * [[-4, 0]],  # hard left
-
-        ]
-
-        dist = self.car_controller.sample_control_inputs()
-
-        self.car_controller.update_trackline()
-        
-        trajectories, costs = self.car_controller.simulate_trajectory_distribution(dist)
-
-        if(math.isnan(costs[0])):
-            min_index = 0
-            mppi_steering = dist[min_index][0][0]
-
-        else:
-            min_index = np.argmin(costs)
-
-            mppi_steering =  dist[min_index][0][0]
-
-            weights = np.zeros(len(dist))
-            for i in range(len(dist)):
-                lowest_cost = 100000
-
-                cost = costs[i]
-                # find best
-                # if cost < lowest_cost:
-                #     best_index = i
-                #     lowest_cost = cost
-
-                weight = math.exp((-1 / INVERSE_TEMP) * cost)
-                
-                weights[i] = weight
-
-                next_control_sequence = np.average(dist, axis=0, weights=weights)
-                # print("costs", costs)
-                # print("weights",weights)
-
-                # print("next_control_sequence",next_control_sequence)
-
-            mppi_steering = next_control_sequence[0][0]
-            # speed = next_control_sequence[0][1]
-
-        # print("Costs", costs)
-        # print("Min index",min_index)
-
-        # self.car_controller.draw_simulated_history(0, trajectories[min_index])
-        print("MPPI Steering", mppi_steering, speed)
-
-
-       
+        mppi_speed, mppi_steering = self.car_controller.plan()
     
         return speed, mppi_steering
 
@@ -463,8 +379,25 @@ def main():
 
         car = env.sim.agents[0] 
         car_state = env.sim.agents[0].state
+        scans = obs['scans'][0]
+
+        print("scan_angles", car.scan_angles)
+        print("side_distances", car.side_distances)
+
+        print("Scans",  obs['scans'][0])
+        print("Car state", car_state)
+
+        planner.lidar_border_points = []
+        for i in range(1080):
+            p1 = car_state[0] + scans[i] * math.cos(car.scan_angles[i] + car_state[4])
+            p2 = car_state[1] + scans[i] * math.sin(car.scan_angles[i] + car_state[4])
+            planner.lidar_border_points.append([50* p1, 50* p2])
+
+        
         # print("CARSTATE", car_state)
         # [ obs['poses_x'][0] , obs['poses_y'][0], obs['poses_theta'][0], obs['linear_vels_x'][0], obs['ang_vels_z'][0], 0. , 0. ]
+        # print("Scans",  np.array(obs['scans']).shape)
+        # print("obs",  (obs))
         planner.car_model.state = car_state
         planner.car_controller.car_state = car_state
 
