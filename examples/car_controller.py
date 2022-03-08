@@ -100,6 +100,9 @@ class CarController:
         self.collect_distance_costs = []
         self.collect_acceleration_costs = []
 
+        # Goal point for new cost function
+        self.goal_point = (0,0)
+
         # Get track ready
         self.update_trackline()
 
@@ -222,7 +225,7 @@ class CarController:
 
             index += 1
 
-        cost = self.cost_function(simulated_trajectory)
+        cost = self.border_cost_function(simulated_trajectory)
 
         return simulated_trajectory, cost
 
@@ -277,7 +280,7 @@ class CarController:
 
         costs = []
         for result in results:
-            cost = self.cost_function(result)
+            cost = self.border_cost_function(result)
             costs.append(cost)
 
         self.simulated_history = results
@@ -379,7 +382,78 @@ class CarController:
 
         return control_input_sequences
 
-    def cost_function(self, trajectory):
+    def border_cost_function(self, trajectory):
+        """
+        calculate the cost of a trajectory
+        @param: trajectory {list<state>} The trajectory of states that needs to be evaluated
+        @returns: cost {float}: the scalar cost of the trajectory
+        """
+
+        distance_cost_weight = 1
+        terminal_speed_cost_weight = 0
+        terminal_position_cost_weight = 1
+
+        distance_cost = 0
+        terminal_speed_cost = 0
+        terminal_position_cost = 0
+       
+
+        number_of_states = len(trajectory)
+        index = 0
+
+
+        # Don't come too close to border
+        # for state in trajectory:
+
+        #     simulated_position = geom.Point(state[0], state[1])
+
+        #     for border_line in self.track.line_strings:
+        #         distance_to_border = simulated_position.distance(border_line)
+        #         distance_cost += 1 / math.exp(distance_to_border)
+
+  
+        # Initial State
+        initial_state = trajectory[0]
+        terminal_state = trajectory[-1]
+
+        # Terminal Speed cost
+        # terminal_speed = terminal_state[3]
+        # if(terminal_speed != 0):
+        #     terminal_speed_cost += abs(1 / terminal_speed)
+        # else:
+        #     terminal_speed_cost = 1
+
+        # if terminal_state[3] < 5:  # Min speed  = 5
+        #     terminal_speed_cost += 3 * abs(5 - terminal_speed)
+
+        # Terminal Position cost
+        terminal_position = geom.Point(terminal_state[0], terminal_state[1])
+        terminal_distance_to_track = terminal_position.distance(geom.Point(self.goal_point))
+        terminal_position_cost += abs(terminal_distance_to_track)
+
+        # Don't cross the border
+        trajectory_line = geom.LineString([initial_state[:2], terminal_state[:2]])
+        # border_line = self.track.line_strings[0]
+        for border_line in self.track.line_strings:
+            if(border_line.crosses(trajectory_line)):
+                terminal_position_cost = 1000
+
+    
+
+        # print("distance_cost", distance_cost)
+        # print("terminal_position_cost", terminal_position_cost)
+
+        # Total cost
+        cost = (
+            distance_cost_weight * distance_cost
+            + terminal_speed_cost_weight * terminal_speed_cost
+            + terminal_position_cost_weight * terminal_position_cost
+        )
+        # print("cost", cost)
+        return cost
+
+
+    def waypoint_cost_function(self, trajectory):
         """
         calculate the cost of a trajectory
         @param: trajectory {list<state>} The trajectory of states that needs to be evaluated
@@ -418,9 +492,15 @@ class CarController:
             simulated_position = geom.Point(state[0], state[1])
             distance_to_track = simulated_position.distance(self.trackline)
             distance_to_track = discount * distance_to_track
-            # distance_to_track = distance_to_track ** 2
 
+            # for line in self.track.line_strings:
+
+            #     distance_to_border = simulated_position.distance(line)
+            #     distance_cost += 1 + 1/distance_to_border
+
+            # distance_to_track = distance_to_track ** 2
             distance_cost += distance_to_track
+
             # print("Car position: ", state[:2])
             # print("Closest trackline: ",self.trackline)
             # print("Distance to track: ", distance_to_track )
@@ -456,7 +536,6 @@ class CarController:
             + terminal_position_cost_weight * terminal_position_cost
             + angle_cost_weight * angle_cost
         )
-
         return cost
 
     def plan(self):
@@ -488,26 +567,26 @@ class CarController:
                 #     best_index = i
                 #     lowest_cost = cost
 
-                weight = math.exp((-1 / INVERSE_TEMP) * cost)
+                if(cost < 999):
+                    weight = math.exp((-1 / INVERSE_TEMP) * cost)
+                else:
+                    weight = 0
                 
                 weights[i] = weight
 
-                next_control_sequence = np.average(dist, axis=0, weights=weights)
-
+            next_control_sequence = np.average(dist, axis=0, weights=weights)
 
             mppi_steering = next_control_sequence[0][0]
             mppi_speed = next_control_sequence[0][1]
 
-
-            print("next_control_sequence", next_control_sequence.shape)
-
             self.best_control_sequenct = next_control_sequence
 
-        # best_route, best_cost = np.array(self.simulate_trajectory(next_control_sequence))
-        # self.draw_simulated_history(0,best_route)
+        if DRAW_LIVE_ROLLOUTS:
+            best_route, best_cost = np.array(self.simulate_trajectory(next_control_sequence))
+            self.draw_simulated_history(0, best_route)
 
 
-        print("Planning in Car Controller", mppi_steering, mppi_speed)
+        # print("Planning in Car Controller", mppi_steering, mppi_speed)
 
         return mppi_speed, mppi_steering
 
@@ -627,6 +706,15 @@ class CarController:
         ]
         position_ax.scatter(w_x, w_y, c="#000000", label="Next waypoints")
 
+        # Draw Borders
+
+        segment = np.array(self.track.segments[0])
+        # print("Segment", segment)
+        w_x = segment[:,0]
+        w_y = segment[:,1]
+        # print("w_x", w_x)
+        # print("w_y", w_y)
+        position_ax.scatter(w_x, w_y, c="#008800", label="Next waypoints")
         # Plot Chosen Trajectory
         t_x = []
         t_y = []

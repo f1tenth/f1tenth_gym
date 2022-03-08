@@ -1,7 +1,10 @@
 from globals import *
-
+from util import *
 import math
 import numpy as np
+import matplotlib.pyplot as plt
+import shapely.geometry as geom
+
 
 
 #Scale of the race track
@@ -33,8 +36,85 @@ class Track:
         self.waypoints = [[self.waypoints_x[i], self.waypoints_y[i]] for i in range(len(self.waypoints_x))]
         self.initial_position = self.waypoints[0]
 
+        self.segments = []
+        self.line_strings = []
 
 
+    
+    def get_ordered_list(points, x, y):
+        points.sort(key = lambda p: (p.x - x)**2 + (p.y - y)**2)
+        return points
+
+    def update_line_strings(self):
+        self.line_strings = []
+        filtered_segments = self.segments
+        for segment in filtered_segments:
+            if(len(segment) < 3): continue
+            line = geom.LineString(segment)
+            self.line_strings.append(line)
+
+
+    def add_new_lidar_points_to_segments(self, points):
+
+        # return
+        d_treshold = 1.5
+        for point in points:
+
+            connected_segment_index = -1
+            segment_index = 0
+            new_segment = True
+            combine_segments = []
+
+            for segment in self.segments:
+                closest_dist = get_distance_from_point_to_points(point, segment)
+
+                # Avoid taking into account already measured points
+                if(closest_dist < 0.8): 
+                    new_segment = False
+                    segment_index+=1
+                    continue
+
+                if(closest_dist < d_treshold):
+                    segment.append(point)
+                    # if new point already belongs to a segment, but also mathes another one, we can combine the segments
+                    if(not new_segment):
+                        if(segment_index != connected_segment_index):
+                            combine_segments.append([connected_segment_index,segment_index]) 
+                    connected_segment_index = segment_index
+                    new_segment = False
+                segment_index+=1
+            if(new_segment):
+                segment = [point]
+                self.segments.append(segment)
+
+            # Combine segments
+            i = 0
+            for c in combine_segments:
+                self.segments[c[0] - i] += self.segments[c[1] -i ]
+                self.segments.pop(c[1] - i)
+                i += 1
+
+
+
+
+        if DRAW_TRACK_SEGMENTS: 
+            # print("segments", self.segments)
+            plt.clf()
+            # plt.xlim(-6, 6)
+            # plt.ylim(-2, 10)
+            for segment in self.segments:
+                x_val = [x[0] for x in segment]
+                y_val = [x[1] for x in segment]
+
+            plt.plot(x_val,y_val,'o')
+            # plt.show()
+            plt.savefig("Myfile.png",format="png")
+
+        self.update_line_strings()
+    
+
+
+    
     
     def distance_to_track(self, p):
         min_distance = 100000

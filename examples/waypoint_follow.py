@@ -203,7 +203,7 @@ class PurePursuitPlanner:
         waypoints_x = self.waypoints[:,1]
         waypoints_y = self.waypoints[:,2]
 
-        print("WP", self.waypoints[:,1].shape)
+        # print("WP", self.waypoints[:,1].shape)
 
 
     def render_test(self, e):
@@ -218,7 +218,7 @@ class PurePursuitPlanner:
         #             ('c3B', (255, 0, 0)))
 
         # Render lidar data
-        for i in range(1080):
+        for i in range(len(self.lidar_border_points)):
             e.batch.add(1, GL_POINTS, None, ('v3f/stream', [self.lidar_border_points[i][0], self.lidar_border_points[i][1], 0.]),
                         ('c3B', (255, 0, 255)))
 
@@ -240,8 +240,6 @@ class PurePursuitPlanner:
         
 
         if(points.shape[0] != 1):
-
-            print(points.shape)
 
             points = points.reshape((points.shape[0] * points.shape[1],7))
             trajectory = points[:,:2]
@@ -268,7 +266,7 @@ class PurePursuitPlanner:
         """
         update waypoints being drawn by EnvRenderer
         """
-
+        return
         points = np.vstack(
             (self.waypoints[:, self.conf.wpt_xind], self.waypoints[:, self.conf.wpt_yind])).T
         scaled_points = 50.*points
@@ -381,19 +379,41 @@ def main():
         car_state = env.sim.agents[0].state
         scans = obs['scans'][0]
 
-        print("scan_angles", car.scan_angles)
-        print("side_distances", car.side_distances)
+        # print("scan_angles", car.scan_angles)
+        # print("side_distances", car.side_distances)
 
-        print("Scans",  obs['scans'][0])
-        print("Car state", car_state)
+        # print("Scans",  obs['scans'][0])
+        # print("Car state", car_state)
 
         planner.lidar_border_points = []
-        for i in range(1080):
-            p1 = car_state[0] + scans[i] * math.cos(car.scan_angles[i] + car_state[4])
-            p2 = car_state[1] + scans[i] * math.sin(car.scan_angles[i] + car_state[4])
-            planner.lidar_border_points.append([50* p1, 50* p2])
+        points = []
 
-        
+        # Use all sensor data
+        # for i in range(1080):
+        #     p1 = car_state[0] + scans[i] * math.cos(car.scan_angles[i] + car_state[4])
+        #     p2 = car_state[1] + scans[i] * math.sin(car.scan_angles[i] + car_state[4])
+        #     planner.lidar_border_points.append([50* p1, 50* p2])
+
+        # Use only a part
+
+        scans = [x - 0.2 for x in scans]
+
+        max_dist = 0
+        farthest_point = (0,0)
+        for i in range(50):
+            max_distance = 15
+            index = 20*i
+            if(scans[index] > max_distance): continue
+            p1 = car_state[0] + scans[index] * math.cos(car.scan_angles[index] + car_state[4])
+            p2 = car_state[1] + scans[index] * math.sin(car.scan_angles[index] + car_state[4])
+            points.append((p1,p2))
+            planner.lidar_border_points.append([50* p1, 50* p2])
+            if( scans[index] > max_dist):
+                max_dist = scans[index]
+                farthest_point = (p1,p2)
+
+        planner.car_controller.goal_point = farthest_point   
+        planner.track.add_new_lidar_points_to_segments(points)
         # print("CARSTATE", car_state)
         # [ obs['poses_x'][0] , obs['poses_y'][0], obs['poses_theta'][0], obs['linear_vels_x'][0], obs['ang_vels_z'][0], 0. , 0. ]
         # print("Scans",  np.array(obs['scans']).shape)
