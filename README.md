@@ -14,6 +14,18 @@ You can find the [documentation](https://f1tenth-gym.readthedocs.io/en/latest/) 
 ## Quickstart
 You can install the environment by running:
 
+### Google Colab:
+
+```bash
+!git clone https://github.com/avantgarda/f1tenth_gym.git # cloning from avantgarda fork of the F1Tenth repo
+%cd /content/f1tenth_gym
+!git checkout colab # colab-compatible branch
+%cd /content/f1tenth_gym/gym
+!python setup.py install
+```
+
+### Local machine:
+
 ```bash
 $ git clone https://github.com/f1tenth/f1tenth_gym.git
 $ cd f1tenth_gym
