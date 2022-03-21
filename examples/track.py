@@ -4,6 +4,7 @@ import math
 import numpy as np
 import matplotlib.pyplot as plt
 import shapely.geometry as geom
+import time
 
 
 
@@ -56,8 +57,10 @@ class Track:
 
     def add_new_lidar_points_to_segments(self, points):
 
+        # start = time.time()
+        
         # return
-        d_treshold = 1.5
+        d_treshold = 0.8
         for point in points:
 
             connected_segment_index = -1
@@ -66,10 +69,13 @@ class Track:
             combine_segments = []
 
             for segment in self.segments:
+
                 closest_dist = get_distance_from_point_to_points(point, segment)
 
+               
+
                 # Avoid taking into account already measured points
-                if(closest_dist < 0.8): 
+                if(closest_dist < 0.2): 
                     new_segment = False
                     segment_index+=1
                     continue
@@ -96,7 +102,6 @@ class Track:
 
 
 
-
         if DRAW_TRACK_SEGMENTS: 
             # print("segments", self.segments)
             plt.clf()
@@ -105,14 +110,16 @@ class Track:
             for segment in self.segments:
                 x_val = [x[0] for x in segment]
                 y_val = [x[1] for x in segment]
+                plt.plot(x_val,y_val,'o')
 
-            plt.plot(x_val,y_val,'o')
             # plt.show()
             plt.savefig("Myfile.png",format="png")
 
+      
         self.update_line_strings()
     
-
+        # end = time.time()
+        # print("Combine linestrings", end - start)
 
     
     
