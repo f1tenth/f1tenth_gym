@@ -214,18 +214,29 @@ class CarController:
         cost = 0
         index = 0
 
+
+        # start = time.time()
+     
         for control_input in control_inputs:
             if cost > MAX_COST:
                 cost = MAX_COST
                 # continue
-
+            
             simulated_state = self.simulate_step(simulated_state, control_input)
-
             simulated_trajectory.append(simulated_state)
 
             index += 1
+        # end = time.time()
+        # print("calculate 1 trajectory time", end - start)
+
+
+        # start = time.time()
 
         cost = self.border_cost_function(simulated_trajectory)
+        # cost = self.waypoint_cost_function(simulated_trajectory)
+
+        # end = time.time()
+        # print("cost function for trajectory time", end - start)
 
         return simulated_trajectory, cost
 
@@ -243,14 +254,21 @@ class CarController:
   
         results = []
         costs = np.zeros(len(control_inputs_distrubution))
+        # start = time.time()
 
         i = 0
         for control_input in control_inputs_distrubution:
+            # start = time.time()
             simulated_trajectory, cost = self.simulate_trajectory(control_input)
+            # end = time.time()
+            # print("simulate Trajectory time", end - start)
 
             results.append(simulated_trajectory)
             costs[i] = cost
             i += 1
+
+        # end = time.time()
+        # print("simulate_trajectory time", end - start)
 
         self.simulated_history = results
         self.simulated_costs = costs
@@ -279,9 +297,14 @@ class CarController:
         results = np.swapaxes(results, 0, 1)
 
         costs = []
+
+        # start = time.time()
+
         for result in results:
             cost = self.border_cost_function(result)
             costs.append(cost)
+        # end = time.time()
+        # print("simulate_trajectory_distribution_nn costs time", end-start)
 
         self.simulated_history = results
         self.simulated_costs = costs
@@ -299,12 +322,14 @@ class CarController:
             NUMBER_OF_STEPS_PER_TRAJECTORY * [[0, 0]],  # No input
             NUMBER_OF_STEPS_PER_TRAJECTORY * [[-0.2, 0]],  # little left
             NUMBER_OF_STEPS_PER_TRAJECTORY * [[-1, 0]],  # hard left
+            NUMBER_OF_STEPS_PER_TRAJECTORY * [[-2, 0]],  # hard left
             NUMBER_OF_STEPS_PER_TRAJECTORY * [[0.2, 0]],  # little right
             NUMBER_OF_STEPS_PER_TRAJECTORY * [[1, 0]],  # hard right
-            NUMBER_OF_STEPS_PER_TRAJECTORY * [[0, -1]],  # brake
-            NUMBER_OF_STEPS_PER_TRAJECTORY * [[0, 1]],  # accelerate
-            NUMBER_OF_STEPS_PER_TRAJECTORY * [[-0.4, 1]],  # accelerate and left
-            NUMBER_OF_STEPS_PER_TRAJECTORY * [[0.4, 1]],  # accelerate and right
+            NUMBER_OF_STEPS_PER_TRAJECTORY * [[2, 0]],  # hard right
+            NUMBER_OF_STEPS_PER_TRAJECTORY * [[0, -0]],  # brake
+            NUMBER_OF_STEPS_PER_TRAJECTORY * [[0, 0]],  # accelerate
+            NUMBER_OF_STEPS_PER_TRAJECTORY * [[-0.4, 0]],  # accelerate and left
+            NUMBER_OF_STEPS_PER_TRAJECTORY * [[0.4, 0]],  # accelerate and right
         ]
 
         return control_inputs
@@ -321,7 +346,7 @@ class CarController:
             NUMBER_OF_INITIAL_TRAJECTORIES * NUMBER_OF_STEPS_PER_TRAJECTORY,
         )
         acceleration = np.random.normal(
-            1,
+            INITIAL_ACCELERATION_MEAN,
             INITIAL_ACCELERATION_VARIANCE,
             NUMBER_OF_INITIAL_TRAJECTORIES * NUMBER_OF_STEPS_PER_TRAJECTORY,
         )
@@ -388,6 +413,7 @@ class CarController:
         @param: trajectory {list<state>} The trajectory of states that needs to be evaluated
         @returns: cost {float}: the scalar cost of the trajectory
         """
+        # start = time.time()
 
         distance_cost_weight = 1
         terminal_speed_cost_weight = 0
@@ -396,22 +422,22 @@ class CarController:
         distance_cost = 0
         terminal_speed_cost = 0
         terminal_position_cost = 0
-       
-
-        number_of_states = len(trajectory)
-        index = 0
 
 
         # Don't come too close to border
+
+        # start = time.time()
+
         # for state in trajectory:
 
         #     simulated_position = geom.Point(state[0], state[1])
-
         #     for border_line in self.track.line_strings:
         #         distance_to_border = simulated_position.distance(border_line)
         #         distance_cost += 1 / math.exp(distance_to_border)
 
-  
+        # end = time.time()
+        # print("distance_cost time", end - start)
+
         # Initial State
         initial_state = trajectory[0]
         terminal_state = trajectory[-1]
@@ -427,18 +453,26 @@ class CarController:
         #     terminal_speed_cost += 3 * abs(5 - terminal_speed)
 
         # Terminal Position cost
+        # start = time.time()
         terminal_position = geom.Point(terminal_state[0], terminal_state[1])
         terminal_distance_to_track = terminal_position.distance(geom.Point(self.goal_point))
         terminal_position_cost += abs(terminal_distance_to_track)
+
+        # end = time.time()
+        # print("terminal position cost time", end - start)
+
+        # start = time.time()
 
         # Don't cross the border
         trajectory_line = geom.LineString([initial_state[:2], terminal_state[:2]])
         # border_line = self.track.line_strings[0]
         for border_line in self.track.line_strings:
             if(border_line.crosses(trajectory_line)):
-                terminal_position_cost = 1000
+                terminal_position_cost = 100000
 
-    
+
+        # end = time.time()
+        # print("cost: check dont cross border time", end - start)
 
         # print("distance_cost", distance_cost)
         # print("terminal_position_cost", terminal_position_cost)
@@ -450,6 +484,9 @@ class CarController:
             + terminal_position_cost_weight * terminal_position_cost
         )
         # print("cost", cost)
+
+        # end = time.time()
+        # print("border_cost_function time: ", end - start)
         return cost
 
 
@@ -461,7 +498,7 @@ class CarController:
         """
 
         distance_cost_weight = 1
-        terminal_speed_cost_weight = 0
+        terminal_speed_cost_weight = 5
         terminal_position_cost_weight = 0
         angle_cost_weight = 0
 
@@ -529,6 +566,7 @@ class CarController:
         # Angle cost
         angle_cost = angle_sum * terminal_state[3]
 
+
         # Total cost
         cost = (
             distance_cost_weight * distance_cost
@@ -536,17 +574,26 @@ class CarController:
             + terminal_position_cost_weight * terminal_position_cost
             + angle_cost_weight * angle_cost
         )
+
+        # print("distance_cost",distance_cost_weight * distance_cost)
+        # print("terminal_speed_cost", terminal_speed_cost_weight * terminal_speed_cost)
+        # print("cost", cost)
         return cost
 
     def plan(self):
-        # dist = self.sample_control_inputs()
 
-        # dist = self.sample_control_inputs_history_based(self.best_control_sequenct)
+        # dist = self.static_control_inputs()
         dist = self.sample_control_inputs()
-
-        self.update_trackline()
+        # dist = self.sample_control_inputs_history_based(self.best_control_sequenct)
         
+
+        # self.update_trackline()
+
+        # start = time.time()
+
         trajectories, costs = self.simulate_trajectory_distribution(dist)
+        # end = time.time()
+        # print("simulate_trajectory_distribution time", end - start)     
 
         if(math.isnan(costs[0])):
             min_index = 0
@@ -567,14 +614,20 @@ class CarController:
                 #     best_index = i
                 #     lowest_cost = cost
 
-                if(cost < 999):
+                if(cost < 99999):
                     weight = math.exp((-1 / INVERSE_TEMP) * cost)
                 else:
                     weight = 0
                 
                 weights[i] = weight
 
-            next_control_sequence = np.average(dist, axis=0, weights=weights)
+            if(not np.any(weights)):
+                # Emergency Brake
+                print("Emergency Brake")
+                return 0, -10
+            else:
+                next_control_sequence = np.average(dist, axis=0, weights=weights)
+
 
             mppi_steering = next_control_sequence[0][0]
             mppi_speed = next_control_sequence[0][1]
