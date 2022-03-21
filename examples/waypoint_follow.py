@@ -10,6 +10,7 @@ import json
 from track import *
 from car import *
 from car_controller import *
+from ftg_planner import FollowTheGapPlanner
 
 from OpenGL.GL import *
 from numba import njit
@@ -341,7 +342,11 @@ def main():
         conf_dict = yaml.load(file, Loader=yaml.FullLoader)
     conf = Namespace(**conf_dict)
 
-    planner = PurePursuitPlanner(conf, 0.17145+0.15875)
+    # planner = PurePursuitPlanner(conf, 0.17145+0.15875)
+    planner = FollowTheGapPlanner(0.8)
+    planner.plot_lidar_data = False
+
+    planner_oponent = FollowTheGapPlanner(0.7)
 
     def render_callback(env_renderer):
         # custom extra drawing function
@@ -359,213 +364,75 @@ def main():
         e.top = top + 800
         e.bottom = bottom - 800
 
-        planner.render_waypoints(env_renderer)
-        planner.render_test(env_renderer)
+        planner.render_ftg(env_renderer)
 
     env = gym.make('f110_gym:f110-v0', map=conf.map_path,
-                   map_ext=conf.map_ext, num_agents=1)
+                   map_ext=conf.map_ext, num_agents=2)
     env.add_render_callback(render_callback)
 
     obs, step_reward, done, info = env.reset(
-        np.array([[conf.sx, conf.sy, conf.stheta]]))
+        np.array([[conf.sx, conf.sy, conf.stheta],[conf.sx -0.5 , conf.sy + 2, conf.stheta]]))
 
-    print("initial car state", PurePursuitPlanner.car_model.state)
 
     env.render()
 
     laptime = 0.0
     start = time.time()
 
-    last_speed = 0
+
+    car = env.sim.agents[0] 
+    car_2 = env.sim.agents[1]   
+
     render_index = 0
     while not done:
 
-        car = env.sim.agents[0] 
+
         car_state = env.sim.agents[0].state
-        scans = obs['scans'][0]
+        ranges = obs['scans'][0]
+        ranges_oponent = obs['scans'][1]
+
+
 
         # print("scan_angles", car.scan_angles)
         # print("side_distances", car.side_distances)
-
         # print("Scans",  obs['scans'][0])
+        # print("obs", obs)
+
+        odom_1 = {
+            'pose_x': obs['poses_x'][0],
+            'pose_y': obs['poses_y'][0],
+            'pose_theta': obs['poses_theta'][0],
+            'linear_vel_x': obs['linear_vels_x'][0],
+            'linear_vel_y': obs['linear_vels_y'][0],
+            'angular_vel_z': obs['ang_vels_z'][0]
+        }
+        print("odom_1", odom_1)
+
         # print("Car state", car_state)
-
-        planner.lidar_border_points = []
-        points = []
-        angles = []
-        distances = []
-
-        # Use all sensor data
-        # for i in range(1080):
-        #     p1 = car_state[0] + scans[i] * math.cos(car.scan_angles[i] + car_state[4])
-        #     p2 = car_state[1] + scans[i] * math.sin(car.scan_angles[i] + car_state[4])
-        #     planner.lidar_border_points.append([50* p1, 50* p2])
-
-        # Use only a part
-
-        scans = [x - 0.3 for x in scans]
-
-        max_dist = 0
-        farthest_point = (0,0)
-        for i in range(108):
-            max_distance = 15
-            index = 10*i
-            if(scans[index] > max_distance): continue
-            p1 = car_state[0] + scans[index] * math.cos(car.scan_angles[index] + car_state[4])
-            p2 = car_state[1] + scans[index] * math.sin(car.scan_angles[index] + car_state[4])
-            points.append((p1,p2))
-            angles.append(car.scan_angles[index])
-            distances.append(scans[index])
-            planner.lidar_border_points.append([50* p1, 50* p2])
-            if( scans[index] > max_dist):
-                max_dist = scans[index]
-                farthest_point = (p1,p2)
-
-        planner.car_controller.goal_point = farthest_point   
-        # planner.track.add_new_lidar_points_to_segments(points)
-        angles_unfiltered = angles.copy()
-        distances_unfiltered = distances.copy()
+        odom_2 = {
+            'pose_x': obs['poses_x'][1],
+            'pose_y': obs['poses_y'][1],
+            'pose_theta': obs['poses_theta'][1],
+            'linear_vel_x': obs['linear_vels_x'][1],
+            'linear_vel_y': obs['linear_vels_y'][1],
+            'angular_vel_z': obs['ang_vels_z'][1]
+        }
         
 
-        closest_distance = 10000
-        closest_distance_index = 0
-
-        # Filter distances
-
-        # ignore close points:
-        for i in range(len(distances)):
-
-            if(distances[i] < 3):
-                distances[i] = 0
-
-            if (distances[i] > 6):
-                distances[i] = 6
-
-            # Set points near closest distance to 0
-            if(distances[i] < closest_distance):
-                closest_distance =distances[i]
-                closest_distance_index = i
-
-
-        # IGNORE neighbors of closest point
-        for i in range(closest_distance_index - 30, closest_distance_index + 30 ):
-            distances[i] = 0
-
-        # Find gaps
-        gaps = []
-        gap_open = False
-        gap_opening_angle = 0
-        gap_starting_index = 0
-        gap_treshold = 2
-
-        hard_border_threshold = 5
-
-        max_distance = 0
-  
-
-        for i in range(len(distances) - 1):
-            # Rising
-            if(not gap_open):
-                if(distances[i] < distances[i+1] - gap_treshold):
-                    gap_opening_angle = angles[i+1] + math.sin(0.05) * distances[i]
-                    gap_starting_index = angles[i+1]
-                    gap_open = True
-             
-
-            # Falling
-            if(gap_open):
-                if(max_distance < distances[i]):
-                     max_distance = distances[i]
-
-                if(distances[i] > distances[i+1] + gap_treshold ):
-                    gap_closing_angle = angles[i+1] - math.sin(0.05) * distances[i]
-                    gap_closing_index = angles[i+1]
-                    gap = [gap_opening_angle,  gap_closing_angle, gap_starting_index, gap_closing_index]
-                    gaps.append(gap)
-                    gap_open = False
-          
-
-         
-
-
-
-
-
-
-        # Find largest Gap
-        largest_gap_angle = 0
-        largest_gap_index = 0
-        largest_gap_center = 0
-        for i in range(len(gaps)):
-            gap = gaps[i]
-            gap_angle = abs(gap[1] - gap[0])
-            if(gap_angle) > largest_gap_angle:
-                largest_gap_angle = gap_angle
-                largest_gap_index = i
-                largest_gap_center = (gap[0] + gap[1]) / 2
-
-
-
-        # Speed Calculation
-
-        speed = 0.7 * max_distance - 3 * abs(largest_gap_center)
-        if(speed < 0.1): speed = 0.1
-        speed = (last_speed + speed )/2
-        last_speed = speed
-
-        if max_distance > 15:
-            speed = 20
-        if max_distance < 2:
-             speed = 2
-  
-        print("aim for angle", largest_gap_center)
-        print("speed", speed)
-        print("max_dist", max_distance)
-
-
-        # Plotting
-        
-        # print("lidar points", distances)
-        if(PLOT_LIDAT_DATA):
-            if(render_index % 10 == 0):
-                plt.clf()
-                plt.title("Lidar Data")
-                plt.plot(angles, distances)
-                plt.plot(angles_unfiltered, distances_unfiltered)
-
-                for gap in gaps:
-                    plt.axvline(x=gap[0], color='k', linestyle='--')
-                    plt.axvline(x=gap[1], color='k', linestyle='--')
-
-                plt.axvline(x=largest_gap_center, color='red', linestyle='--')
-
-                plt.savefig("lidar.png")
-
-        # print("CARSTATE", car_state)
-        # [ obs['poses_x'][0] , obs['poses_y'][0], obs['poses_theta'][0], obs['linear_vels_x'][0], obs['ang_vels_z'][0], 0. , 0. ]
-        # print("Scans",  np.array(obs['scans']).shape)
-        # print("obs",  (obs))
-        # planner.car_model.state = car_state
-        # planner.car_controller.car_state = car_state
-
-        # speed, steer = planner.plan(obs['poses_x'][0], obs['poses_y'][0], obs['poses_theta'][0], work['tlad'], work['vgain'])
-
-        # print("Steer", steer)
-
-        steer = largest_gap_center
+        speed, steer =  planner.process_observation(ranges, odom_1)
         accl, sv = pid(speed, steer, car.state[3], car.state[2], car.params['sv_max'], car.params['a_max'], car.params['v_max'], car.params['v_min'])
-
         # sv = steer
 
-        obs, step_reward, done, info = env.step(np.array([[ accl, sv]]))
 
-        # planner.currentPosition = [obs['poses_x'][0], obs['poses_y'][0]]
+        speed_2, steer_2 = planner_oponent.process_observation(ranges_oponent, odom_2)
+        accl_2, sv_2 = pid(speed_2, steer_2, car_2.state[3], car_2.state[2], car_2.params['sv_max'], car_2.params['a_max'], car_2.params['v_max'], car_2.params['v_min'])
+
+        obs, step_reward, done, info = env.step(np.array([[ accl, sv],[ accl_2, sv_2]]))
+        # obs, step_reward, done, info = env.step(np.array([[ accl, sv],[ 0,0]]))
 
         laptime += step_reward
         env.render(mode='human')
         render_index += 1
-
-        # planner.save_current_state()
 
     print('Sim elapsed time:', laptime, 'Real elapsed time:', time.time()-start)
 
