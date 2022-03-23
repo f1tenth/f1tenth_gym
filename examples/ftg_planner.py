@@ -11,10 +11,7 @@ class FollowTheGapPlanner:
     Example Planner
     """
    
-    vertex_list = pyglet.graphics.vertex_list(2,
-        ('v2i', (10, 15, 30, 35)),
-        ('c3B', (0, 0, 255, 0, 255, 0))
-    )
+ 
 
     def __init__(self, speed_fraction = 1):
     
@@ -25,69 +22,40 @@ class FollowTheGapPlanner:
 
         # self.drawn_waypoints = []
         self.lidar_border_points = 1080 * [[0,0]]
+        self.lidar_live_points = []
         self.lidar_scan_angles = np.linspace(-2.35,2.35, 1080)
         self.simulation_index = 0
         self.speed_fraction = speed_fraction
         self.plot_lidar_data = False
+        self.draw_lidar_data = False
+        self.lidar_visualization_color = (0, 0, 0)
+        self.lidar_live_gaps = []
+
+        self.vertex_list = pyglet.graphics.vertex_list(2,
+        ('v2i', (10, 15, 30, 35)),
+        ('c3B', (0, 0, 255, 0, 255, 0))
+    )
 
 
 
     def render_ftg(self, e):
-        return
+
+
+        if not self.draw_lidar_data: return
 
         # Render lidar data
-        for i in range(len(self.lidar_border_points)):
-            e.batch.add(1, GL_POINTS, None, ('v3f/stream', [self.lidar_border_points[i][0], self.lidar_border_points[i][1], 0.]),
-                        ('c3B', (255, 0, 255)))
-
-        return
-        points = np.array(self.currentPosition)
-        scaled_points = 50.*points
-
-        # print("Scaled Points", scaled_points)
-
-        # e.batch.add(1, GL_POINTS, None, ('v3f/stream', [scaled_points[0], scaled_points[1], 0.]),
-        #             ('c3B', (255, 0, 0)))
-
-      
-
-        points = np.array(self.nextPosition)
-        scaled_points = 50.*points
-        # self.vertex_list.delete()
+        # for i in range(len(self.lidar_border_points)):
+        #     e.batch.add(1, GL_POINTS, None, ('v3f/stream', [self.lidar_border_points[i][0], self.lidar_border_points[i][1], 0.]),
+        #                 ('c3B', (255, 0, 255)))
 
         self.vertex_list.delete()
-        self.vertex_list =  e.batch.add(1, GL_POINTS, None, ('v3f/stream', [scaled_points[0], scaled_points[1], 0.]), ('c3B', (0, 255, 0)))
         
+        scaled_points = np.array(self.lidar_border_points)
+        howmany = scaled_points.shape[0]
+        scaled_points_flat = scaled_points.flatten()
 
+        self.vertex_list = e.batch.add(howmany, GL_POINTS, None, ('v2f/stream', scaled_points_flat), ('c3B', self.lidar_visualization_color * howmany ))
 
-        points = np.array(self.car_controller.simulated_history)
-        chosen_trajectory = points[0][:][:]
-        chosen_trajectory_positions = chosen_trajectory[:][:]
-        c = 0
-
-        
-
-        if(points.shape[0] != 1):
-
-            points = points.reshape((points.shape[0] * points.shape[1],7))
-            trajectory = points[:,:2]
-
-            scaled_points = 50.*trajectory
-
-            howmany = scaled_points.shape[0]
-            scaled_points_flat = scaled_points.flatten()
-
-            c = c + 140
-            self.vertex_list = e.batch.add(howmany, GL_POINTS, None, ('v2f/stream', scaled_points_flat),
-                        ('c3B', (0, c, 255 -c) * howmany ))
-
-
-        self.car_controller.simulated_history  = [[0,0,0,0,0,0,0]]
-
-
-        # for i in range(points.shape[0]):
-        #      self.vertex_list = e.batch.add(1, GL_POINTS, None, ('v3f/stream', [scaled_points[i, 0], scaled_points[i, 1], 0.]),
-        #                 ('c3B', (0, 255,0)))
 
 
 
@@ -106,9 +74,6 @@ class FollowTheGapPlanner:
             'angular_vel_z': float,
         }
         """
-
-        # print("ego_odom",ego_odom)
-
         pose_x = ego_odom['pose_x']
         pose_y = ego_odom['pose_y']
         pose_theta = ego_odom['pose_theta']
@@ -116,6 +81,10 @@ class FollowTheGapPlanner:
         points = []
         angles = []
         distances = []
+        self.lidar_border_points = []
+
+        # Take into account size of car
+        scans = [x - 0.3 for x in ranges]
 
         # Use all sensor data
         # for i in range(1080):
@@ -124,20 +93,17 @@ class FollowTheGapPlanner:
         #     planner.lidar_border_points.append([50* p1, 50* p2])
 
         # Use only a part
-
-        scans = [x - 0.3 for x in ranges]
-
         max_dist = 0
-        for i in range(20, 84):
-            max_distance = 15
-            index = 10*i
-            # if(scans[index] > max_distance): continue
+        for i in range(20, 88): # Only front cone, not all 180 degree (use 0 to 108 for all lidar points)
+            index = 10*i # Only use every 10th lidar point
+
             p1 = pose_x + scans[index] * math.cos(self.lidar_scan_angles[index] + pose_theta)
             p2 = pose_y + scans[index] * math.sin(self.lidar_scan_angles[index] + pose_theta)
             points.append((p1,p2))
             angles.append(self.lidar_scan_angles[index])
             distances.append(scans[index])
             self.lidar_border_points.append([50* p1, 50* p2])
+            self.lidar_live_points.append([50* p1, 50* p2])
             if( scans[index] > max_dist):
                 max_dist = scans[index]
 
@@ -202,7 +168,7 @@ class FollowTheGapPlanner:
                     gap_open = False
                     gap_found = True
           
-
+        self.lidar_live_gaps = gaps
 
         # Find largest Gap
         largest_gap_angle = 0
@@ -221,24 +187,20 @@ class FollowTheGapPlanner:
         # Speed Calculation
 
         speed = self.speed_fraction * max_distance - 3 * abs(largest_gap_center)
-        if(speed < 0.1): speed = 0.1
-        # speed = (last_speed + speed )/2
-        # last_speed = speed
+        if(speed < 0.1): speed = 0.1 #Dont stand still
 
-        if max_distance > 15:
-            speed = 20
-        if max_distance < 2:
-             speed = 2
-  
+        if max_distance > 8:
+            speed = 14
 
+        # Emergency Brake
         if(not gap_found):
             speed = 0.0
             print("Emergency Brake")
 
-        print("Speed", speed)
+        # print("Speed", speed)
+
+
         # Plotting
-        
-        # print("lidar points", distances)
         if(self.plot_lidar_data):
             if(self.simulation_index % 10 == 0):
                 plt.clf()

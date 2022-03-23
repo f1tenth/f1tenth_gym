@@ -164,189 +164,30 @@ def get_actuation(pose_theta, lookahead_point, position, lookahead_distance, whe
     return speed, steering_angle
 
 
-class PurePursuitPlanner:
-    """
-    Example Planner
-    """
-    car_model = Car()
-    track = Track()
-    car_controller = CarController(track)
-
-    vertex_list = pyglet.graphics.vertex_list(2,
-        ('v2i', (10, 15, 30, 35)),
-        ('c3B', (0, 0, 255, 0, 255, 0))
-    )
-
-    def __init__(self, conf, wb):
-        self.wheelbase = wb
-        self.conf = conf
-        self.load_waypoints(conf)
-        self.max_reacquire = 20.
-
-
-        self.track = Track()
-        self.car_model = Car()
-        self.car_controller = CarController(self.track)
-
-        self.currentPosition = np.array([0.0, 0.0])
-        self.nextPosition = np.array([0.0, 0.0])
-        self.nextPositions = [[0.0, 0.0]]
-
-        self.drawn_waypoints = []
-        self.lidar_border_points = 1080 * [[0,0]]
-
-    def load_waypoints(self, conf):
-        """
-        loads waypoints
-        """
-        self.waypoints = np.loadtxt(
-            conf.wpt_path, delimiter=conf.wpt_delim, skiprows=conf.wpt_rowskip)
-
-        waypoints_x = self.waypoints[:,1]
-        waypoints_y = self.waypoints[:,2]
-
-        # print("WP", self.waypoints[:,1].shape)
-
-
-    def render_test(self, e):
-        
-
-        points = np.array(self.currentPosition)
-        scaled_points = 50.*points
-
-        # print("Scaled Points", scaled_points)
-
-        # e.batch.add(1, GL_POINTS, None, ('v3f/stream', [scaled_points[0], scaled_points[1], 0.]),
-        #             ('c3B', (255, 0, 0)))
-
-        # Render lidar data
-        for i in range(len(self.lidar_border_points)):
-            e.batch.add(1, GL_POINTS, None, ('v3f/stream', [self.lidar_border_points[i][0], self.lidar_border_points[i][1], 0.]),
-                        ('c3B', (255, 0, 255)))
-
-
-        points = np.array(self.nextPosition)
-        scaled_points = 50.*points
-        # self.vertex_list.delete()
-
-        self.vertex_list.delete()
-        self.vertex_list =  e.batch.add(1, GL_POINTS, None, ('v3f/stream', [scaled_points[0], scaled_points[1], 0.]), ('c3B', (0, 255, 0)))
-        
-
-
-        points = np.array(self.car_controller.simulated_history)
-        chosen_trajectory = points[0][:][:]
-        chosen_trajectory_positions = chosen_trajectory[:][:]
-        c = 0
-
-        
-
-        if(points.shape[0] != 1):
-
-            points = points.reshape((points.shape[0] * points.shape[1],7))
-            trajectory = points[:,:2]
-
-            scaled_points = 50.*trajectory
-
-            howmany = scaled_points.shape[0]
-            scaled_points_flat = scaled_points.flatten()
-
-            c = c + 140
-            self.vertex_list = e.batch.add(howmany, GL_POINTS, None, ('v2f/stream', scaled_points_flat),
-                        ('c3B', (0, c, 255 -c) * howmany ))
-
-
-        self.car_controller.simulated_history  = [[0,0,0,0,0,0,0]]
-
-
-        # for i in range(points.shape[0]):
-        #      self.vertex_list = e.batch.add(1, GL_POINTS, None, ('v3f/stream', [scaled_points[i, 0], scaled_points[i, 1], 0.]),
-        #                 ('c3B', (0, 255,0)))
-
-
-    def render_waypoints(self, e):
-        """
-        update waypoints being drawn by EnvRenderer
-        """
-        return
-        points = np.vstack(
-            (self.waypoints[:, self.conf.wpt_xind], self.waypoints[:, self.conf.wpt_yind])).T
-        scaled_points = 50.*points
-
-        for i in range(points.shape[0]):
-            if len(self.drawn_waypoints) < points.shape[0]:
-                b = e.batch.add(1, GL_POINTS, None, ('v3f/stream', [scaled_points[i, 0], scaled_points[i, 1], 0.]),
-                                ('c3B/stream', [183, 193, 222]))
-                self.drawn_waypoints.append(b)
-            else:
-                self.drawn_waypoints[i].vertices = [
-                    scaled_points[i, 0], scaled_points[i, 1], 0.]
-
-    def _get_current_waypoint(self, waypoints, lookahead_distance, position, theta):
-        """
-        gets the current waypoint to follow
-        """
-        wpts = np.vstack(
-            (self.waypoints[:, self.conf.wpt_xind], self.waypoints[:, self.conf.wpt_yind])).T
-        nearest_point, nearest_dist, t, i = nearest_point_on_trajectory(
-            position, wpts)
-        if nearest_dist < lookahead_distance:
-            lookahead_point, i2, t2 = first_point_on_trajectory_intersecting_circle(
-                position, lookahead_distance, wpts, i+t, wrap=True)
-            if i2 == None:
-                return None
-            current_waypoint = np.empty((3, ))
-            # x, y
-            current_waypoint[0:2] = wpts[i2, :]
-            # speed
-            current_waypoint[2] = waypoints[i, self.conf.wpt_vind]
-            return current_waypoint
-        elif nearest_dist < self.max_reacquire:
-            return np.append(wpts[i, :], waypoints[i, self.conf.wpt_vind])
-        else:
-            return None
-
-    def plan(self, pose_x, pose_y, pose_theta, lookahead_distance, vgain):
-        """
-        gives actuation given observation
-        """
-        position = np.array([pose_x, pose_y])
-        lookahead_point = self._get_current_waypoint(
-            self.waypoints, lookahead_distance, position, pose_theta)
-
-        if lookahead_point is None:
-            return 4.0, 0.0
-
-        speed, steering_angle = get_actuation(
-            pose_theta, lookahead_point, position, lookahead_distance, self.wheelbase)
-        speed = vgain * speed
-
-            
-        self.nextPosition = self.car_model.state[:2]
-        mppi_speed, mppi_steering = self.car_controller.plan()
-
-        if(mppi_speed == -10):
-            return mppi_speed, mppi_steering
-        return speed, mppi_steering
-
-
 def main():
     """
     main entry point
     """
 
-    work = {'mass': 3.463388126201571, 'lf': 0.15597534362552312,
-            'tlad': 1.82461887897713965, 'vgain': 1.30338203837889}
-
     with open('config_example_map.yaml') as file:
         conf_dict = yaml.load(file, Loader=yaml.FullLoader)
     conf = Namespace(**conf_dict)
 
-    # planner = PurePursuitPlanner(conf, 0.17145+0.15875)
+    # First car
     planner = FollowTheGapPlanner(0.8)
     planner.plot_lidar_data = False
+    planner.draw_lidar_data = True
+    planner.lidar_visualization_color = (255, 0, 255)
 
-    planner_oponent = FollowTheGapPlanner(0.7)
+
+
+    # 2nd Car
+    planner_2 = FollowTheGapPlanner(0.7)
+    planner_2.plot_lidar_data = False
+    planner_2.draw_lidar_data = True
+    planner_2.lidar_visualization_color = (255, 255, 255)
+   
+
 
     def render_callback(env_renderer):
         # custom extra drawing function
@@ -365,6 +206,7 @@ def main():
         e.bottom = bottom - 800
 
         planner.render_ftg(env_renderer)
+        planner_2.render_ftg(env_renderer)
 
     env = gym.make('f110_gym:f110-v0', map=conf.map_path,
                    map_ext=conf.map_ext, num_agents=2)
@@ -373,31 +215,28 @@ def main():
     obs, step_reward, done, info = env.reset(
         np.array([[conf.sx, conf.sy, conf.stheta],[conf.sx -0.5 , conf.sy + 2, conf.stheta]]))
 
+    car = env.sim.agents[0] 
+    car_2 = env.sim.agents[1]
 
     env.render()
 
     laptime = 0.0
     start = time.time()
 
-
-    car = env.sim.agents[0] 
-    car_2 = env.sim.agents[1]   
-
     render_index = 0
     while not done:
 
 
-        car_state = env.sim.agents[0].state
         ranges = obs['scans'][0]
         ranges_oponent = obs['scans'][1]
-
-
 
         # print("scan_angles", car.scan_angles)
         # print("side_distances", car.side_distances)
         # print("Scans",  obs['scans'][0])
         # print("obs", obs)
+        # print("Car state", car_state)
 
+        # First car
         odom_1 = {
             'pose_x': obs['poses_x'][0],
             'pose_y': obs['poses_y'][0],
@@ -406,9 +245,11 @@ def main():
             'linear_vel_y': obs['linear_vels_y'][0],
             'angular_vel_z': obs['ang_vels_z'][0]
         }
-        print("odom_1", odom_1)
 
-        # print("Car state", car_state)
+        speed, steer =  planner.process_observation(ranges, odom_1)
+        accl, sv = pid(speed, steer, car.state[3], car.state[2], car.params['sv_max'], car.params['a_max'], car.params['v_max'], car.params['v_min'])
+
+        # Second car
         odom_2 = {
             'pose_x': obs['poses_x'][1],
             'pose_y': obs['poses_y'][1],
@@ -417,18 +258,12 @@ def main():
             'linear_vel_y': obs['linear_vels_y'][1],
             'angular_vel_z': obs['ang_vels_z'][1]
         }
-        
 
-        speed, steer =  planner.process_observation(ranges, odom_1)
-        accl, sv = pid(speed, steer, car.state[3], car.state[2], car.params['sv_max'], car.params['a_max'], car.params['v_max'], car.params['v_min'])
-        # sv = steer
-
-
-        speed_2, steer_2 = planner_oponent.process_observation(ranges_oponent, odom_2)
+        speed_2, steer_2 = planner_2.process_observation(ranges_oponent, odom_2)
         accl_2, sv_2 = pid(speed_2, steer_2, car_2.state[3], car_2.state[2], car_2.params['sv_max'], car_2.params['a_max'], car_2.params['v_max'], car_2.params['v_min'])
 
+
         obs, step_reward, done, info = env.step(np.array([[ accl, sv],[ accl_2, sv_2]]))
-        # obs, step_reward, done, info = env.step(np.array([[ accl, sv],[ 0,0]]))
 
         laptime += step_reward
         env.render(mode='human')
