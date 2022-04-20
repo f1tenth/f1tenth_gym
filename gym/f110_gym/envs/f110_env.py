@@ -106,19 +106,25 @@ class F110Env(gym.Env):
             self.seed = kwargs['seed']
         except:
             self.seed = 12345
-        try:
-            self.map_name = kwargs['map']
-            # different default maps
-            if self.map_name == 'berlin':
-                self.map_path = os.path.dirname(os.path.abspath(__file__)) + '/maps/berlin.yaml'
-            elif self.map_name == 'skirk':
-                self.map_path = os.path.dirname(os.path.abspath(__file__)) + '/maps/skirk.yaml'
-            elif self.map_name == 'levine':
-                self.map_path = os.path.dirname(os.path.abspath(__file__)) + '/maps/levine.yaml'
-            else:
-                self.map_path = self.map_name + '.yaml'
-        except:
-            self.map_path = os.path.dirname(os.path.abspath(__file__)) + '/maps/vegas.yaml'
+        self.map_path = os.path.dirname(os.path.abspath(__file__)) + '/maps/porto.yaml'
+        # self.map_path = os.path.dirname(os.path.abspath(__file__)) + '/maps/levine.yaml'
+        # try:
+        #     self.map_name = kwargs['map']
+        #     # different default maps
+        #     print(f"Map: {self.map_name}")
+        #     if self.map_name == 'berlin':
+        #         self.map_path = os.path.dirname(os.path.abspath(__file__)) + '/maps/berlin.yaml'
+        #     elif self.map_name == 'skirk':
+        #         self.map_path = os.path.dirname(os.path.abspath(__file__)) + '/maps/skirk.yaml'
+        #     elif self.map_name == 'levine':
+        #         self.map_path = os.path.dirname(os.path.abspath(__file__)) + '/maps/levine.yaml'
+        #     else:
+        #         self.map_path = os.path.dirname(os.path.abspath(__file__)) + '/maps/' + self.map_name + '.yaml'
+        #         # self.map_path = self.map_name + '.yaml'
+        # except:
+        #     # os.path.dirname(os.path.abspath(__file__)) + '/maps/' + self.map_name + '.yaml'
+        #     # self.map_path = os.path.dirname(os.path.abspath(__file__)) + '/maps/vegas.yaml'
+        #     self.map_path = os.path.dirname(os.path.abspath(__file__)) + '/maps/levine.yaml'
 
         try:
             self.map_ext = kwargs['map_ext']

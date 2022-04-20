@@ -510,6 +510,7 @@ class Simulator(object):
             'linear_vels_x': [],
             'linear_vels_y': [],
             'ang_vels_z': [],
+            'steering_deltas': [],
             'collisions': self.collisions}
         for i, agent in enumerate(self.agents):
             observations['scans'].append(agent_scans[i])
@@ -518,6 +519,7 @@ class Simulator(object):
             observations['poses_theta'].append(agent.state[4])
             observations['linear_vels_x'].append(agent.state[3])
             observations['linear_vels_y'].append(0.)
+            observations['steering_deltas'].append(agent.state[2])
             observations['ang_vels_z'].append(agent.state[5])
 
         return observations
