@@ -50,7 +50,7 @@ RUN mkdir /f1tenth_gym
 COPY . /f1tenth_gym
 
 RUN cd /f1tenth_gym && \
-    pip3 install -e gym/
+    pip3 install -e .
 
 WORKDIR /f1tenth_gym
 
