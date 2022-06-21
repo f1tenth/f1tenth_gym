@@ -9,12 +9,14 @@ This project is still under heavy developement.
 You can find the [documentation](https://f1tenth-gym.readthedocs.io/en/latest/) of the environment here.
 
 ## Quickstart
-You can install the environment by running:
+We recommend installing the simulation inside a virtualenv. You can install the environment by running:
 
 ```bash
+virtualenv gym_env
+source gym_env/bin/activate
 git clone https://github.com/f1tenth/f1tenth_gym.git
 cd f1tenth_gym
-pip3 install --user -e .
+pip install -e .
 ```
 
 Then you can run a quick waypoint follow example by:
