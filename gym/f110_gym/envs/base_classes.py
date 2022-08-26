@@ -66,7 +66,7 @@ class RaceCar(object):
     scan_angles = None
     side_distances = None
 
-    def __init__(self, params, seed, is_ego=False, time_step=0.01, num_beams=1080, fov=4.7):
+    def __init__(self, params, seed, is_ego=False, time_step=0.01, num_beams=1080, fov=4.7, integrator=Integrator.RK4):
         """
         Init function
 
@@ -88,6 +88,9 @@ class RaceCar(object):
         self.time_step = time_step
         self.num_beams = num_beams
         self.fov = fov
+        self.integrator = integrator
+        if self.integrator is Integrator.RK4:
+            warnings.warn(f"Chosen integrator is RK4. This is different from previous versions of the gym.")
 
         # state is [x, y, steer_angle, vel, yaw_angle, yaw_rate, slip_angle]
         self.state = np.zeros((7, ))
@@ -276,29 +279,121 @@ class RaceCar(object):
         # steering angle velocity input to steering velocity acceleration input
         accl, sv = pid(vel, steer, self.state[3], self.state[2], self.params['sv_max'], self.params['a_max'], self.params['v_max'], self.params['v_min'])
         
-        # update physics, get RHS of diff'eq
-        f = vehicle_dynamics_st(
-            self.state,
-            np.array([sv, accl]),
-            self.params['mu'],
-            self.params['C_Sf'],
-            self.params['C_Sr'],
-            self.params['lf'],
-            self.params['lr'],
-            self.params['h'],
-            self.params['m'],
-            self.params['I'],
-            self.params['s_min'],
-            self.params['s_max'],
-            self.params['sv_min'],
-            self.params['sv_max'],
-            self.params['v_switch'],
-            self.params['a_max'],
-            self.params['v_min'],
-            self.params['v_max'])
+        if self.integrator is Integrator.RK4:
+            # RK4 integration
+            k1 = vehicle_dynamics_st(
+                self.state,
+                np.array([sv, accl]),
+                self.params['mu'],
+                self.params['C_Sf'],
+                self.params['C_Sr'],
+                self.params['lf'],
+                self.params['lr'],
+                self.params['h'],
+                self.params['m'],
+                self.params['I'],
+                self.params['s_min'],
+                self.params['s_max'],
+                self.params['sv_min'],
+                self.params['sv_max'],
+                self.params['v_switch'],
+                self.params['a_max'],
+                self.params['v_min'],
+                self.params['v_max'])
 
-        # update state
-        self.state = self.state + f * self.time_step
+            k2_state = self.state + self.time_step*(k1/2)
+
+            k2 = vehicle_dynamics_st(
+                k2_state,
+                np.array([sv, accl]),
+                self.params['mu'],
+                self.params['C_Sf'],
+                self.params['C_Sr'],
+                self.params['lf'],
+                self.params['lr'],
+                self.params['h'],
+                self.params['m'],
+                self.params['I'],
+                self.params['s_min'],
+                self.params['s_max'],
+                self.params['sv_min'],
+                self.params['sv_max'],
+                self.params['v_switch'],
+                self.params['a_max'],
+                self.params['v_min'],
+                self.params['v_max'])
+
+            k3_state = self.state + self.time_step*(k2/2)
+
+            k3 = vehicle_dynamics_st(
+                k2_state,
+                np.array([sv, accl]),
+                self.params['mu'],
+                self.params['C_Sf'],
+                self.params['C_Sr'],
+                self.params['lf'],
+                self.params['lr'],
+                self.params['h'],
+                self.params['m'],
+                self.params['I'],
+                self.params['s_min'],
+                self.params['s_max'],
+                self.params['sv_min'],
+                self.params['sv_max'],
+                self.params['v_switch'],
+                self.params['a_max'],
+                self.params['v_min'],
+                self.params['v_max'])
+
+            k4_state = self.state + self.time_step*k3
+
+            k4 = vehicle_dynamics_st(
+                k4_state,
+                np.array([sv, accl]),
+                self.params['mu'],
+                self.params['C_Sf'],
+                self.params['C_Sr'],
+                self.params['lf'],
+                self.params['lr'],
+                self.params['h'],
+                self.params['m'],
+                self.params['I'],
+                self.params['s_min'],
+                self.params['s_max'],
+                self.params['sv_min'],
+                self.params['sv_max'],
+                self.params['v_switch'],
+                self.params['a_max'],
+                self.params['v_min'],
+                self.params['v_max'])
+
+            # dynamics integration
+            self.state = self.state + self.time_step*(1/6)*(k1 + 2*k2 + 2*k3 + k4)
+        
+        elif self.integrator is Integrator.Euler:
+            f = vehicle_dynamics_st(
+                self.state,
+                np.array([sv, accl]),
+                self.params['mu'],
+                self.params['C_Sf'],
+                self.params['C_Sr'],
+                self.params['lf'],
+                self.params['lr'],
+                self.params['h'],
+                self.params['m'],
+                self.params['I'],
+                self.params['s_min'],
+                self.params['s_max'],
+                self.params['sv_min'],
+                self.params['sv_max'],
+                self.params['v_switch'],
+                self.params['a_max'],
+                self.params['v_min'],
+                self.params['v_max'])
+            self.state = self.state + self.time_step * f
+        
+        else:
+            raise SyntaxError(f"Invalid Integrator Specified. Provided {self.integrator.name}. Please choose RK4 or Euler")
 
         # bound yaw angle
         if self.state[4] > 2*np.pi:
@@ -361,7 +456,7 @@ class Simulator(object):
 
     """
 
-    def __init__(self, params, num_agents, seed, time_step=0.01, ego_idx=0):
+    def __init__(self, params, num_agents, seed, time_step=0.01, ego_idx=0, integrator=Integrator.RK4):
         """
         Init function
 
@@ -388,10 +483,10 @@ class Simulator(object):
         # initializing agents
         for i in range(self.num_agents):
             if i == ego_idx:
-                ego_car = RaceCar(params, self.seed, is_ego=True, time_step=self.time_step)
+                ego_car = RaceCar(params, self.seed, is_ego=True, time_step=self.time_step, integrator=integrator)
                 self.agents.append(ego_car)
             else:
-                agent = RaceCar(params, self.seed, is_ego=False, time_step=self.time_step)
+                agent = RaceCar(params, self.seed, is_ego=False, time_step=self.time_step, integrator=integrator)
                 self.agents.append(agent)
 
     def set_map(self, map_path, map_ext):

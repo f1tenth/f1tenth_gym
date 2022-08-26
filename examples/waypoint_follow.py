@@ -1,4 +1,5 @@
 import time
+from f110_gym.envs.base_classes import Integrator
 import yaml
 import gym
 import numpy as np
@@ -215,18 +216,40 @@ class PurePursuitPlanner:
 
         return speed, steering_angle
 
+
+class FlippyPlanner:
+    """
+    Planner designed to exploit integration methods and dynamics.
+    For testing only. To observe this error, use single track dynamics for all velocities >0.1
+    """
+    def __init__(self, speed=1, flip_every=1, steer=2):
+        self.speed = speed
+        self.flip_every = flip_every
+        self.counter = 0
+        self.steer = steer
+    
+    def render_waypoints(self, *args, **kwargs):
+        pass
+
+    def plan(self, *args, **kwargs):
+        if self.counter%self.flip_every == 0:
+            self.counter = 0
+            self.steer *= -1
+        return self.speed, self.steer
+
+
 def main():
     """
     main entry point
     """
 
-    work = {'mass': 3.463388126201571, 'lf': 0.15597534362552312, 'tlad': 0.82461887897713965, 'vgain': 0.90338203837889}
+    work = {'mass': 3.463388126201571, 'lf': 0.15597534362552312, 'tlad': 0.82461887897713965, 'vgain': 1.375}#0.90338203837889}
     
     with open('config_example_map.yaml') as file:
         conf_dict = yaml.load(file, Loader=yaml.FullLoader)
     conf = Namespace(**conf_dict)
 
-    planner = PurePursuitPlanner(conf, 0.17145+0.15875)
+    planner = PurePursuitPlanner(conf, (0.17145+0.15875)) #FlippyPlanner(speed=0.2, flip_every=1, steer=10)
 
     def render_callback(env_renderer):
         # custom extra drawing function
@@ -246,7 +269,7 @@ def main():
 
         planner.render_waypoints(env_renderer)
 
-    env = gym.make('f110_gym:f110-v0', map=conf.map_path, map_ext=conf.map_ext, num_agents=1)
+    env = gym.make('f110_gym:f110-v0', map=conf.map_path, map_ext=conf.map_ext, num_agents=1, timestep=0.01, integrator=Integrator.RK4)
     env.add_render_callback(render_callback)
     
     obs, step_reward, done, info = env.reset(np.array([[conf.sx, conf.sy, conf.stheta]]))
