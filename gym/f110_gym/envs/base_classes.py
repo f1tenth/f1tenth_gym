@@ -27,6 +27,8 @@ Prototype of base classes
 Replacement of the old RaceCar, Simulator classes in C++
 Author: Hongrui Zheng
 """
+from enum import Enum
+import warnings
 
 import numpy as np
 from numba import njit
@@ -34,6 +36,11 @@ from numba import njit
 from f110_gym.envs.dynamic_models import vehicle_dynamics_st, pid
 from f110_gym.envs.laser_models import ScanSimulator2D, check_ttc_jit, ray_cast
 from f110_gym.envs.collision_models import get_vertices, collision_multiple
+
+class Integrator(Enum):
+    RK4 = 1
+    Euler = 2
+
 
 class RaceCar(object):
     """
