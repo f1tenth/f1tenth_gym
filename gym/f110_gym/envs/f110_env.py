@@ -30,7 +30,7 @@ from gym import error, spaces, utils
 from gym.utils import seeding
 
 # base classes
-from f110_gym.envs.base_classes import Simulator
+from f110_gym.envs.base_classes import Simulator, Integrator
 
 # others
 import numpy as np
@@ -144,6 +144,12 @@ class F110Env(gym.Env):
         except:
             self.ego_idx = 0
 
+        # default integrator
+        try:
+            self.integrator = kwargs['integrator']
+        except:
+            self.integrator = Integrator.RK4
+
         # radius to consider done
         self.start_thresh = 0.5  # 10cm
 
@@ -175,7 +181,7 @@ class F110Env(gym.Env):
         self.start_rot = np.eye(2)
 
         # initiate stuff
-        self.sim = Simulator(self.params, self.num_agents, self.seed, time_step=self.timestep)
+        self.sim = Simulator(self.params, self.num_agents, self.seed, time_step=self.timestep, integrator=self.integrator)
         self.sim.set_map(self.map_path, self.map_ext)
 
         # stateful observations for rendering
