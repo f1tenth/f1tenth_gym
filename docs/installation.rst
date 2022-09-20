@@ -13,7 +13,7 @@
 
 Installation
 =================
-``f1tenth_gym`` is a pure python library, we provide two ways to set up the environment.
+``f1tenth_gym`` is a pure Python library. We provide two ways to set up the environment.
 
 .. image:: assets/docker_logo.png
 
@@ -35,7 +35,7 @@ A Dockerfile is provided. A container can be created by running the following co
 Using pip
 ---------------
 
-The environment is a python package, and only depends on ``numpy``, ``scipy``, ``numba``, ``Pillow``, ``gym``, ``pyyaml``, and ``pyglet``. You can install the package via pip:
+The environment is a Python package, and only depends on ``numpy``, ``scipy``, ``numba``, ``Pillow``, ``gym``, ``pyyaml``, and ``pyglet``. You can install the package via pip:
 
 .. code:: bash
 
