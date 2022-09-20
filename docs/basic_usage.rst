@@ -17,7 +17,7 @@ The ``reset()`` and ``step()`` method returns:
 
 The action taken by the ``step()`` function is a numpy ndarray of size ``(num_agents, 2)``, where each row represents an agent's action (indices corresponds to the list of agents), and the columns are control inputs (steering angle, velocity).
 
-A working example could be found in ``examples/waypoint_follow.py``.
+A working example can be found in ``examples/waypoint_follow.py``.
 
 The following pseudo code provides a skeleton for creating a simulation loop.
 
