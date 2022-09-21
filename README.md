@@ -4,6 +4,9 @@
 
 This is the repository of the F1TENTH Gym environment.
 
+![F1TENTH GYM overview](docs/figs/gym_overview.png)
+
+
 This project is still under heavy developement.
 
 You can find the [documentation](https://f1tenth-gym.readthedocs.io/en/latest/) of the environment here.
