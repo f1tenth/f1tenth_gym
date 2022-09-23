@@ -65,5 +65,11 @@ The F1TENTH Gym is explained in the paper ["F1TENTH: An Open-source Evaluation E
   organization={PMLR}
 }
 
+@article{betz2022_f1tenth,
+Author = {Johannes Betz and Hongrui Zheng and Zirui Zang and Florian Sauerbeck and Krzysztof Walas and Velin Dimitrov and Madhur Behl and Rosa Zheng and Joydeep Biswas and Venkat Krovi and Rahul Mangharam},
+Title = {Teaching Autonomous Systems Hands-On: Leveraging Modular Small-Scale Hardware in the Robotics Classroom},
+Year = {2022},
+Eprint = {arXiv:2209.11181},
+}
 
 ```
