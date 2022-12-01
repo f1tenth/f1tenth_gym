@@ -326,7 +326,7 @@ class RaceCar(object):
             k3_state = self.state + self.time_step*(k2/2)
 
             k3 = vehicle_dynamics_st(
-                k2_state,
+                k3_state,
                 np.array([sv, accl]),
                 self.params['mu'],
                 self.params['C_Sf'],
