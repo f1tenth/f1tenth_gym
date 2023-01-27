@@ -185,7 +185,7 @@ def get_scan(pose, theta_dis, fov, num_beams, theta_index_increment, sines, cosi
 
     return scan
 
-@njit(cache=True)
+@njit(cache=True, error_model='numpy')
 def check_ttc_jit(scan, vel, scan_angles, cosines, side_distances, ttc_thresh):
     """
     Checks the iTTC of each beam in a scan for collision with environment
