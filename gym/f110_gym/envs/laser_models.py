@@ -202,6 +202,7 @@ def check_ttc_jit(scan, vel, scan_angles, cosines, side_distances, ttc_thresh):
         in_collision (bool): whether vehicle is in collision with environment
         collision_angle (float): at which angle the collision happened
     """
+    in_collision = False
     if vel != 0.0:
         num_beams = scan.shape[0]
         for i in range(num_beams):
