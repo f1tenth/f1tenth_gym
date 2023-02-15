@@ -13,6 +13,8 @@ The environment is designed with determinism in mind. All agents' physics simula
 
 Github repo: https://github.com/f1tenth/f1tenth_gym
 
+Note that the GitHub will have more up to date documentation than this page. If you see a mistake, please contribute a fix!
+
 Example Usecases
 ------------------
 
