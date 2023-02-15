@@ -39,7 +39,4 @@ The environment is a Python package, and only depends on ``numpy``, ``scipy``, `
 
 .. code:: bash
 
-    $ git clone https://github.com/f1tenth/f1tenth_gym.git
-    $ cd f1tenth_gym
-    $ git checkout exp_py
-    $ pip3 install --user -e gym/
+    $ pip3 install git+https://github.com/f1tenth/f1tenth_gym.git
