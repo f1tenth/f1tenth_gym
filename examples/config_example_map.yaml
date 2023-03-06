@@ -8,7 +8,7 @@ map_path: './example_map'
 map_ext: '.png'
 
 # starting pose for map
-sx: 0.0
+sx: 0.7
 sy: 0.0
 stheta: 1.37079632679
 

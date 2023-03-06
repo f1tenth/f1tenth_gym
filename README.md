@@ -1,3 +1,5 @@
+![Python 3.8 3.9](https://github.com/f1tenth/f1tenth_gym/actions/workflows/ci.yml/badge.svg)
+![Docker](https://github.com/f1tenth/f1tenth_gym/actions/workflows/docker.yml/badge.svg)
 # The F1TENTH Gym environment with Google Colab
 
 This is the repository of the [F1TENTH](https://f1tenth.org/) Gym environment with [Google Colaboratory](https://research.google.com/colaboratory/) integration.
@@ -12,7 +14,7 @@ This project is still under heavy developement.
 You can find the [documentation](https://f1tenth-gym.readthedocs.io/en/latest/) of the environment here.
 
 ## Quickstart
-You can install the environment by running:
+We recommend installing the simulation inside a virtualenv. You can install the environment by running:
 
 ### Google Colab:
 
@@ -27,10 +29,11 @@ You can install the environment by running:
 ### Local machine:
 
 ```bash
-$ git clone https://github.com/f1tenth/f1tenth_gym.git
-$ cd f1tenth_gym
-$ git checkout exp_py
-$ pip3 install --user -e gym/
+virtualenv gym_env
+source gym_env/bin/activate
+git clone https://github.com/f1tenth/f1tenth_gym.git
+cd f1tenth_gym
+pip install -e .
 ```
 
 Then you can run a quick waypoint follow example by:
@@ -39,7 +42,15 @@ cd examples
 python3 waypoint_follow.py
 ```
 
+A Dockerfile is also provided with support for the GUI with nvidia-docker (nvidia GPU required):
+```bash
+docker build -t f1tenth_gym_container -f Dockerfile .
+docker run --gpus all -it -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix f1tenth_gym_container
+````
+Then the same example can be ran.
+
 ## Known issues
+- Library support issues on Windows. You must use Python 3.8 as of 10-2021
 - On MacOS Big Sur and above, when rendering is turned on, you might encounter the error:
 ```
 ImportError: Can't find framework /System/Library/Frameworks/OpenGL.framework.
