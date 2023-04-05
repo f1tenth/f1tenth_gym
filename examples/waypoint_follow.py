@@ -169,7 +169,7 @@ class PurePursuitPlanner:
         #points = self.waypoints
 
         points = np.vstack((self.waypoints[:, self.conf.wpt_xind], self.waypoints[:, self.conf.wpt_yind])).T
-        
+
         scaled_points = 50.*points
 
         for i in range(points.shape[0]):
@@ -179,7 +179,7 @@ class PurePursuitPlanner:
                 self.drawn_waypoints.append(b)
             else:
                 self.drawn_waypoints[i].vertices = [scaled_points[i, 0], scaled_points[i, 1], 0.]
-        
+
     def _get_current_waypoint(self, waypoints, lookahead_distance, position, theta):
         """
         gets the current waypoint to follow
@@ -227,7 +227,7 @@ class FlippyPlanner:
         self.flip_every = flip_every
         self.counter = 0
         self.steer = steer
-    
+
     def render_waypoints(self, *args, **kwargs):
         pass
 
@@ -244,7 +244,7 @@ def main():
     """
 
     work = {'mass': 3.463388126201571, 'lf': 0.15597534362552312, 'tlad': 0.82461887897713965, 'vgain': 1.375}#0.90338203837889}
-    
+
     with open('config_example_map.yaml') as file:
         conf_dict = yaml.load(file, Loader=yaml.FullLoader)
     conf = Namespace(**conf_dict)
@@ -271,7 +271,7 @@ def main():
 
     env = gym.make('f110_gym:f110-v0', map=conf.map_path, map_ext=conf.map_ext, num_agents=1, timestep=0.01, integrator=Integrator.RK4)
     env.add_render_callback(render_callback)
-    
+
     obs, step_reward, done, info = env.reset(np.array([[conf.sx, conf.sy, conf.stheta]]))
     env.render()
 
@@ -280,10 +280,12 @@ def main():
 
     while not done:
         speed, steer = planner.plan(obs['poses_x'][0], obs['poses_y'][0], obs['poses_theta'][0], work['tlad'], work['vgain'])
+        print(np.array([[steer, speed]]))
+        exit()
         obs, step_reward, done, info = env.step(np.array([[steer, speed]]))
         laptime += step_reward
         env.render(mode='human')
-        
+
     print('Sim elapsed time:', laptime, 'Real elapsed time:', time.time()-start)
 
 if __name__ == '__main__':

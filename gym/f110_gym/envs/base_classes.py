@@ -37,6 +37,9 @@ from f110_gym.envs.dynamic_models import vehicle_dynamics_st, pid
 from f110_gym.envs.laser_models import ScanSimulator2D, check_ttc_jit, ray_cast
 from f110_gym.envs.collision_models import get_vertices, collision_multiple
 
+# from gym import error, spaces, utils
+
+
 class Integrator(Enum):
     RK4 = 1
     Euler = 2
@@ -89,8 +92,8 @@ class RaceCar(object):
         self.num_beams = num_beams
         self.fov = fov
         self.integrator = integrator
-        if self.integrator is Integrator.RK4:
-            warnings.warn(f"Chosen integrator is RK4. This is different from previous versions of the gym.")
+        # if self.integrator is Integrator.RK4:
+        #     warnings.warn(f"Chosen integrator is RK4. This is different from previous versions of the gym.")
 
         # state is [x, y, steer_angle, vel, yaw_angle, yaw_rate, slip_angle]
         self.state = np.zeros((7, ))
@@ -154,6 +157,24 @@ class RaceCar(object):
                         to_side = dist_sides / np.cos(-angle - np.pi/2)
                         to_fr = dist_fr / np.sin(-angle - np.pi/2)
                         RaceCar.side_distances[i] = min(to_side, to_fr)
+        
+        # self.action_space = spaces.Box(low=np.array([-1.0, -1.0]), high=np.array([1.0, 1.0]), dtype=np.float32)
+        
+        # self.num_agents=1
+        
+        # self.observation_space = spaces.Dict({
+        #     'ego_idx': spaces.Box(low=0, high=self.num_agents - 1, shape=(), dtype=np.int32),
+        #     'scans': spaces.Box(low=-np.inf, high=np.inf, shape=(1080, ), dtype=np.float32),
+        #     'poses_x': spaces.Box(low=-np.inf, high=np.inf, shape=(self.num_agents,), dtype=np.float32),
+        #     'poses_y': spaces.Box(low=-np.inf, high=np.inf, shape=(self.num_agents,), dtype=np.float32),
+        #     'poses_theta': spaces.Box(low=-np.inf, high=np.inf, shape=(self.num_agents,), dtype=np.float32),
+        #     'linear_vels_x': spaces.Box(low=-np.inf, high=np.inf, shape=(self.num_agents,), dtype=np.float32),
+        #     'linear_vels_y': spaces.Box(low=-np.inf, high=np.inf, shape=(self.num_agents,), dtype=np.float32),
+        #     'ang_vels_z': spaces.Box(low=-np.inf, high=np.inf, shape=(self.num_agents,), dtype=np.float32),
+        #     'collisions': spaces.Box(low=0, high=1, shape=(self.num_agents,), dtype=np.float32),
+        #     'lap_times': spaces.Box(low=0, high=float('inf'), shape=(self.num_agents,), dtype=np.float32),
+        #     'lap_counts': spaces.Box(low=0, high=float('inf'), shape=(self.num_agents,), dtype=np.int32)
+        # })
 
     def update_params(self, params):
         """
@@ -178,7 +199,7 @@ class RaceCar(object):
         """
         RaceCar.scan_simulator.set_map(map_path, map_ext)
 
-    def reset(self, pose):
+    def reset(self, pose=None):
         """
         Resets the vehicle to a pose
         
@@ -402,6 +423,7 @@ class RaceCar(object):
             self.state[4] = self.state[4] + 2*np.pi
 
         # update scan
+        
         current_scan = RaceCar.scan_simulator.scan(np.append(self.state[0:2], self.state[4]), self.scan_rng)
 
         return current_scan
@@ -554,12 +576,12 @@ class Simulator(object):
             observations (dict): dictionary for observations: poses of agents, current laser scan of each agent, collision indicators, etc.
         """
 
-
         agent_scans = []
 
         # looping over agents
         for i, agent in enumerate(self.agents):
             # update each agent's pose
+            control_inputs = np.array(control_inputs).reshape(-1, 2)
             current_scan = agent.update_pose(control_inputs[i, 0], control_inputs[i, 1])
             agent_scans.append(current_scan)
 
