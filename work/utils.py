@@ -4,7 +4,6 @@ from sklearn.preprocessing import StandardScaler
 from stable_baselines3.common.callbacks import BaseCallback
 from gym import spaces
 import torch
-import csv
 import math
 
 class SaveModelCallback(BaseCallback):
@@ -94,6 +93,9 @@ class NewReward(gym.Wrapper):
         # Penalize the agent for collisions
         if self.env.collisions[0]:
             reward -= 10
+            
+        if obs['ang_vels_z'] > 5:
+            reward -= 50
 
         return reward
 
@@ -128,7 +130,9 @@ class FrenetObsWrapper(gym.ObservationWrapper):
 
         poses_x = obs['poses_x']
         poses_y = obs['poses_y']
-        frenet_coords = np.array([convert_to_frenet(x, y, self.map_data) for x, y in zip(poses_x, poses_y)])
+        # frenet_coords = np.array([convert_to_frenet(x, y, self.map_data) for x, y in zip(poses_x, poses_y)])
+        frenet_coords = np.array([convert_to_frenet(poses_x[i], poses_y[i], self.map_data) for i in range(len(poses_x))])
+
 
         # Replace 'poses_x' and 'poses_y' with Frenet coordinates
         obs['poses_s'] = frenet_coords[:, 0]
@@ -139,6 +143,7 @@ class FrenetObsWrapper(gym.ObservationWrapper):
         del obs['poses_y']
 
         return obs
+    
 
 class ScaledObservationEnv(gym.ObservationWrapper):
     def __init__(self, env: gym.Env):
@@ -195,12 +200,6 @@ class DebugNaNsCallback(BaseCallback):
 
         return True  # Continue trainingclass DebugNaNsCallback(BaseCallback):
 
-# def read_csv(file_path):
-#     with open(file_path, newline='') as csvfile:
-#         reader = csv.reader(csvfile, delimiter=';')
-#         data = [[float(val) for val in row] for i, row in enumerate(reader) if i >= 3]
-#     return data
-
 def read_csv(file_path):
     data = np.genfromtxt(file_path, delimiter=';', skip_header=3)
     return data
@@ -212,6 +211,7 @@ def get_closest_point_index(x, y, map_data):
     closest_point_index = np.argmin(distances)
     return closest_point_index
 
+# @lru_cache(maxsize=1000)
 def convert_to_frenet(x, y, map_data):
     closest_point_index = get_closest_point_index(x, y, map_data)
     closest_point = map_data[closest_point_index]

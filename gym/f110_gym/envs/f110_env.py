@@ -268,6 +268,7 @@ class F110Env(gym.Env):
         return {key: np.array(value) for key, value in obs.items()}
     
     def step(self, action):
+        # print(action)
         # call simulation step
         obs = self.sim.step(action)
         obs['lap_times'] = self.lap_times

@@ -18,7 +18,7 @@ def create_env():
 
 env = create_env()
 
-model = PPO.load("ppo_model_300000", env=env)
+model = PPO.load("ppo_model_720000", env=env)
 
 obs = env.reset()
 
