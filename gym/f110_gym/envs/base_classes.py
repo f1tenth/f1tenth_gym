@@ -37,9 +37,6 @@ from f110_gym.envs.dynamic_models import vehicle_dynamics_st, pid
 from f110_gym.envs.laser_models import ScanSimulator2D, check_ttc_jit, ray_cast
 from f110_gym.envs.collision_models import get_vertices, collision_multiple
 
-# from gym import error, spaces, utils
-
-
 class Integrator(Enum):
     RK4 = 1
     Euler = 2
@@ -79,9 +76,6 @@ class RaceCar(object):
             time_step (float, default=0.01): physics sim time step
             num_beams (int, default=1080): number of beams in the laser scan
             fov (float, default=4.7): field of view of the laser
-
-        Returns:
-            None
         """
 
         # initialization
@@ -92,8 +86,6 @@ class RaceCar(object):
         self.num_beams = num_beams
         self.fov = fov
         self.integrator = integrator
-        # if self.integrator is Integrator.RK4:
-        #     warnings.warn(f"Chosen integrator is RK4. This is different from previous versions of the gym.")
 
         # state is [x, y, steer_angle, vel, yaw_angle, yaw_rate, slip_angle]
         self.state = np.zeros((7, ))
@@ -157,24 +149,6 @@ class RaceCar(object):
                         to_side = dist_sides / np.cos(-angle - np.pi/2)
                         to_fr = dist_fr / np.sin(-angle - np.pi/2)
                         RaceCar.side_distances[i] = min(to_side, to_fr)
-        
-        # self.action_space = spaces.Box(low=np.array([-1.0, -1.0]), high=np.array([1.0, 1.0]), dtype=np.float32)
-        
-        # self.num_agents=1
-        
-        # self.observation_space = spaces.Dict({
-        #     'ego_idx': spaces.Box(low=0, high=self.num_agents - 1, shape=(), dtype=np.int32),
-        #     'scans': spaces.Box(low=-np.inf, high=np.inf, shape=(1080, ), dtype=np.float32),
-        #     'poses_x': spaces.Box(low=-np.inf, high=np.inf, shape=(self.num_agents,), dtype=np.float32),
-        #     'poses_y': spaces.Box(low=-np.inf, high=np.inf, shape=(self.num_agents,), dtype=np.float32),
-        #     'poses_theta': spaces.Box(low=-np.inf, high=np.inf, shape=(self.num_agents,), dtype=np.float32),
-        #     'linear_vels_x': spaces.Box(low=-np.inf, high=np.inf, shape=(self.num_agents,), dtype=np.float32),
-        #     'linear_vels_y': spaces.Box(low=-np.inf, high=np.inf, shape=(self.num_agents,), dtype=np.float32),
-        #     'ang_vels_z': spaces.Box(low=-np.inf, high=np.inf, shape=(self.num_agents,), dtype=np.float32),
-        #     'collisions': spaces.Box(low=0, high=1, shape=(self.num_agents,), dtype=np.float32),
-        #     'lap_times': spaces.Box(low=0, high=float('inf'), shape=(self.num_agents,), dtype=np.float32),
-        #     'lap_counts': spaces.Box(low=0, high=float('inf'), shape=(self.num_agents,), dtype=np.int32)
-        # })
 
     def update_params(self, params):
         """
@@ -389,7 +363,13 @@ class RaceCar(object):
                 self.params['v_max'])
 
             # dynamics integration
+            # print('prev state', self.state)
+            # print('k1 cont, ', k1)
+            # print('k2 cont, ', k2)
+            # print('k3 cont, ', k3)
+            # print('k4 cont, ', k4)
             self.state = self.state + self.time_step*(1/6)*(k1 + 2*k2 + 2*k3 + k4)
+            # print('next state', self.state, '\n')
         
         elif self.integrator is Integrator.Euler:
             f = vehicle_dynamics_st(

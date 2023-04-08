@@ -20,14 +20,9 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-'''
-Author: Hongrui Zheng
-'''
-
 # gym imports
 import gym
-from gym import error, spaces, utils
-from gym.utils import seeding
+from gym import  spaces
 
 # base classes
 from f110_gym.envs.base_classes import Simulator, Integrator
@@ -49,6 +44,8 @@ VIDEO_W = 600
 VIDEO_H = 400
 WINDOW_W = 1000
 WINDOW_H = 800
+
+DTYPE = np.float32
 
 class F110Env(gym.Env):
     """
@@ -98,77 +95,45 @@ class F110Env(gym.Env):
     render_callbacks = []
 
     def __init__(self, **kwargs):
-        # kwargs extraction
-                                                              
-        try:
-            self.seed = kwargs['seed']
-        except:
-            self.seed = 12345
-        try:
-            self.map_name = kwargs['map']
-            # different default maps
-            if self.map_name == 'berlin':
-                self.map_path = os.path.dirname(os.path.abspath(__file__)) + '/maps/berlin.yaml'
-            elif self.map_name == 'skirk':
-                self.map_path = os.path.dirname(os.path.abspath(__file__)) + '/maps/skirk.yaml'
-            elif self.map_name == 'levine':
-                self.map_path = os.path.dirname(os.path.abspath(__file__)) + '/maps/levine.yaml'
-            else:
-                self.map_path = self.map_name + '.yaml'
-        except:
-            self.map_path = os.path.dirname(os.path.abspath(__file__)) + '/maps/vegas.yaml'
+        # kwargs extraction     
+        self.seed = kwargs.get('seed', 12345)
+        
+        self.map_name = kwargs.get('map', 'vegas')
+        map_mapping = {
+            'berlin': 'berlin.yaml',
+            'skirk': 'skirk.yaml',
+            'levine': 'levine.yaml'}
+        
+        self.map_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'maps', map_mapping.get(self.map_name, self.map_name + '.yaml'))
+        self.map_ext = kwargs.get('map_ext', '.png')
 
-        try:
-            self.map_ext = kwargs['map_ext']
-        except:
-            self.map_ext = '.png'
-
-        try:
-            self.params = kwargs['params']
-        except:
-            self.params = {'mu': 1.0489, 'C_Sf': 4.718, 'C_Sr': 5.4562, 'lf': 0.15875, 'lr': 0.17145, 'h': 0.074, 'm': 3.74, 'I': 0.04712, 's_min': -0.4189, 's_max': 0.4189, 'sv_min': -3.2, 'sv_max': 3.2, 'v_switch': 7.319, 'a_max': 9.51, 'v_min':-5.0, 'v_max': 20.0, 'width': 0.31, 'length': 0.58}
-
+        default_params = {'mu': 1.0489, 'C_Sf': 4.718, 'C_Sr': 5.4562, 'lf': 0.15875, 'lr': 0.17145, 
+                          'h': 0.074, 'm': 3.74, 'I': 0.04712, 's_min': -0.4189, 's_max': 0.4189, 
+                          'sv_min': -3.2, 'sv_max': 3.2, 'v_switch': 7.319, 'a_max': 9.51, 'v_min':-5.0, 
+                          'v_max': 20.0, 'width': 0.31, 'length': 0.58}
+        self.params = kwargs.get('params', default_params)
+        
         # simulation parameters
-        try:
-            self.num_agents = kwargs['num_agents']
-        except:
-            self.num_agents = 2
+        self.num_agents = kwargs.get('num_agents', 2)
+        self.timestep = kwargs.get('timestep', 0.01)
+        self.ego_idx = kwargs.get('ego_idx', 0)
 
-        try:
-            self.timestep = kwargs['timestep']
-        except:
-            self.timestep = 0.01
-
-        # default ego index
-        try:
-            self.ego_idx = kwargs['ego_idx']
-        except:
-            self.ego_idx = 0
-
-        # default integrator
-        try:
-            self.integrator = kwargs['integrator']
-        except:
-            self.integrator = Integrator.RK4
+        self.integrator = kwargs.get('integrator', Integrator.RK4)
 
         # radius to consider done
         self.start_thresh = 0.5  # 10cm
 
         # env states
-        self.poses_x = []
-        self.poses_y = []
-        self.poses_theta = []
-        self.collisions = np.zeros((self.num_agents, ))
-        # TODO: collision_idx not used yet
-        # self.collision_idx = -1 * np.ones((self.num_agents, ))
+        self.poses = np.zeros((self.num_agents, 3))
+        self.collisions = np.zeros(self.num_agents)
 
         # loop completion
         self.near_start = True
         self.num_toggles = 0
 
         # race info
-        self.lap_times = np.zeros((self.num_agents, ))
-        self.lap_counts = np.zeros((self.num_agents, ))
+        self.lap_times = np.zeros(self.num_agents)
+        self.lap_counts = np.zeros(self.num_agents)
         self.current_time = 0.0
 
         # finish line info
@@ -188,20 +153,20 @@ class F110Env(gym.Env):
         # stateful observations for rendering
         self.render_obs = None
         
-        self.action_space = spaces.Box(low=np.array([-1.0, -1.0]), high=np.array([1.0, 1.0]), dtype=np.float32)
+        self.action_space = spaces.Box(low=np.array([self.params['s_min'], self.params['sv_min']]), high=np.array([self.params['s_max'], self.params['sv_max']]), dtype=np.float32)
         
         self.observation_space = spaces.Dict({
-            'ego_idx': spaces.Box(low=0, high=self.num_agents - 1, shape=(1,), dtype=np.int32), #good 
+            'ego_idx': spaces.Box(low=0, high=self.num_agents - 1, shape=(1,), dtype=np.int32),
             'scans': spaces.Box(low=0, high=100, shape=(1080, ), dtype=np.float32),
-            'poses_x': spaces.Box(low=-1000, high=1000, shape=(self.num_agents,), dtype=np.float32),       #good
-            'poses_y': spaces.Box(low=-1000, high=1000, shape=(self.num_agents,), dtype=np.float32),       #good
-            'poses_theta': spaces.Box(low=-2*np.pi, high=2*np.pi, shape=(self.num_agents,), dtype=np.float32),       #good
-            'linear_vels_x': spaces.Box(low=-10, high=10, shape=(self.num_agents,), dtype=np.float32),     #good
-            'linear_vels_y': spaces.Box(low=-10, high=10, shape=(self.num_agents,), dtype=np.float32),     #good
-            'ang_vels_z': spaces.Box(low=-10, high=10, shape=(self.num_agents,), dtype=np.float32),    #good
-            'collisions': spaces.Box(low=0, high=1, shape=(self.num_agents,), dtype=np.float32),   #good
-            'lap_times': spaces.Box(low=0, high=1e6, shape=(self.num_agents,), dtype=np.float32), #good
-            'lap_counts': spaces.Box(low=0, high=9999, shape=(self.num_agents,), dtype=np.int32)     #good
+            'poses_x': spaces.Box(low=-1000, high=1000, shape=(self.num_agents,), dtype=np.float32),      
+            'poses_y': spaces.Box(low=-1000, high=1000, shape=(self.num_agents,), dtype=np.float32),       
+            'poses_theta': spaces.Box(low=-2*np.pi, high=2*np.pi, shape=(self.num_agents,), dtype=np.float32),       
+            'linear_vels_x': spaces.Box(low=-10, high=10, shape=(self.num_agents,), dtype=np.float32),     
+            'linear_vels_y': spaces.Box(low=-10, high=10, shape=(self.num_agents,), dtype=np.float32),    
+            'ang_vels_z': spaces.Box(low=-10, high=10, shape=(self.num_agents,), dtype=np.float32),    
+            'collisions': spaces.Box(low=0, high=1, shape=(self.num_agents,), dtype=np.float32),   
+            'lap_times': spaces.Box(low=0, high=1e6, shape=(self.num_agents,), dtype=np.float32), 
+            'lap_counts': spaces.Box(low=0, high=9999, shape=(self.num_agents,), dtype=np.int32)    
         })
 
 
@@ -252,59 +217,68 @@ class F110Env(gym.Env):
                 self.lap_times[i] = self.current_time
 
         done = (self.collisions[self.ego_idx]) or np.all(self.toggle_list >= 4)
+        
+        self.max_episode_time = 20
+        
+        if self.current_time >= self.max_episode_time:
+            done = True
+        # if done:
+        #     print('EPISODE DONE')   
+        #     print('time', self.current_time)     
 
         return bool(done), self.toggle_list >= 4
 
     def _update_state(self, obs_dict):
-        """
-        Update the env's states according to observations
+        for key in ['poses_x', 'poses_y', 'poses_theta', 'collisions']:
+            setattr(self, key, obs_dict[key])
 
-        Args:
-            obs_dict (dict): dictionary of observation
+    def reward(self, obs):
+        reward = 0
+        return reward
+    
+    def _check_invalid_values(self, obs):
+        invalid = False
+        for key, value in obs.items():
+            if np.any(np.isnan(value)) or np.any(np.isinf(value)):
+                invalid = True
+                break
+        return invalid
+    
+    def _handle_invalid_values(self, obs):
+        for key, value in obs.items():
+            if np.any(np.isnan(value)) or np.any(np.isinf(value)):
+                obs[key] = np.zeros_like(value)
+        return obs
+    
+    def _format_obs(self, obs):
+        formatted_obs = {
+            key: np.array(value, dtype=DTYPE)
+            for key, value in obs.items()
+        }
+        formatted_obs['ego_idx'] = np.array([obs['ego_idx']], dtype=np.int32)
+        formatted_obs['lap_counts'] = np.array(obs['lap_counts'], dtype=np.int32)
+        return formatted_obs
 
-        Returns:
-            None
-        """
-        self.poses_x = obs_dict['poses_x']
-        self.poses_y = obs_dict['poses_y']
-        self.poses_theta = obs_dict['poses_theta']
-        self.collisions = obs_dict['collisions']
-
+    def _update_render_obs(self, obs):
+        self.render_obs = {
+            key: obs[key] for key in ['ego_idx', 'poses_x', 'poses_y', 'poses_theta', 'lap_times', 'lap_counts']
+        }
+        
+    def _convert_obs_to_arrays(self, obs):
+        return {key: np.array(value) for key, value in obs.items()}
+    
     def step(self, action):
-        """
-        Step function for the gym env
-
-        Args:
-            action (np.ndarray(num_agents, 2))
-
-        Returns:
-            obs (dict): observation of the current step
-            reward (float, default=self.timestep): step reward, currently is physics timestep
-            done (bool): if the simulation is done
-            info (dict): auxillary information dictionary
-        """
-
         # call simulation step
         obs = self.sim.step(action)
         obs['lap_times'] = self.lap_times
         obs['lap_counts'] = self.lap_counts
+        self._update_render_obs(obs)
 
-        F110Env.current_obs = obs
+        # F110Env.current_obs = obs
 
-        self.render_obs = {
-            'ego_idx': obs['ego_idx'],
-            'poses_x': obs['poses_x'],
-            'poses_y': obs['poses_y'],
-            'poses_theta': obs['poses_theta'],
-            'lap_times': obs['lap_times'],
-            'lap_counts': obs['lap_counts']
-            }
-
-        # times
-        reward = self.timestep
+        self.stepreward = self.reward(obs)
         self.current_time = self.current_time + self.timestep
 
-        # update data member
         self._update_state(obs)
 
         # check done
@@ -313,52 +287,19 @@ class F110Env(gym.Env):
         
         obs['scans'] = obs['scans'][0]
         
-        # ego_idx = obs['ego_idx']
-        # scans = obs['scans']
-        # poses_x = obs['poses_x']
-        # poses_y = obs['poses_y']
-        # poses_theta = obs['poses_theta']
-        # linear_vels_x = obs['linear_vels_x']
-        # linear_vels_y = obs['linear_vels_y']
-        # ang_vels_z = obs['ang_vels_z']
-        # collisions = obs['collisions']
-        # lap_times = obs['lap_times']
-        # lap_counts = obs['lap_counts']
+        if self._check_invalid_values(obs):
+            obs = self._handle_invalid_values(obs)
 
-        # # collisions = obs['collisions']
-        # # lap_times = obs['lap_times']
-        # # lap_counts = obs['lap_counts'].items())
-        # observation = np.array([ego_idx, scans, poses_x, poses_y, poses_theta, linear_vels_x, linear_vels_y, ang_vels_z, collisions, lap_times, lap_counts])
-        # observation = observation.reshape(1, 11)
-        # print(observation)
-        
-        for item in obs.keys():
-            if type(obs[item]) != np.ndarray:
-                # print(item)
-                obs[item] = np.array(obs[item])
-        obs = {
-        'ego_idx': np.array([obs['ego_idx']], dtype=np.int32),
-        'scans': np.array(obs['scans'], dtype=np.float32),
-        'poses_x': np.array(obs['poses_x'], dtype=np.float32),
-        'poses_y': np.array(obs['poses_y'], dtype=np.float32),
-        'poses_theta': np.array(obs['poses_theta'], dtype=np.float32),
-        'linear_vels_x': np.array(obs['linear_vels_x'], dtype=np.float32),
-        'linear_vels_y': np.array(obs['linear_vels_x'], dtype=np.float32),
-        'ang_vels_z': np.array(obs['ang_vels_z'], dtype=np.float32),
-        'collisions': np.array(obs['collisions'], dtype=np.float32),
-        'lap_times': np.array(obs['lap_times'], dtype=np.float32),
-        'lap_counts': np.array(obs['lap_times'], dtype=np.int32),
-        }
+        obs = self._format_obs(obs)
+        return obs, self.stepreward, done, info
 
-        return obs, reward, done, info
+
 
     def reset(self, poses=None):
         if poses is None:
             # Generate random poses for the agents
             poses = np.array([[0, 0, 0.1]])
         """
-        Reset the gym environment by given poses
-
         Args:
             poses (np.ndarray (num_agents, 3)): poses to reset agents to
 
@@ -389,57 +330,10 @@ class F110Env(gym.Env):
         action = np.zeros((self.num_agents, 2))
         obs, reward, done, info = self.step(action)
 
-        self.render_obs = {
-            'ego_idx': obs['ego_idx'],
-            'poses_x': obs['poses_x'],
-            'poses_y': obs['poses_y'],
-            'poses_theta': obs['poses_theta'],
-            'lap_times': obs['lap_times'],
-            'lap_counts': obs['lap_counts']
-            }
-        
-        # obs['scans'] = obs['scans'][0]
-        
-        # ego_idx = obs['ego_idx']
-        # scans = obs['scans']
-        # poses_x = obs['poses_x']
-        # poses_y = obs['poses_y']
-        # poses_theta = obs['poses_theta']
-        # linear_vels_x = obs['linear_vels_x']
-        # linear_vels_y = obs['linear_vels_y']
-        # ang_vels_z = obs['ang_vels_z']
-        # collisions = obs['collisions']
-        # lap_times = obs['lap_times']
-        # lap_counts = obs['lap_counts']
-
-        # # collisions = obs['collisions']
-        # # lap_times = obs['lap_times']
-        # # lap_counts = obs['lap_counts'].items())
-        # observation = np.array([ego_idx, scans, poses_x, poses_y, poses_theta, linear_vels_x, linear_vels_y, ang_vels_z, collisions, lap_times, lap_counts])
-        # observation = observation.reshape(1, 11)
-        # print(observation)
-        for item in obs.keys():
-            if type(obs[item]) != np.ndarray:
-                # print(item)
-                obs[item] = np.array(obs[item])
-        
-        # print('before\n', obs)
-        
-        obs = {
-        'ego_idx': np.array(obs['ego_idx'], dtype=np.int32),
-        'scans': np.array(obs['scans'], dtype=np.float32),
-        'poses_x': np.array(obs['poses_x'], dtype=np.float32),
-        'poses_y': np.array(obs['poses_y'], dtype=np.float32),
-        'poses_theta': np.array(obs['poses_theta'], dtype=np.float32),
-        'linear_vels_x': np.array(obs['linear_vels_x'], dtype=np.float32),
-        'linear_vels_y': np.array(obs['linear_vels_x'], dtype=np.float32),
-        'ang_vels_z': np.array(obs['ang_vels_z'], dtype=np.float32),
-        'collisions': np.array(obs['collisions'], dtype=np.float32),
-        'lap_times': np.array(obs['lap_times'], dtype=np.float32),
-        'lap_counts': np.array(obs['lap_times'], dtype=np.int32),
-        }
-        # print('RESET RETURNS: \n', obs)
-        # exit()
+        self._update_render_obs(obs)
+        obs = self._convert_obs_to_arrays(obs)
+        obs = self._format_obs(obs)
+                
         return obs
 
     def update_map(self, map_path, map_ext):
@@ -462,9 +356,6 @@ class F110Env(gym.Env):
         Args:
             params (dict): dictionary of parameters
             index (int, default=-1): if >= 0 then only update a specific agent's params
-
-        Returns:
-            None
         """
         self.sim.update_params(params, agent_idx=index)
 
@@ -486,9 +377,6 @@ class F110Env(gym.Env):
             mode (str, default='human'): rendering mode, currently supports:
                 'human': slowed down rendering such that the env is rendered in a way that sim time elapsed is close to real time elapsed
                 'human_fast': render as fast as possible
-
-        Returns:
-            None
         """
         assert mode in ['human', 'human_fast']
 

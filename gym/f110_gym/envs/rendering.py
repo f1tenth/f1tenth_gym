@@ -30,6 +30,7 @@ Author: Hongrui Zheng
 # opengl stuff
 import pyglet
 from pyglet.gl import *
+from pyglet.graphics.vertexdomain import VertexDomain
 
 # other
 import numpy as np
@@ -136,6 +137,10 @@ class EnvRenderer(pyglet.window.Window):
         map_height = map_img.shape[0]
         map_width = map_img.shape[1]
 
+        # downsample the map
+        downsample_factor = 10
+        map_img_downsampled = map_img[::downsample_factor, ::downsample_factor]
+
         # convert map pixels to coordinates
         range_x = np.arange(map_width)
         range_y = np.arange(map_height)
@@ -152,6 +157,7 @@ class EnvRenderer(pyglet.window.Window):
         for i in range(map_points.shape[0]):
             self.batch.add(1, GL_POINTS, None, ('v3f/stream', [map_points[i, 0], map_points[i, 1], map_points[i, 2]]), ('c3B/stream', [183, 193, 222]))
         self.map_points = map_points
+        
 
     def on_resize(self, width, height):
         """
@@ -294,6 +300,7 @@ class EnvRenderer(pyglet.window.Window):
         self.fps_display.draw()
         # Remove default modelview matrix
         glPopMatrix()
+
 
     def update_obs(self, obs):
         """
