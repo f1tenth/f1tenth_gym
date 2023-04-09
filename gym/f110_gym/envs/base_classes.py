@@ -276,7 +276,6 @@ class RaceCar(object):
         # steering angle velocity input to steering velocity acceleration input
         accl, sv = pid(vel, steer, self.state[3], self.state[2], self.params['sv_max'], self.params['a_max'], self.params['v_max'], self.params['v_min'])
         
-        # hereeee
         if self.integrator is Integrator.RK4:
             # RK4 integration
             
@@ -288,26 +287,6 @@ class RaceCar(object):
             k4_state = self.state + self.time_step*k3
             k4 = self.call_vehicle_dynamics_st(k4_state, sv, accl)
 
-            # for index, value in enumerate(k1):
-            #     if value >10:
-            #         k1[index] = 10
-            #     if value < -10:
-            #         k1[index] = -10
-            # for index, value in enumerate(k2):
-            #     if value >10:
-            #         k2[index] = 10
-            #     if value < -10:
-            #         k2[index] = -10
-            # for index, value in enumerate(k3):
-            #     if value >10:
-            #         k3[index] = 10
-            #     if value < -10:
-            #         k3[index] = -10
-            # for index, value in enumerate(k4):
-            #     if value >10:
-            #         k4[index] = 10
-            #     if value < -10:
-            #         k4[index] = -10
             self.state += self.time_step*(1/6)*(k1 + 2*k2 + 2*k3 + k4)
         
         elif self.integrator is Integrator.Euler:
@@ -323,9 +302,6 @@ class RaceCar(object):
         elif self.state[4] < 0:
             self.state[4] = self.state[4] + 2*np.pi
             
-        # psi_dot_threshold = 0.1  # Choose an appropriate value
-        # self.state[2] = np.clip(self.state[2], -psi_dot_threshold, psi_dot_threshold)
-
         # update scan
         
         current_scan = RaceCar.scan_simulator.scan(np.append(self.state[0:2], self.state[4]), self.scan_rng)
