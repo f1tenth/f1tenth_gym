@@ -221,7 +221,7 @@ class F110Env(gym.Env):
 
         done = (self.collisions[self.ego_idx]) or np.all(self.toggle_list >= 4)
         
-        self.max_episode_time = 20
+        self.max_episode_time = 50
         
         if self.current_time >= self.max_episode_time:
             done = True
@@ -276,8 +276,7 @@ class F110Env(gym.Env):
         obs['lap_counts'] = self.lap_counts
         self._update_render_obs(obs)
 
-        self.stepreward = self.reward(obs)
-        self.current_time = self.current_time + self.timestep
+        self.current_time += self.timestep
 
         self._update_state(obs)
 
@@ -287,19 +286,18 @@ class F110Env(gym.Env):
         
         obs['scans'] = obs['scans'][0]
         
-        if self._check_invalid_values(obs):
-            obs = self._handle_invalid_values(obs)
+        # if self._check_invalid_values(obs):
+        #     obs = self._handle_invalid_values(obs)
 
         obs = self._format_obs(obs)
-        return obs, self.stepreward, done, info
-
+        return obs, self.reward(obs), done, info
 
 
     def reset(self, poses=None):
         if poses is None:
             random.seed(time.time())
             # Generate random poses for the agents
-            poses = np.array([[np.random.uniform(-1.0, 1.0), np.random.uniform(-1.0, 1.0), np.random.uniform(0, np.pi)]])
+            poses = np.array([[np.random.uniform(-0.3, 0.3), np.random.uniform(-1.0, 1.0), np.random.uniform(np.pi/3, np.pi *2/3)]])
         """
         Args:
             poses (np.ndarray (num_agents, 3)): poses to reset agents to

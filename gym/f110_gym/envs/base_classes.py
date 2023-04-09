@@ -288,26 +288,26 @@ class RaceCar(object):
             k4_state = self.state + self.time_step*k3
             k4 = self.call_vehicle_dynamics_st(k4_state, sv, accl)
 
-            for index, value in enumerate(k1):
-                if value >10:
-                    k1[index] = 10
-                if value < -10:
-                    k1[index] = -10
-            for index, value in enumerate(k2):
-                if value >10:
-                    k2[index] = 10
-                if value < -10:
-                    k2[index] = -10
-            for index, value in enumerate(k3):
-                if value >10:
-                    k3[index] = 10
-                if value < -10:
-                    k3[index] = -10
-            for index, value in enumerate(k4):
-                if value >10:
-                    k4[index] = 10
-                if value < -10:
-                    k4[index] = -10
+            # for index, value in enumerate(k1):
+            #     if value >10:
+            #         k1[index] = 10
+            #     if value < -10:
+            #         k1[index] = -10
+            # for index, value in enumerate(k2):
+            #     if value >10:
+            #         k2[index] = 10
+            #     if value < -10:
+            #         k2[index] = -10
+            # for index, value in enumerate(k3):
+            #     if value >10:
+            #         k3[index] = 10
+            #     if value < -10:
+            #         k3[index] = -10
+            # for index, value in enumerate(k4):
+            #     if value >10:
+            #         k4[index] = 10
+            #     if value < -10:
+            #         k4[index] = -10
             self.state += self.time_step*(1/6)*(k1 + 2*k2 + 2*k3 + k4)
         
         elif self.integrator is Integrator.Euler:
@@ -323,8 +323,8 @@ class RaceCar(object):
         elif self.state[4] < 0:
             self.state[4] = self.state[4] + 2*np.pi
             
-        psi_dot_threshold = 0.1  # Choose an appropriate value
-        self.state[2] = np.clip(self.state[2], -psi_dot_threshold, psi_dot_threshold)
+        # psi_dot_threshold = 0.1  # Choose an appropriate value
+        # self.state[2] = np.clip(self.state[2], -psi_dot_threshold, psi_dot_threshold)
 
         # update scan
         
@@ -486,7 +486,6 @@ class Simulator(object):
 
         # fill in observations
         # state is [x, y, steer_angle, vel, yaw_angle, yaw_rate, slip_angle]
-        # collision_angles is removed from observations
         observations = {'ego_idx': self.ego_idx,
             'scans': [],
             'poses_x': [],

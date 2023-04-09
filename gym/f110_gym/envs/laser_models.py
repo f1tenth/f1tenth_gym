@@ -35,7 +35,6 @@ import os
 import yaml
 
 import unittest
-import timeit
 
 def get_dt(bitmap, resolution):
     """
@@ -476,60 +475,6 @@ class ScanTests(unittest.TestCase):
         self.num_test = 10
         self.test_poses = np.zeros((self.num_test, 3))
         self.test_poses[:, 2] = np.linspace(-1., 1., num=self.num_test)
-
-        # # legacy gym data
-        # sample_scan = np.load('legacy_scan.npz')
-        # self.berlin_scan = sample_scan['berlin']
-        # self.skirk_scan = sample_scan['skirk']
-
-    # def test_map_berlin(self):
-    #     scan_rng = np.random.default_rng(seed=12345)
-    #     scan_sim = ScanSimulator2D(self.num_beams, self.fov)
-    #     new_berlin = np.empty((self.num_test, self.num_beams))
-    #     map_path = '../../../maps/berlin.yaml'
-    #     map_ext = '.png'
-    #     scan_sim.set_map(map_path, map_ext)
-    #     # scan gen loop
-    #     for i in range(self.num_test):
-    #         test_pose = self.test_poses[i]
-    #         new_berlin[i,:] = scan_sim.scan(test_pose, scan_rng)
-    #     diff = self.berlin_scan - new_berlin
-    #     mse = np.mean(diff**2)
-    #     # print('Levine distance test, norm: ' + str(norm))
-
-    #     # plotting
-    #     import matplotlib.pyplot as plt
-    #     theta = np.linspace(-self.fov/2., self.fov/2., num=self.num_beams)
-    #     plt.polar(theta, new_berlin[1,:], '.', lw=0)
-    #     plt.polar(theta, self.berlin_scan[1,:], '.', lw=0)
-    #     plt.show()
-
-    #     self.assertLess(mse, 2.)
-
-    # def test_map_skirk(self):
-    #     scan_rng = np.random.default_rng(seed=12345)
-    #     scan_sim = ScanSimulator2D(self.num_beams, self.fov)
-    #     new_skirk = np.empty((self.num_test, self.num_beams))
-    #     map_path = '../../../maps/skirk.yaml'
-    #     map_ext = '.png'
-    #     scan_sim.set_map(map_path, map_ext)
-    #     print('map set')
-    #     # scan gen loop
-    #     for i in range(self.num_test):
-    #         test_pose = self.test_poses[i]
-    #         new_skirk[i,:] = scan_sim.scan(test_pose, scan_rng)
-    #     diff = self.skirk_scan - new_skirk
-    #     mse = np.mean(diff**2)
-    #     print('skirk distance test, mse: ' + str(mse))
-
-    #     # plotting
-    #     import matplotlib.pyplot as plt
-    #     theta = np.linspace(-self.fov/2., self.fov/2., num=self.num_beams)
-    #     plt.polar(theta, new_skirk[1,:], '.', lw=0)
-    #     plt.polar(theta, self.skirk_scan[1,:], '.', lw=0)
-    #     plt.show()
-
-    #     self.assertLess(mse, 2.)
 
     def test_fps(self):
         # scan fps should be greater than 500

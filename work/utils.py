@@ -2,12 +2,23 @@ import gym
 import numpy as np
 from sklearn.preprocessing import StandardScaler
 from stable_baselines3.common.callbacks import BaseCallback
+from f110_gym.envs.base_classes import Integrator
 from gym import spaces
 import torch
 import math
 
 
 NUM_BEAMS = 600
+
+def create_env():
+    env = gym.make('f110_gym:f110-v0', num_agents=1, map='/Users/meraj/workspace/f1tenth_gym/examples/example_map', integrator=Integrator.RK4)
+    env = FrenetObsWrapper(env, '/Users/meraj/workspace/f1tenth_gym/examples/example_waypoints.csv')
+    env = NewReward(env, '/Users/meraj/workspace/f1tenth_gym/examples/example_waypoints.csv')
+    env = FilterObservationSpace(env)
+    # env = ScaledObservationEnv(env)
+    # env = FilterObservationSpace(env)
+    return env
+
 
 class EpisodeNumberCallback(BaseCallback):
     def __init__(self, verbose=0):
@@ -87,61 +98,55 @@ class NewReward(gym.Wrapper):
         # ego_s = obs["poses_s"]
         ego_d = obs["poses_d"]
 
-        # target_s = 2.0
-        # target_d = 0.0
-
-        # d_s = target_s - ego_s
-        # d_d = target_d - ego_d
-        # distance = np.linalg.norm([d_s, d_d])
-
-        # # Encourage the agent to move closer to the target
-        # reward = -0.1 * distance
         reward = 0
 
-        # # Reward the agent for reaching the target area
-        # if distance < 1.0:
-        #     reward += 5.0
-
         # Penalize the agent for being stationary
-        stationary_threshold = 0.05
+        stationary_threshold = 0.25
         ego_linear_speed = np.sqrt(obs['linear_vels_s'][self.ego_idx]**2 + obs['linear_vels_d'][self.ego_idx]**2)
         if ego_linear_speed < stationary_threshold:
-            reward -= 0.5
+            reward -= 10.0
+
 
         # Penalize the agent for collisions
         if self.env.collisions[0]:
-            reward -= 100
+            reward -= 1.0
         else:
             reward += 1.0
-
-        # Penalize the agent for extreme angular velocities and poses
-        # ang_vel_penalty_threshold = 10
-        # pose_theta_penalty_threshold = 400
-        # if obs['ang_vels_z'] > ang_vel_penalty_threshold or obs['poses_theta'] > pose_theta_penalty_threshold:
-        #     reward -= 20
-        # elif obs['ang_vels_z'] > 5:
-        #     reward -= 5
-        # elif obs['ang_vels_z'] > 3:
-        #     reward -= 3
-        # elif obs['ang_vels_z'] > 1.0:
-        #     reward -= 1
-        # elif obs['ang_vels_z'] > 0.5:
-        #     reward -= 0.5
 
         # Encourage the agent to maintain a safe distance from the walls
         wall_distance_threshold = 0.5
         if abs(ego_d) < wall_distance_threshold:
-            reward -= 1.0 * (wall_distance_threshold - abs(ego_d))
-        
+            reward -= 3.0 * (wall_distance_threshold - abs(ego_d)) * abs(wall_distance_threshold - abs(ego_d))
 
         # Encourage the agent to move in the desired direction (along the s-axis)
-        direction_reward_weight = 5.0
+        direction_reward_weight = 1.0
         reward += direction_reward_weight * obs['linear_vels_s'][self.ego_idx]
 
-        # # Penalize the agent for high lateral velocity (to discourage erratic behavior)
-        # lateral_vel_penalty_weight = 0.1
-        # reward -= lateral_vel_penalty_weight * abs(obs['linear_vels_d'][self.ego_idx])
+        # Penalize the agent for high lateral velocity (to discourage erratic behavior)
+        lateral_vel_penalty_weight = 1.0
+        reward -= lateral_vel_penalty_weight * abs(obs['linear_vels_d'][self.ego_idx])
 
+
+        pose_theta_penalty_weight = 0.3
+        desired_orientation = np.pi / 2
+
+        # Normalize the pose_theta
+        normalized_pose_theta = (obs['poses_theta'][self.ego_idx] + np.pi) % (2 * np.pi) - np.pi
+
+        # Calculate the difference between the current orientation and desired orientation
+        angle_diff = normalized_pose_theta - desired_orientation
+
+        # Normalize the angle difference
+        angle_diff = (angle_diff + np.pi) % (2 * np.pi) - np.pi
+
+        # Apply the penalty based on the angle difference
+        reward += 1 - pose_theta_penalty_weight * abs(angle_diff) ** 2
+        
+        # print('vs', obs['linear_vels_s'])
+        # print('vd', obs['linear_vels_d'])
+        # print()
+        
+        
         return reward
 
     def step(self, action):

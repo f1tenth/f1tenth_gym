@@ -13,13 +13,6 @@ warnings.filterwarnings("ignore", category=UserWarning, module="gym.spaces.box")
 logging.getLogger('tensorflow').setLevel(logging.ERROR)
 
 # instantiating the environment
-def create_env():
-    env = gym.make('f110_gym:f110-v0', num_agents=1, map='/Users/meraj/workspace/f1tenth_gym/examples/example_map', integrator=Integrator.RK4)
-    env = FrenetObsWrapper(env, '/Users/meraj/workspace/f1tenth_gym/examples/example_waypoints.csv')
-    env = NewReward(env, '/Users/meraj/workspace/f1tenth_gym/examples/example_waypoints.csv')
-    env = ScaledObservationEnv(env)
-    env = FilterObservationSpace(env)
-    return env
 
 env = create_env()
 
@@ -43,28 +36,28 @@ def update_action():
         # Increase steering angle (right)
         if keyboard.is_pressed('d'):
             steering_angle += delta
-            steering_angle = min(0.4, steering_angle)
+            steering_angle = min(0.4189, steering_angle)
             action[0, 0] = steering_angle
             print("Action: ", action)
 
         # Decrease steering angle (left)
         if keyboard.is_pressed('a'):
             steering_angle -= delta
-            steering_angle = max(-0.4, steering_angle)
+            steering_angle = max(-0.4189, steering_angle)
             action[0, 0] = steering_angle
             print("Action: ", action)
 
         # Increase velocity
         if keyboard.is_pressed('w'):
             velocity += delta
-            velocity = min(1, velocity)
+            velocity = min(3.2, velocity)
             action[0, 1] = velocity
             print("Action: ", action)
 
         # Decrease velocity
         if keyboard.is_pressed('s'):
             velocity -= delta
-            velocity = max(-1, velocity)
+            velocity = max(-3.2, velocity)
             action[0, 1] = velocity
             print("Action: ", action)
 
@@ -85,13 +78,16 @@ while not done:
     # stepping through the environment
     obs, reward, done, info = env.step(action)
     
-    print('vel s', obs['linear_vels_s'])
-    print('vel d', obs['linear_vels_d'])
-    print('angvel', obs['ang_vels_z'])
-    print('pose s', obs['poses_s'])
-    print('pose d', obs['poses_d'])
-    print('pose theta', obs['poses_theta'])
-    print('reward', reward)
-    print()
+    # print('vel s', obs['linear_vels_s'])
+    # print('vel d', obs['linear_vels_d'])
+    # print('angvel', obs['ang_vels_z'])
+    # print('pose s', obs['poses_s'])
+    # print('pose d', obs['poses_d'])
+    # print('pose theta', obs['poses_theta'])
+    # print('reward', reward)
+    # print(min(obs['scans']))
+    # print(max(obs['scans']))
+    # print(obs['poses_theta'])
+    # print()
     env.render()
     # time.sleep(0.5)
