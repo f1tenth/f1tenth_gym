@@ -6,6 +6,22 @@ from gym import spaces
 import torch
 import math
 
+
+NUM_BEAMS = 600
+
+class EpisodeNumberCallback(BaseCallback):
+    def __init__(self, verbose=0):
+        super(EpisodeNumberCallback, self).__init__(verbose)
+        self.episode_number = 0
+
+    def _on_step(self):
+        # Check if a new episode has started
+        if self.locals["done"] and self.locals["infos"]:
+            self.episode_number += 1
+            # print(f"Episode number: {self.episode_number}")
+
+        return True
+
 class SaveModelCallback(BaseCallback):
     def __init__(self, save_interval, save_path):
         super().__init__()
@@ -22,12 +38,12 @@ class FilterObservationSpace(gym.ObservationWrapper):
         super().__init__(env)
 
         self.observation_space = spaces.Dict({
-            'scans': spaces.Box(low=0, high=100, shape=(1080, ), dtype=np.float32),
+            'scans': spaces.Box(low=0, high=100, shape=(NUM_BEAMS, ), dtype=np.float32),
             'poses_s': spaces.Box(low=-1000, high=1000, shape=(1,), dtype=np.float32),      
             'poses_d': spaces.Box(low=-1000, high=1000, shape=(1,), dtype=np.float32),       
             'poses_theta': spaces.Box(low=-2*np.pi, high=2*np.pi, shape=(1,), dtype=np.float32),       
-            'linear_vels_x': spaces.Box(low=-10, high=10, shape=(1,), dtype=np.float32),     
-            'linear_vels_y': spaces.Box(low=-10, high=10, shape=(1,), dtype=np.float32),    
+            'linear_vels_s': spaces.Box(low=-10, high=10, shape=(1,), dtype=np.float32),     
+            'linear_vels_d': spaces.Box(low=-10, high=10, shape=(1,), dtype=np.float32),    
             'ang_vels_z': spaces.Box(low=-10, high=10, shape=(1,), dtype=np.float32),    
         })
 
@@ -66,43 +82,67 @@ class NewReward(gym.Wrapper):
         super().__init__(env)
         self.map_data = read_csv(csv_file_path)
 
+
     def reward(self, obs):
         ego_s = obs["poses_s"]
         ego_d = obs["poses_d"]
 
-        target_s = 5.0
+        target_s = 2.0
         target_d = 0.0
 
         d_s = target_s - ego_s
         d_d = target_d - ego_d
-        distance = np.sqrt(d_s**2 + d_d**2)
+        distance = np.linalg.norm([d_s, d_d])
 
         # Encourage the agent to move closer to the target
         reward = -0.1 * distance
 
         # Reward the agent for reaching the target area
         if distance < 1.0:
-            reward += 1.0
+            reward += 5.0
 
         # Penalize the agent for being stationary
         stationary_threshold = 0.05
-        ego_linear_speed = np.sqrt(obs['linear_vels_x'][self.ego_idx]**2 + obs['linear_vels_y'][self.ego_idx]**2)
+        ego_linear_speed = np.sqrt(obs['linear_vels_s'][self.ego_idx]**2 + obs['linear_vels_d'][self.ego_idx]**2)
         if ego_linear_speed < stationary_threshold:
-            reward -= 0.1
+            reward -= 0.5
 
         # Penalize the agent for collisions
         if self.env.collisions[0]:
-            reward -= 10
-            
-        if obs['ang_vels_z'] > 5:
-            reward -= 50
+            reward -= 5000
+
+        # Penalize the agent for extreme angular velocities and poses
+        ang_vel_penalty_threshold = 10
+        pose_theta_penalty_threshold = 400
+        if obs['ang_vels_z'] > ang_vel_penalty_threshold or obs['poses_theta'] > pose_theta_penalty_threshold:
+            reward -= 20
+        elif obs['ang_vels_z'] > 5:
+            reward -= 5
+        elif obs['ang_vels_z'] > 3:
+            reward -= 3
+        elif obs['ang_vels_z'] > 1.0:
+            reward -= 1
+        elif obs['ang_vels_z'] > 0.5:
+            reward -= 0.5
+
+        # Encourage the agent to maintain a safe distance from the walls
+        wall_distance_threshold = 0.5
+        if abs(ego_d) < wall_distance_threshold:
+            reward -= 1.0 * (wall_distance_threshold - abs(ego_d))
+
+        # Encourage the agent to move in the desired direction (along the s-axis)
+        direction_reward_weight = 2.5
+        reward += direction_reward_weight * obs['linear_vels_s'][self.ego_idx]
+
+        # # Penalize the agent for high lateral velocity (to discourage erratic behavior)
+        # lateral_vel_penalty_weight = 0.1
+        # reward -= lateral_vel_penalty_weight * abs(obs['linear_vels_d'][self.ego_idx])
 
         return reward
 
     def step(self, action):
         obs, original_reward, done, info = self.env.step(action)
         new_reward = self.reward(obs)
-        self.step_reward = new_reward
         return obs, new_reward.item(), done, info
                        
 
@@ -113,12 +153,12 @@ class FrenetObsWrapper(gym.ObservationWrapper):
         
         self.observation_space = spaces.Dict({
             'ego_idx': spaces.Box(low=0, high=self.num_agents - 1, shape=(1,), dtype=np.int32),
-            'scans': spaces.Box(low=0, high=100, shape=(1080, ), dtype=np.float32),
+            'scans': spaces.Box(low=0, high=100, shape=(NUM_BEAMS, ), dtype=np.float32),
             'poses_s': spaces.Box(low=-1000, high=1000, shape=(self.num_agents,), dtype=np.float32),      
             'poses_d': spaces.Box(low=-1000, high=1000, shape=(self.num_agents,), dtype=np.float32),       
             'poses_theta': spaces.Box(low=-2*np.pi, high=2*np.pi, shape=(self.num_agents,), dtype=np.float32),       
-            'linear_vels_x': spaces.Box(low=-10, high=10, shape=(self.num_agents,), dtype=np.float32),     
-            'linear_vels_y': spaces.Box(low=-10, high=10, shape=(self.num_agents,), dtype=np.float32),    
+            'linear_vels_s': spaces.Box(low=-10, high=10, shape=(self.num_agents,), dtype=np.float32),     
+            'linear_vels_d': spaces.Box(low=-10, high=10, shape=(self.num_agents,), dtype=np.float32),    
             'ang_vels_z': spaces.Box(low=-10, high=10, shape=(self.num_agents,), dtype=np.float32),    
             'collisions': spaces.Box(low=0, high=1, shape=(self.num_agents,), dtype=np.float32),   
             'lap_times': spaces.Box(low=0, high=1e6, shape=(self.num_agents,), dtype=np.float32), 
@@ -130,17 +170,23 @@ class FrenetObsWrapper(gym.ObservationWrapper):
 
         poses_x = obs['poses_x']
         poses_y = obs['poses_y']
-        # frenet_coords = np.array([convert_to_frenet(x, y, self.map_data) for x, y in zip(poses_x, poses_y)])
         frenet_coords = np.array([convert_to_frenet(poses_x[i], poses_y[i], self.map_data) for i in range(len(poses_x))])
 
-
-        # Replace 'poses_x' and 'poses_y' with Frenet coordinates
         obs['poses_s'] = frenet_coords[:, 0]
         obs['poses_d'] = frenet_coords[:, 1]
+        
+        # Convert 'linear_vels_x' and 'linear_vels_y' to s and d velocities
+        s_velocities = obs['linear_vels_x'] * np.cos(obs['poses_theta']) + obs['linear_vels_y'] * np.sin(obs['poses_theta'])
+        d_velocities = -obs['linear_vels_x'] * np.sin(obs['poses_theta']) + obs['linear_vels_y'] * np.cos(obs['poses_theta'])
+
+        obs['linear_vels_s'] = s_velocities
+        obs['linear_vels_d'] = d_velocities
 
         # Remove original 'poses_x' and 'poses_y'
         del obs['poses_x']
         del obs['poses_y']
+        del obs['linear_vels_x']
+        del obs['linear_vels_y']
 
         return obs
     

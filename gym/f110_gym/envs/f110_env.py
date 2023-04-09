@@ -36,6 +36,7 @@ import time
 import pyglet
 pyglet.options['debug_gl'] = False
 from pyglet import gl
+import random
 
 # constants
 
@@ -46,6 +47,8 @@ WINDOW_W = 1000
 WINDOW_H = 800
 
 DTYPE = np.float32
+
+NUM_BEAMS = 600
 
 class F110Env(gym.Env):
     """
@@ -153,11 +156,11 @@ class F110Env(gym.Env):
         # stateful observations for rendering
         self.render_obs = None
         
-        self.action_space = spaces.Box(low=np.array([self.params['s_min'], self.params['sv_min']]), high=np.array([self.params['s_max'], self.params['sv_max']]), dtype=np.float32)
+        self.action_space = spaces.Box(low=np.array([self.params['s_min'], 0]), high=np.array([self.params['s_max'], self.params['sv_max']]), dtype=np.float32)
         
         self.observation_space = spaces.Dict({
             'ego_idx': spaces.Box(low=0, high=self.num_agents - 1, shape=(1,), dtype=np.int32),
-            'scans': spaces.Box(low=0, high=100, shape=(1080, ), dtype=np.float32),
+            'scans': spaces.Box(low=0, high=100, shape=(NUM_BEAMS, ), dtype=np.float32),
             'poses_x': spaces.Box(low=-1000, high=1000, shape=(self.num_agents,), dtype=np.float32),      
             'poses_y': spaces.Box(low=-1000, high=1000, shape=(self.num_agents,), dtype=np.float32),       
             'poses_theta': spaces.Box(low=-2*np.pi, high=2*np.pi, shape=(self.num_agents,), dtype=np.float32),       
@@ -222,9 +225,6 @@ class F110Env(gym.Env):
         
         if self.current_time >= self.max_episode_time:
             done = True
-        # if done:
-        #     print('EPISODE DONE')   
-        #     print('time', self.current_time)     
 
         return bool(done), self.toggle_list >= 4
 
@@ -267,15 +267,14 @@ class F110Env(gym.Env):
     def _convert_obs_to_arrays(self, obs):
         return {key: np.array(value) for key, value in obs.items()}
     
+
     def step(self, action):
-        # print(action)
+       
         # call simulation step
         obs = self.sim.step(action)
         obs['lap_times'] = self.lap_times
         obs['lap_counts'] = self.lap_counts
         self._update_render_obs(obs)
-
-        # F110Env.current_obs = obs
 
         self.stepreward = self.reward(obs)
         self.current_time = self.current_time + self.timestep
@@ -298,8 +297,9 @@ class F110Env(gym.Env):
 
     def reset(self, poses=None):
         if poses is None:
+            random.seed(time.time())
             # Generate random poses for the agents
-            poses = np.array([[0, 0, 0.1]])
+            poses = np.array([[np.random.uniform(-1.0, 1.0), np.random.uniform(-1.0, 1.0), np.random.uniform(65.0, 125.0)]])
         """
         Args:
             poses (np.ndarray (num_agents, 3)): poses to reset agents to

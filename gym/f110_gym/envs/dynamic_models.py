@@ -25,6 +25,7 @@ from numba import njit
 
 import unittest
 import time
+from scipy.integrate import solve_ivp
 
 @njit(cache=True)
 def accl_constraints(vel, accl, v_switch, a_max, v_min, v_max):
@@ -251,6 +252,15 @@ class DynamicsTest(unittest.TestCase):
         self.v_max = 50.8  #minimum velocity [m/s]
         self.v_switch = 7.319  #switching velocity [m/s]
         self.a_max = 11.5  #maximum absolute acceleration [m/s^2]
+        
+    def simulate_model(self, model_func, x0, t, u, atol=1e-10, rtol=1e-10):
+        def wrapped_func(t, x, *args):
+            return model_func(x, u, *args)
+
+        result = solve_ivp(
+            wrapped_func, (t[0], t[-1]), x0, method='RK45', t_eval=t, args=(self.mu, self.C_Sf, self.C_Sr, self.lf, self.lr, self.h, self.m, self.I, self.s_min, self.s_max, self.sv_min, self.sv_max, self.v_switch, self.a_max, self.v_min, self.v_max), atol=atol, rtol=rtol
+        )
+        return result.y.T
 
     def test_derivatives(self):
         # ground truth derivatives
@@ -303,9 +313,12 @@ class DynamicsTest(unittest.TestCase):
         u = np.array([0., 0.])
 
         # simulate single-track model
-        x_roll_st = odeint(func_ST, x0_ST, t, args=(u, self.mu, self.C_Sf, self.C_Sr, self.lf, self.lr, self.h, self.m, self.I, self.s_min, self.s_max, self.sv_min, self.sv_max, self.v_switch, self.a_max, self.v_min, self.v_max))
+        # x_roll_st = odeint(func_ST, x0_ST, t, args=(u, self.mu, self.C_Sf, self.C_Sr, self.lf, self.lr, self.h, self.m, self.I, self.s_min, self.s_max, self.sv_min, self.sv_max, self.v_switch, self.a_max, self.v_min, self.v_max))
         # simulate kinematic single-track model
-        x_roll_ks = odeint(func_KS, x0_KS, t, args=(u, self.mu, self.C_Sf, self.C_Sr, self.lf, self.lr, self.h, self.m, self.I, self.s_min, self.s_max, self.sv_min, self.sv_max, self.v_switch, self.a_max, self.v_min, self.v_max))
+        # x_roll_ks = odeint(func_KS, x0_KS, t, args=(u, self.mu, self.C_Sf, self.C_Sr, self.lf, self.lr, self.h, self.m, self.I, self.s_min, self.s_max, self.sv_min, self.sv_max, self.v_switch, self.a_max, self.v_min, self.v_max))
+
+        x_roll_st = self.simulate_model(vehicle_dynamics_st, x0_ST, t, u)
+        x_roll_ks = self.simulate_model(vehicle_dynamics_ks, x0_KS, t, u)
 
         self.assertTrue(all(x_roll_st[-1]==x0_ST))
         self.assertTrue(all(x_roll_ks[-1]==x0_KS))
@@ -335,9 +348,12 @@ class DynamicsTest(unittest.TestCase):
         u = np.array([0., -0.7*g])
 
         # simulate single-track model
-        x_dec_st = odeint(func_ST, x0_ST, t, args=(u, self.mu, self.C_Sf, self.C_Sr, self.lf, self.lr, self.h, self.m, self.I, self.s_min, self.s_max, self.sv_min, self.sv_max, self.v_switch, self.a_max, self.v_min, self.v_max))
+        # x_dec_st = odeint(func_ST, x0_ST, t, args=(u, self.mu, self.C_Sf, self.C_Sr, self.lf, self.lr, self.h, self.m, self.I, self.s_min, self.s_max, self.sv_min, self.sv_max, self.v_switch, self.a_max, self.v_min, self.v_max))
         # simulate kinematic single-track model
-        x_dec_ks = odeint(func_KS, x0_KS, t, args=(u, self.mu, self.C_Sf, self.C_Sr, self.lf, self.lr, self.h, self.m, self.I, self.s_min, self.s_max, self.sv_min, self.sv_max, self.v_switch, self.a_max, self.v_min, self.v_max))
+        # x_dec_ks = odeint(func_KS, x0_KS, t, args=(u, self.mu, self.C_Sf, self.C_Sr, self.lf, self.lr, self.h, self.m, self.I, self.s_min, self.s_max, self.sv_min, self.sv_max, self.v_switch, self.a_max, self.v_min, self.v_max))
+
+        x_dec_st = self.simulate_model(vehicle_dynamics_st, x0_ST, t, u)
+        x_dec_ks = self.simulate_model(vehicle_dynamics_ks, x0_KS, t, u)
 
         # ground truth for single-track model
         x_dec_st_gt = [-3.4335000000000013, 0.0000000000000000, 0.0000000000000000, -6.8670000000000018, 0.0000000000000000, 0.0000000000000000, 0.0000000000000000]
@@ -373,9 +389,12 @@ class DynamicsTest(unittest.TestCase):
         u = np.array([0.15, 0.63*g])
 
         # simulate single-track model
-        x_acc_st = odeint(func_ST, x0_ST, t, args=(u, self.mu, self.C_Sf, self.C_Sr, self.lf, self.lr, self.h, self.m, self.I, self.s_min, self.s_max, self.sv_min, self.sv_max, self.v_switch, self.a_max, self.v_min, self.v_max))
+        # x_acc_st = odeint(func_ST, x0_ST, t, args=(u, self.mu, self.C_Sf, self.C_Sr, self.lf, self.lr, self.h, self.m, self.I, self.s_min, self.s_max, self.sv_min, self.sv_max, self.v_switch, self.a_max, self.v_min, self.v_max))
         # simulate kinematic single-track model
-        x_acc_ks = odeint(func_KS, x0_KS, t, args=(u, self.mu, self.C_Sf, self.C_Sr, self.lf, self.lr, self.h, self.m, self.I, self.s_min, self.s_max, self.sv_min, self.sv_max, self.v_switch, self.a_max, self.v_min, self.v_max))
+        # x_acc_ks = odeint(func_KS, x0_KS, t, args=(u, self.mu, self.C_Sf, self.C_Sr, self.lf, self.lr, self.h, self.m, self.I, self.s_min, self.s_max, self.sv_min, self.sv_max, self.v_switch, self.a_max, self.v_min, self.v_max))
+
+        x_acc_st = self.simulate_model(vehicle_dynamics_st, x0_ST, t, u)
+        x_acc_ks = self.simulate_model(vehicle_dynamics_ks, x0_KS, t, u)
 
         # ground truth for single-track model
         x_acc_st_gt = [3.0731976046859715, 0.2869835398304389, 0.1500000000000000, 6.1802999999999999, 0.1097747074946325, 0.3248268063223301, 0.0697547542798040]
@@ -410,9 +429,12 @@ class DynamicsTest(unittest.TestCase):
         u = np.array([0.15, 0.])
 
         # simulate single-track model
-        x_left_st = odeint(func_ST, x0_ST, t, args=(u, self.mu, self.C_Sf, self.C_Sr, self.lf, self.lr, self.h, self.m, self.I, self.s_min, self.s_max, self.sv_min, self.sv_max, self.v_switch, self.a_max, self.v_min, self.v_max))
+        # x_left_st = odeint(func_ST, x0_ST, t, args=(u, self.mu, self.C_Sf, self.C_Sr, self.lf, self.lr, self.h, self.m, self.I, self.s_min, self.s_max, self.sv_min, self.sv_max, self.v_switch, self.a_max, self.v_min, self.v_max))
         # simulate kinematic single-track model
-        x_left_ks = odeint(func_KS, x0_KS, t, args=(u, self.mu, self.C_Sf, self.C_Sr, self.lf, self.lr, self.h, self.m, self.I, self.s_min, self.s_max, self.sv_min, self.sv_max, self.v_switch, self.a_max, self.v_min, self.v_max))
+        # x_left_ks = odeint(func_KS, x0_KS, t, args=(u, self.mu, self.C_Sf, self.C_Sr, self.lf, self.lr, self.h, self.m, self.I, self.s_min, self.s_max, self.sv_min, self.sv_max, self.v_switch, self.a_max, self.v_min, self.v_max))
+
+        x_left_st = self.simulate_model(vehicle_dynamics_st, x0_ST, t, u)
+        x_left_ks = self.simulate_model(vehicle_dynamics_ks, x0_KS, t, u)
 
         # ground truth for single-track model
         x_left_st_gt = [0.0000000000000000, 0.0000000000000000, 0.1500000000000000, 0.0000000000000000, 0.0000000000000000, 0.0000000000000000, 0.0000000000000000]

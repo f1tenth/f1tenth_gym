@@ -3,9 +3,11 @@ from stable_baselines3 import PPO
 import warnings
 from f110_gym.envs.base_classes import Integrator
 from utils import *
+import logging
 
 # Suppress the 'Box bound precision lowered by casting to float32' warning
 warnings.filterwarnings("ignore", category=UserWarning, module="gym.spaces.box")
+logging.getLogger('tensorflow').setLevel(logging.ERROR)
 
 # instantiating the environment
 def create_env():
@@ -18,7 +20,7 @@ def create_env():
 
 env = create_env()
 
-model = PPO.load("ppo_model_720000", env=env)
+model = PPO.load("/Users/meraj/workspace/f1tenth_gym/work/models/ppo_model_150000.zip", env=env)
 
 obs = env.reset()
 
