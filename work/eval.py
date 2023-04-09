@@ -20,7 +20,7 @@ def create_env():
 
 env = create_env()
 
-model = PPO.load("/Users/meraj/workspace/f1tenth_gym/work/models/ppo_model_150000.zip", env=env)
+model = PPO.load("/Users/meraj/workspace/f1tenth_gym/work/models/ppo_model_100000.zip", env=env)
 
 obs = env.reset()
 

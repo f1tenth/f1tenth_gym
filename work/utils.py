@@ -84,22 +84,23 @@ class NewReward(gym.Wrapper):
 
 
     def reward(self, obs):
-        ego_s = obs["poses_s"]
+        # ego_s = obs["poses_s"]
         ego_d = obs["poses_d"]
 
-        target_s = 2.0
-        target_d = 0.0
+        # target_s = 2.0
+        # target_d = 0.0
 
-        d_s = target_s - ego_s
-        d_d = target_d - ego_d
-        distance = np.linalg.norm([d_s, d_d])
+        # d_s = target_s - ego_s
+        # d_d = target_d - ego_d
+        # distance = np.linalg.norm([d_s, d_d])
 
-        # Encourage the agent to move closer to the target
-        reward = -0.1 * distance
+        # # Encourage the agent to move closer to the target
+        # reward = -0.1 * distance
+        reward = 0
 
-        # Reward the agent for reaching the target area
-        if distance < 1.0:
-            reward += 5.0
+        # # Reward the agent for reaching the target area
+        # if distance < 1.0:
+        #     reward += 5.0
 
         # Penalize the agent for being stationary
         stationary_threshold = 0.05
@@ -109,29 +110,32 @@ class NewReward(gym.Wrapper):
 
         # Penalize the agent for collisions
         if self.env.collisions[0]:
-            reward -= 5000
+            reward -= 100
+        else:
+            reward += 1.0
 
         # Penalize the agent for extreme angular velocities and poses
-        ang_vel_penalty_threshold = 10
-        pose_theta_penalty_threshold = 400
-        if obs['ang_vels_z'] > ang_vel_penalty_threshold or obs['poses_theta'] > pose_theta_penalty_threshold:
-            reward -= 20
-        elif obs['ang_vels_z'] > 5:
-            reward -= 5
-        elif obs['ang_vels_z'] > 3:
-            reward -= 3
-        elif obs['ang_vels_z'] > 1.0:
-            reward -= 1
-        elif obs['ang_vels_z'] > 0.5:
-            reward -= 0.5
+        # ang_vel_penalty_threshold = 10
+        # pose_theta_penalty_threshold = 400
+        # if obs['ang_vels_z'] > ang_vel_penalty_threshold or obs['poses_theta'] > pose_theta_penalty_threshold:
+        #     reward -= 20
+        # elif obs['ang_vels_z'] > 5:
+        #     reward -= 5
+        # elif obs['ang_vels_z'] > 3:
+        #     reward -= 3
+        # elif obs['ang_vels_z'] > 1.0:
+        #     reward -= 1
+        # elif obs['ang_vels_z'] > 0.5:
+        #     reward -= 0.5
 
         # Encourage the agent to maintain a safe distance from the walls
         wall_distance_threshold = 0.5
         if abs(ego_d) < wall_distance_threshold:
             reward -= 1.0 * (wall_distance_threshold - abs(ego_d))
+        
 
         # Encourage the agent to move in the desired direction (along the s-axis)
-        direction_reward_weight = 2.5
+        direction_reward_weight = 5.0
         reward += direction_reward_weight * obs['linear_vels_s'][self.ego_idx]
 
         # # Penalize the agent for high lateral velocity (to discourage erratic behavior)
