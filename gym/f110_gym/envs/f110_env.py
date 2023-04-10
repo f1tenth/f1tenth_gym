@@ -236,6 +236,9 @@ class F110Env(gym.Env):
         reward = 0
         return reward
     
+    def get_obs(self):
+        return self.curr_obs
+    
     def _check_invalid_values(self, obs):
         invalid = False
         for key, value in obs.items():
@@ -290,6 +293,7 @@ class F110Env(gym.Env):
         #     obs = self._handle_invalid_values(obs)
 
         obs = self._format_obs(obs)
+        self.curr_obs = obs
         return obs, self.reward(obs), done, info
 
 

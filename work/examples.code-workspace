@@ -1,0 +1,17 @@
+{
+	"folders": [
+		{
+			"path": "../examples"
+		},
+		{
+			"path": "../gym"
+		},
+		{
+			"path": "../docs"
+		},
+		{
+			"path": "."
+		}
+	],
+	"settings": {}
+}

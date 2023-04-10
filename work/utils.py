@@ -2,6 +2,7 @@ import gym
 import numpy as np
 from sklearn.preprocessing import StandardScaler
 from stable_baselines3.common.callbacks import BaseCallback
+from stable_baselines3.common.logger import TensorBoardOutputFormat
 from f110_gym.envs.base_classes import Integrator
 from gym import spaces
 from reward import *
@@ -17,16 +18,62 @@ def create_env():
     # env = ScaledObservationEnv(env)
     return env
 
-class SaveModelCallback(BaseCallback):
-    def __init__(self, save_interval, save_path):
-        super().__init__()
+
+
+# class SaveModelCallback(BaseCallback):
+#     def __init__(self, save_interval, save_path):
+#         super().__init__()
+#         self.save_interval = save_interval
+#         self.save_path = save_path
+
+#     def _on_step(self) -> bool:
+#         if self.num_timesteps % self.save_interval == 0:
+#             self.model.save(f"{self.save_path}_{self.num_timesteps}")
+#         return True
+
+
+
+class TensorboardCallback(BaseCallback):
+    def __init__(self, save_interval, save_path, verbose=1):
+        super(TensorboardCallback, self).__init__(verbose)
         self.save_interval = save_interval
         self.save_path = save_path
+        self.n_calls = 0
 
     def _on_step(self) -> bool:
         if self.num_timesteps % self.save_interval == 0:
             self.model.save(f"{self.save_path}_{self.num_timesteps}")
         return True
+    
+    def _on_rollout_end(self) -> None:
+        obs = self.training_env.get_attr("curr_obs")
+        poses_s = obs[0]["poses_s"]
+        self.logger.record("rollout/poses_s", poses_s)
+        return True
+
+
+# class LogFinalPosesSCallback(SaveModelCallback):
+#     def __init__(self, save_interval, save_path, log_dir, verbose=0):
+#         super(LogFinalPosesSCallback, self).__init__(save_interval, save_path, verbose)
+#         self.log_dir = log_dir
+#         self.tensorboard = TensorBoardOutputFormat(log_dir)
+#         self.n_calls = 0
+#         self.last_obs = None  # Add this line
+
+#     def _on_step(self) -> bool:
+#         super(LogFinalPosesSCallback, self)._on_step()
+#         self.last_obs = self.locals.get("obs", None)  # Add this line
+#         return True
+
+#     def _on_rollout_end(self) -> None:
+#         if self.last_obs is not None:  # Add this line
+#             obs = self.last_obs
+#             poses_s = obs['poses_s']
+#             episode = self.locals["episode_num"]
+
+#             # Log the final value of poses_s
+#             self.tensorboard.write_scalar("final_poses_s", poses_s, episode)
+
 
 class FilterObservationSpace(gym.ObservationWrapper):
     def __init__(self, env):

@@ -1,13 +1,4 @@
-.. _custom_usage:
 
-Customized Usage Example
-==========================
-
-For a basic usage example, see :ref:`basic_usage`.
-
-The environment also provides options for customization.
-
-Custom Map
 ------------
 
 The environment uses a convention that is similar to the ROS map convention. A map for the environment is created by two files: a ``yaml`` file containing the metadata of the map, and a single channel black and white image that represents the map, where black pixels are obstacles and white pixels are free space.
@@ -57,28 +48,6 @@ An example of a randomly generated track:
     :width: 300
     :align: center
 
-Multiple Agents
------------------
-
-You can instantiate an environment with any number of agents (default is 2). For example:
-
-.. code:: python
-    
-    env = gym.make('f110_gym:f110-v0',
-                   num_agents=3)
-
-This will create an environment with 3 agents. Note that your call to the ``reset()`` and ``step()`` function will have to change accordingly:
-
-.. code:: python
-
-    _, _, _, _ = env.reset(np.array([[ego_x, ego_y],
-                                     [opp1_x, opp1_y],
-                                     [opp2_x, opp2_y]]))
-    _, _, _, _ = env.step(np.array([[ego_steer, ego_speed],
-                                     [opp1_steer, opp1_speed],
-                                     [opp2_steer, opp2_speed]]))
-
-Note that performance of the environment will start to degrade as more and more agents are added.
 
 Changing Parameters in Vehicle Dynamics
 ------------------------------------------
@@ -87,79 +56,4 @@ The vehicle dynamic model used in the environment is the Single-Track Model from
 
 You can change the default paramters (identified on concrete floor with the default configuration F1TENTH vehicle) used in the environment in two ways.
 
-1. You could instantiate the environment with a parameter dictionary:
 
-.. code:: python
-
-    params_dict = {'mu': 1.0489,
-                   'C_Sf': 4.718,
-                   'C_Sr': 5.4562,
-                   'lf': 0.15875,
-                   'lr': 0.17145,
-                   'h': 0.074,
-                   'm': 3.74,
-                   'I': 0.04712,
-                   's_min': -0.4189,
-                   's_max': 0.4189,
-                   'sv_min': -3.2,
-                   'sv_max': 3.2,
-                   'v_switch':7.319,
-                   'a_max': 9.51,
-                   'v_min':-5.0,
-                   'v_max': 20.0,
-                   'width': 0.31,
-                   'length': 0.58}
-    env = gym.make('f110_gym:f110-v0', params=params_dict)
-
-2. Or you could update the parameters of a specific vehicle in the list of vehicles (or all vehicles):
-
-.. code:: python
-        
-    # env with default params and 2 agents
-    env = gym.make('f110_gym:f110-v0')
-
-    # new params
-    params_dict = {'mu': 1.0489,
-                   'C_Sf': 4.718,
-                   'C_Sr': 5.4562,
-                   'lf': 0.15875,
-                   'lr': 0.17145,
-                   'h': 0.074,
-                   'm': 3.74,
-                   'I': 0.04712,
-                   's_min': -0.4189,
-                   's_max': 0.4189,
-                   'sv_min': -3.2,
-                   'sv_max': 3.2,
-                   'v_switch':7.319,
-                   'a_max': 9.51,
-                   'v_min':-5.0,
-                   'v_max': 20.0,
-                   'width': 0.31,
-                   'length': 0.58}
-
-    # update params of only the 2nd vehicles
-    env.update_params(params_dict, index=1)
-
-    # update params of all vehicles
-    env.update_params(params_dict)
-
-The dynamic model's physical parameters are:
-    - **mu**: surface friction coefficient *[-]*
-    - **C_Sf**: Cornering stiffness coefficient, front *[1/rad]*
-    - **C_Sr**: Cornering stiffness coefficient, rear *[1/rad]*
-    - **lf**: Distance from center of gravity to front axle *[m]*
-    - **lr**: Distance from center of gravity to rear axle *[m]*
-    - **h**: Height of center of gravity *[m]*
-    - **m**: Total mass of the vehicle *[kg]*
-    - **I**: Moment of inertial of the entire vehicle about the z axis *[kgm^2]*
-    - **s_min**: Minimum steering angle constraint *[rad]*
-    - **s_max**: Maximum steering angle constraint *[rad]*
-    - **sv_min**: Minimum steering velocity constraint *[rad/s]*
-    - **sv_max**: Maximum steering velocity constraint *[rad/s]*
-    - **v_switch**: Switching velocity (velocity at which the acceleration is no longer able to create wheel spin) *[m/s]*
-    - **a_max**: Maximum longitudinal acceleration *[m/s^2]*
-    - **v_min**: Minimum longitudinal velocity *[m/s]*
-    - **v_max**: Maximum longitudinal velocity *[m/s]*
-    - **width**: width of the vehicle *[m]*
-    - **length**: length of the vehicle *[m]*
