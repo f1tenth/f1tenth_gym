@@ -2,13 +2,9 @@ import gym
 import numpy as np
 from sklearn.preprocessing import StandardScaler
 from stable_baselines3.common.callbacks import BaseCallback
-from torch.utils.tensorboard import SummaryWriter
 from f110_gym.envs.base_classes import Integrator
 from gym import spaces
 from reward import *
-import matplotlib.pyplot as plt
-from stable_baselines3.common.logger import Figure
-
 
 NUM_BEAMS = 600
 
