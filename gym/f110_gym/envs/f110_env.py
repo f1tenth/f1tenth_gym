@@ -285,12 +285,9 @@ class F110Env(gym.Env):
 
         # check done
         done, toggle_list = self._check_done()
-        info = {'checkpoint_done': toggle_list}
+        info = {'checkpoint_done': done}
         
         obs['scans'] = obs['scans'][0]
-        
-        # if self._check_invalid_values(obs):
-        #     obs = self._handle_invalid_values(obs)
 
         obs = self._format_obs(obs)
         self.curr_obs = obs
