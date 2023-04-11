@@ -72,17 +72,21 @@ def get_closest_point_index(x, y, map_data):
     closest_point_index = np.argmin(distances)
     return closest_point_index
 
-def convert_to_frenet(x, y, map_data):
+def convert_to_frenet(x, y,vel_magnitude, pose_theta, map_data):
     closest_point_index = get_closest_point_index(x, y, map_data)
     closest_point = map_data[closest_point_index]
     s_m, x_m, y_m, psi_rad = closest_point[0], closest_point[1], closest_point[2], closest_point[3]
     
-    delta_x, delta_y = x - x_m, y - y_m
+    dx = x - x_m
+    dy = y - y_m
     
-    # s = delta_x * np.cos(psi_rad) + delta_y * np.sin(psi_rad) + s_m
-    # d = delta_x * np.sin(psi_rad) + delta_y * np.cos(psi_rad)
+    vx = vel_magnitude * np.cos(pose_theta)
+    vy = vel_magnitude * np.sin(pose_theta)
     
-    s = -delta_x * np.sin(psi_rad) + delta_y * np.cos(psi_rad) + s_m
-    d =  delta_x * np.cos(psi_rad) + delta_y * np.sin(psi_rad)
+    s = -dx * np.sin(psi_rad) + dy * np.cos(psi_rad) + s_m
+    d =  dx * np.cos(psi_rad) + dy * np.sin(psi_rad)
     
-    return s, d, psi_rad
+    vs = -vx * np.sin(psi_rad) + vy * np.cos(psi_rad)
+    vd =  vx * np.cos(psi_rad) + vy * np.sin(psi_rad)
+    
+    return s, d, vs, vd
