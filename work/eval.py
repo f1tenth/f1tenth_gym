@@ -4,7 +4,7 @@ from reward import *
 
 env = create_env()
 
-model_index = int(4 * 100000)
+model_index = int(100 * 100000)
 model = PPO.load("/Users/meraj/workspace/f1tenth_gym/work/models/ppo_model_{}.zip".format(model_index), env=env)
 # model = PPO.load("/Users/meraj/workspace/f1tenth_gym/work/models/base/01_100423.zip", env=env)
 

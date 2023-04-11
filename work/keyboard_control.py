@@ -80,7 +80,7 @@ while not done:
     
     # print('vel s', obs['linear_vels_s'])
     # print('vel d', obs['linear_vels_d'])
-    # print('angvel', obs['ang_vels_z'])
+    # # print('angvel', obs['ang_vels_z'])
     # print('pose s', obs['poses_s'])
     # print('pose d', obs['poses_d'])
     # print('pose theta', obs['poses_theta'])
@@ -88,6 +88,6 @@ while not done:
     # print(min(obs['scans']))
     # print(max(obs['scans']))
     # print(obs['poses_theta'])
-    # print()
+    print()
     env.render()
     # time.sleep(0.5)

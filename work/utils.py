@@ -65,6 +65,7 @@ class FrenetObsWrapper(gym.ObservationWrapper):
     def __init__(self, env, csv_file_path):
         super(FrenetObsWrapper, self).__init__(env)
         self.map_data = read_csv(csv_file_path)
+        # self.tangent_angles = compute_tangent_angles(self.map_data)
         
         self.observation_space = spaces.Dict({
             'ego_idx': spaces.Box(low=0, high=self.num_agents - 1, shape=(1,), dtype=np.int32),
@@ -81,21 +82,28 @@ class FrenetObsWrapper(gym.ObservationWrapper):
         })
 
     def observation(self, obs):
-
-
         poses_x = obs['poses_x']
         poses_y = obs['poses_y']
         frenet_coords = np.array([convert_to_frenet(poses_x[i], poses_y[i], self.map_data) for i in range(len(poses_x))])
 
         obs['poses_s'] = frenet_coords[:, 0]
         obs['poses_d'] = frenet_coords[:, 1]
+        psi_rad = frenet_coords[:, 2]
         
-        # Convert 'linear_vels_x' and 'linear_vels_y' to s and d velocities
-        s_velocities = obs['linear_vels_x'] * np.cos(obs['poses_theta']) + obs['linear_vels_y'] * np.sin(obs['poses_theta'])
-        d_velocities = -obs['linear_vels_x'] * np.sin(obs['poses_theta']) + obs['linear_vels_y'] * np.cos(obs['poses_theta'])
+        vel_magnitude = obs['linear_vels_x']
+        pose_theta = obs['poses_theta']
+        
+        vx = vel_magnitude * np.cos(pose_theta)
+        vy = vel_magnitude * np.sin(pose_theta)
+
+        s_velocities = -vx * np.sin(psi_rad) + vy * np.cos(psi_rad)
+        d_velocities =  vx * np.cos(psi_rad) + vy * np.sin(psi_rad)
 
         obs['linear_vels_s'] = s_velocities
         obs['linear_vels_d'] = d_velocities
+        
+        print(obs['poses_y'])
+        # print(['poses_'])
 
         # Remove original 'poses_x' and 'poses_y'
         del obs['poses_x']

@@ -75,18 +75,14 @@ def get_closest_point_index(x, y, map_data):
 def convert_to_frenet(x, y, map_data):
     closest_point_index = get_closest_point_index(x, y, map_data)
     closest_point = map_data[closest_point_index]
-    s_m, x_m, y_m = closest_point[0], closest_point[1], closest_point[2]
-
-    if closest_point_index == 0:
-        prev_point = map_data[-1]
-    else:
-        prev_point = map_data[closest_point_index - 1]
-    x_prev, y_prev = prev_point[1], prev_point[2]
-
-    heading = np.arctan2(y_m - y_prev, x_m - x_prev)
-    dx = x - x_m
-    dy = y - y_m
-    d = math.cos(heading) * dy - math.sin(heading) * dx
-    s = s_m + math.cos(heading) * dx + math.sin(heading) * dy
-
-    return s, d
+    s_m, x_m, y_m, psi_rad = closest_point[0], closest_point[1], closest_point[2], closest_point[3]
+    
+    delta_x, delta_y = x - x_m, y - y_m
+    
+    # s = delta_x * np.cos(psi_rad) + delta_y * np.sin(psi_rad) + s_m
+    # d = delta_x * np.sin(psi_rad) + delta_y * np.cos(psi_rad)
+    
+    s = -delta_x * np.sin(psi_rad) + delta_y * np.cos(psi_rad) + s_m
+    d =  delta_x * np.cos(psi_rad) + delta_y * np.sin(psi_rad)
+    
+    return s, d, psi_rad
