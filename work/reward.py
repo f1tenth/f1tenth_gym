@@ -9,12 +9,14 @@ class NewReward(gym.Wrapper):
 
     def reward(self, obs):
         ego_d = obs["poses_d"]
+        vs = obs['linear_vels_s'][self.ego_idx]
+        vd = obs['linear_vels_d'][self.ego_idx]
 
         reward = 0
 
         # Penalize the agent for being stationary
         stationary_threshold = 0.25
-        ego_linear_speed = np.sqrt(obs['linear_vels_s'][self.ego_idx]**2 + obs['linear_vels_d'][self.ego_idx]**2)
+        ego_linear_speed = np.sqrt(vs ** 2 + vd ** 2)
         if ego_linear_speed < stationary_threshold:
             reward -= 10.0
 
@@ -32,11 +34,11 @@ class NewReward(gym.Wrapper):
 
         # Encourage the agent to move in the desired direction (along the s-axis)
         direction_reward_weight = 2.0
-        reward += direction_reward_weight * obs['linear_vels_s'][self.ego_idx]
+        reward += direction_reward_weight * vs 
 
         # Penalize the agent for high lateral velocity (to discourage erratic behavior)
         lateral_vel_penalty_weight = 1.0
-        reward -= lateral_vel_penalty_weight * abs(obs['linear_vels_d'][self.ego_idx])
+        reward -= lateral_vel_penalty_weight * abs(vd)
 
 
         # pose_theta_penalty_weight = 0.3
