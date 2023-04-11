@@ -11,8 +11,8 @@ NUM_BEAMS = 600
 def create_env():
     env = gym.make('f110_gym:f110-v0', num_agents=1, map='/Users/meraj/workspace/f1tenth_gym/examples/example_map', integrator=Integrator.RK4)
     env = FrenetObsWrapper(env, '/Users/meraj/workspace/f1tenth_gym/examples/example_waypoints.csv')
+    # exit()
     env = NewReward(env, '/Users/meraj/workspace/f1tenth_gym/examples/example_waypoints.csv')
-    env = FilterObservationSpace(env)
     # env = ScaledObservationEnv(env)
     return env
 
@@ -30,75 +30,58 @@ class TensorboardCallback(BaseCallback):
         
         infos = self.locals.get("infos", [{}])[0]['checkpoint_done']
         if infos == True:
-            obs = self.training_env.get_attr("curr_obs")
-            poses_x = obs[0]["poses_x"][0]
-            poses_y = obs[0]["poses_y"][0]
+            obs = self.training_env.get_attr("curr_obs")[0]
+            poses_x = obs["poses_x"][0]
+            poses_y = obs["poses_y"][0]
 
-            self.poses_s, _ = convert_to_frenet(poses_x, poses_y, self.map_data)
+            self.poses_s = convert_to_frenet(x= poses_x, y = poses_y, vel_magnitude = 0, pose_theta = 0, map_data=self.map_data)[0]
+            # self.poses_s = obs[0]["poses_s"][0]
+            
+        if self.poses_s > 150:
+            self.poses_s -= 156.3585883 
 
         self.logger.record("rollout/poses_s", self.poses_s)
         return True
-
-
-class FilterObservationSpace(gym.ObservationWrapper):
-    def __init__(self, env):
-        super().__init__(env)
-
-        self.observation_space = spaces.Dict({
-            'scans': spaces.Box(low=0, high=100, shape=(NUM_BEAMS, ), dtype=np.float32),
-            'poses_s': spaces.Box(low=-1000, high=1000, shape=(1,), dtype=np.float32),      
-            'poses_d': spaces.Box(low=-1000, high=1000, shape=(1,), dtype=np.float32),       
-            'poses_theta': spaces.Box(low=-2*np.pi, high=2*np.pi, shape=(1,), dtype=np.float32),       
-            'linear_vels_s': spaces.Box(low=-10, high=10, shape=(1,), dtype=np.float32),     
-            'linear_vels_d': spaces.Box(low=-10, high=10, shape=(1,), dtype=np.float32),    
-            'ang_vels_z': spaces.Box(low=-10, high=10, shape=(1,), dtype=np.float32),    
-        })
-
-    def observation(self, observation):
-        # Remove unnecessary keys from the observation
-        keys_to_remove = ['ego_idx', 'collisions', 'lap_times', 'lap_counts']
-        filtered_observation = {k: v for k, v in observation.items() if k not in keys_to_remove}
-        return filtered_observation
-                       
 
 class FrenetObsWrapper(gym.ObservationWrapper):
     def __init__(self, env, csv_file_path):
         super(FrenetObsWrapper, self).__init__(env)
         self.map_data = read_csv(csv_file_path)
-        # self.tangent_angles = compute_tangent_angles(self.map_data)
-        
+                
         self.observation_space = spaces.Dict({
-            'ego_idx': spaces.Box(low=0, high=self.num_agents - 1, shape=(1,), dtype=np.int32),
             'scans': spaces.Box(low=0, high=100, shape=(NUM_BEAMS, ), dtype=np.float32),
-            'poses_s': spaces.Box(low=-1000, high=1000, shape=(self.num_agents,), dtype=np.float32),      
-            'poses_d': spaces.Box(low=-1000, high=1000, shape=(self.num_agents,), dtype=np.float32),       
-            'poses_theta': spaces.Box(low=-2*np.pi, high=2*np.pi, shape=(self.num_agents,), dtype=np.float32),       
-            'linear_vels_s': spaces.Box(low=-10, high=10, shape=(self.num_agents,), dtype=np.float32),     
-            'linear_vels_d': spaces.Box(low=-10, high=10, shape=(self.num_agents,), dtype=np.float32),    
-            'ang_vels_z': spaces.Box(low=-10, high=10, shape=(self.num_agents,), dtype=np.float32),    
-            'collisions': spaces.Box(low=0, high=1, shape=(self.num_agents,), dtype=np.float32),   
-            'lap_times': spaces.Box(low=0, high=1e6, shape=(self.num_agents,), dtype=np.float32), 
-            'lap_counts': spaces.Box(low=0, high=9999, shape=(self.num_agents,), dtype=np.int32)    
+            'poses_s': spaces.Box(low=-1000, high=1000, shape=(1,), dtype=np.float32),      
+            'poses_d': spaces.Box(low=-1000, high=1000, shape=(1,), dtype=np.float32),       
+            'linear_vels_s': spaces.Box(low=-10, high=10, shape=(1,), dtype=np.float32),     
+            'linear_vels_d': spaces.Box(low=-10, high=10, shape=(1,), dtype=np.float32),    
+            'ang_vels_z': spaces.Box(low=-10, high=10, shape=(1,), dtype=np.float32),    
+            'poses_theta': spaces.Box(low=-2*np.pi, high=2*np.pi, shape=(self.num_agents,), dtype=np.float32),
         })
 
     def observation(self, obs):
         poses_x = obs['poses_x'][0]
         poses_y = obs['poses_y'][0]
         vel_magnitude = obs['linear_vels_x']
-        pose_theta = obs['poses_theta']
+        poses_theta = obs['poses_theta'][0]
         
-        frenet_coords = convert_to_frenet(poses_x, poses_y, vel_magnitude, pose_theta, self.map_data)
+        frenet_coords = convert_to_frenet(poses_x, poses_y, vel_magnitude, poses_theta, self.map_data)
         
-        obs['poses_s'] = frenet_coords[0]
-        obs['poses_d'] = frenet_coords[1]
-        obs['linear_vels_s'] = frenet_coords[2]
-        obs['linear_vels_d'] = frenet_coords[3]
+        obs['poses_s'] = np.array(frenet_coords[0]).reshape((1, -1))
+        obs['poses_d'] = np.array(frenet_coords[1])
+        obs['linear_vels_s'] = np.array(frenet_coords[2]).reshape((1, -1))
+        obs['linear_vels_d'] = np.array(frenet_coords[3])
                 
         # Remove original 'poses_x' and 'poses_y'
         del obs['poses_x']
         del obs['poses_y']
         del obs['linear_vels_x']
         del obs['linear_vels_y']
+        
+        del obs['ego_idx']
+        del obs['collisions']
+        del obs['lap_times']
+        del obs['lap_counts']
+        # del obs['poses_theta']
 
         return obs
     

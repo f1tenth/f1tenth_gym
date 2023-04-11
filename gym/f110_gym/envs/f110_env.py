@@ -299,7 +299,6 @@ class F110Env(gym.Env):
             random.seed(time.time())
             # Generate random poses for the agents
             poses = np.array([[np.random.uniform(-0.3, 0.3), np.random.uniform(-1.0, 1.0), np.random.uniform(np.pi/3, np.pi *2/3)]])
-            # poses = np.array([[np.random.uniform(-0.3, 0.3), 5.0, 0.0]])
         """
         Args:
             poses (np.ndarray (num_agents, 3)): poses to reset agents to

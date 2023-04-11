@@ -1,6 +1,5 @@
 import gym
 import numpy as np
-import math
 
 class NewReward(gym.Wrapper):
     def __init__(self, env, csv_file_path):
@@ -32,7 +31,7 @@ class NewReward(gym.Wrapper):
             reward -= 3.0 * (wall_distance_threshold - abs(ego_d)) * abs(wall_distance_threshold - abs(ego_d))
 
         # Encourage the agent to move in the desired direction (along the s-axis)
-        direction_reward_weight = 1.0
+        direction_reward_weight = 2.0
         reward += direction_reward_weight * obs['linear_vels_s'][self.ego_idx]
 
         # Penalize the agent for high lateral velocity (to discourage erratic behavior)
@@ -40,18 +39,18 @@ class NewReward(gym.Wrapper):
         reward -= lateral_vel_penalty_weight * abs(obs['linear_vels_d'][self.ego_idx])
 
 
-        pose_theta_penalty_weight = 0.3
-        desired_orientation = np.pi / 2
+        # pose_theta_penalty_weight = 0.3
+        # desired_orientation = np.pi / 2
 
-        # Normalize the pose_theta
-        normalized_pose_theta = (obs['poses_theta'][self.ego_idx] + np.pi) % (2 * np.pi) - np.pi
+        # # Normalize the pose_theta
+        # normalized_pose_theta = (obs['poses_theta'][self.ego_idx] + np.pi) % (2 * np.pi) - np.pi
 
-        # Calculate the difference between the current orientation and desired orientation
-        angle_diff = normalized_pose_theta - desired_orientation
+        # # Calculate the difference between the current orientation and desired orientation
+        # angle_diff = normalized_pose_theta - desired_orientation
 
-        # Normalize the angle difference
-        angle_diff = (angle_diff + np.pi) % (2 * np.pi) - np.pi
-        reward += 1 - pose_theta_penalty_weight * abs(angle_diff) ** 2
+        # # Normalize the angle difference
+        # angle_diff = (angle_diff + np.pi) % (2 * np.pi) - np.pi
+        # reward += 1 - pose_theta_penalty_weight * abs(angle_diff) ** 2
         
         return reward
 
@@ -88,5 +87,5 @@ def convert_to_frenet(x, y,vel_magnitude, pose_theta, map_data):
     
     vs = -vx * np.sin(psi_rad) + vy * np.cos(psi_rad)
     vd =  vx * np.cos(psi_rad) + vy * np.sin(psi_rad)
-    
+        
     return s, d, vs, vd
