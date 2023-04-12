@@ -2,15 +2,16 @@ import gym
 import numpy as np
 
 class NewReward(gym.Wrapper):
-    def __init__(self, env, csv_file_path):
+    def __init__(self, env, map_data):
         super().__init__(env)
-        self.map_data = read_csv(csv_file_path)
+        self.map_data = map_data
 
 
     def reward(self, obs):
         ego_d = obs["poses_d"]
         vs = obs['linear_vels_s'][self.ego_idx]
         vd = obs['linear_vels_d'][self.ego_idx]
+        # lap_count = obs['lap_count'][self.ego_idx]
 
         reward = 0
 
@@ -23,7 +24,7 @@ class NewReward(gym.Wrapper):
 
         # Penalize the agent for collisions
         if self.env.collisions[0]:
-            reward -= 1.0
+            reward -= 100.0
         else:
             reward += 1.0
 
@@ -39,6 +40,8 @@ class NewReward(gym.Wrapper):
         # Penalize the agent for high lateral velocity (to discourage erratic behavior)
         lateral_vel_penalty_weight = 1.0
         reward -= lateral_vel_penalty_weight * abs(vd)
+        
+        # reward += 500 * lap_count
 
 
         # pose_theta_penalty_weight = 0.3
@@ -66,15 +69,13 @@ def read_csv(file_path):
     data = np.genfromtxt(file_path, delimiter=';', skip_header=3)
     return data
 
-def get_closest_point_index(x, y, map_data):
-    map_data_np = np.array(map_data)
-    map_x, map_y = map_data_np[:, 1], map_data_np[:, 2]
-    distances = np.sqrt((x - map_x)**2 + (y - map_y)**2)
-    closest_point_index = np.argmin(distances)
+def get_closest_point_index(x, y, kdtree):
+    _, indices = kdtree.query(np.array([[x, y]]), k=1)
+    closest_point_index = indices[0, 0]
     return closest_point_index
 
-def convert_to_frenet(x, y,vel_magnitude, pose_theta, map_data):
-    closest_point_index = get_closest_point_index(x, y, map_data)
+def convert_to_frenet(x, y,vel_magnitude, pose_theta, map_data, kdtree):
+    closest_point_index = get_closest_point_index(x, y, kdtree)
     closest_point = map_data[closest_point_index]
     s_m, x_m, y_m, psi_rad = closest_point[0], closest_point[1], closest_point[2], closest_point[3]
     

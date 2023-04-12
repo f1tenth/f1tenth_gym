@@ -285,7 +285,7 @@ class F110Env(gym.Env):
 
         # check done
         done, toggle_list = self._check_done()
-        info = {'checkpoint_done': done}
+        info = {'checkpoint_done': done, 'lap_count' : self.lap_counts, 'lap_times' : self.lap_times}
         
         obs['scans'] = obs['scans'][0]
 
