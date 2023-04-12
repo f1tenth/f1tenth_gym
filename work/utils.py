@@ -15,7 +15,6 @@ def create_env():
     env = gym.make('f110_gym:f110-v0', num_agents=1, map='/Users/meraj/workspace/f1tenth_gym/examples/example_map', integrator=Integrator.RK4)
     env = FrenetObsWrapper(env, map_data=map_data)
     env = NewReward(env, map_data=map_data)
-    env = ScaledObservationEnv(env)
     return env
 
 class TensorboardCallback(BaseCallback):
@@ -87,29 +86,3 @@ class FrenetObsWrapper(gym.ObservationWrapper):
         del obs['poses_theta']
 
         return obs
-    
-
-class ScaledObservationEnv(gym.ObservationWrapper):
-    def __init__(self, env: gym.Env):
-        super().__init__(env)
-        self.scalers = {}
-
-        for key, space in self.env.observation_space.spaces.items():
-            if isinstance(space, spaces.Box) and space.dtype in [np.float32, np.float64]:
-                scaler = StandardScaler()
-                scaler.fit(np.array([space.low, space.high]))
-                self.scalers[key] = scaler
-
-    def _handle_invalid_values(self, obs):
-        for key, value in obs.items():
-            if np.any(np.isnan(value)) or np.any(np.isinf(value)):
-                obs[key] = np.zeros_like(value)
-        return obs
-
-    def observation(self, observation):
-        observation = self._handle_invalid_values(observation)
-        
-        scaled_observation = observation.copy()
-        for key, scaler in self.scalers.items():
-            scaled_observation[key] = scaler.transform(observation[key].reshape(1, -1)).reshape(-1)
-        return scaled_observation

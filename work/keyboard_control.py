@@ -34,14 +34,14 @@ def update_action():
     global action, steering_angle, velocity, delta
     while True:
         # Increase steering angle (right)
-        if keyboard.is_pressed('d'):
+        if keyboard.is_pressed('a'):
             steering_angle += delta
             steering_angle = min(0.4189, steering_angle)
             action[0, 0] = steering_angle
             print("Action: ", action)
 
         # Decrease steering angle (left)
-        if keyboard.is_pressed('a'):
+        if keyboard.is_pressed('d'):
             steering_angle -= delta
             steering_angle = max(-0.4189, steering_angle)
             action[0, 0] = steering_angle

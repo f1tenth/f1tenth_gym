@@ -91,7 +91,7 @@ def steering_constraint(steering_angle, steering_velocity, s_min, s_max, sv_min,
 @njit(cache=True)
 def vehicle_dynamics_ks(x, u_init, mu, C_Sf, C_Sr, lf, lr, h, m, I, s_min, s_max, sv_min, sv_max, v_switch, a_max, v_min, v_max):
     """
-    Single Track Kinematic Vehicle Dynamics.
+    Single Track Kinematic Vehicle Dynamics, with the reference point at the center of mass.
 
         Args:
             x (numpy.ndarray (3, )): vehicle state vector (x1, x2, x3, x4, x5)
@@ -109,16 +109,19 @@ def vehicle_dynamics_ks(x, u_init, mu, C_Sf, C_Sr, lf, lr, h, m, I, s_min, s_max
     """
     # wheelbase
     lwb = lf + lr
+    
+    # slip angle
+    slip_angle = np.arctan(np.tan(x[2]) * lr / lwb)
 
     # constraints
     u = np.array([steering_constraint(x[2], u_init[0], s_min, s_max, sv_min, sv_max), accl_constraints(x[3], u_init[1], v_switch, a_max, v_min, v_max)])
 
     # system dynamics
-    f = np.array([x[3]*np.cos(x[4]),
-         x[3]*np.sin(x[4]),
+    f = np.array([x[3]*np.cos(slip_angle + x[4]),
+         x[3]*np.sin(slip_angle + x[4]),
          u[0],
          u[1],
-         x[3]/lwb*np.tan(x[2])])
+         x[3]*np.cos(slip_angle)*np.tan(x[2])/lwb])
     return f
 
 @njit(cache=True)
@@ -157,8 +160,20 @@ def vehicle_dynamics_st(x, u_init, mu, C_Sf, C_Sr, lf, lr, h, m, I, s_min, s_max
         # system dynamics
         x_ks = x[0:5]
         f_ks = vehicle_dynamics_ks(x_ks, u, mu, C_Sf, C_Sr, lf, lr, h, m, I, s_min, s_max, sv_min, sv_max, v_switch, a_max, v_min, v_max)
-        f = np.hstack((f_ks, np.array([u[1]/lwb*np.tan(x[2])+x[3]/(lwb*np.cos(x[2])**2)*u[0],
-        0])))
+        
+        slip_rate = (lr * u[0]) / (lwb*np.cos(x[2])**2 * (1 + (np.tan(x[2])**2 * lr/lwb)**2))
+        yaw_rate = 1/lwb * (u[1]*np.cos(x[6])*np.tan(x[2]) -
+                            x[3]*np.sin(x[6])*slip_rate*np.tan(x[2]) +
+                            x[3]*np.cos(x[6])*u[0]/np.cos(x[2])**2)
+        f = np.hstack((
+            f_ks,
+            np.array([
+                yaw_rate,
+                slip_rate
+            ])
+        ))
+        # f = np.hstack((f_ks, np.array([u[1]/lwb*np.tan(x[2])+x[3]/(lwb*np.cos(x[2])**2)*u[0],
+        # 0])))
 
     else:
         # system dynamics
