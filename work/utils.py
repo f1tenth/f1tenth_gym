@@ -15,6 +15,7 @@ def create_env():
     env = gym.make('f110_gym:f110-v0', num_agents=1, map='/Users/meraj/workspace/f1tenth_gym/examples/example_map', integrator=Integrator.RK4)
     env = FrenetObsWrapper(env, map_data=map_data)
     env = NewReward(env, map_data=map_data)
+    env = ReducedObs(env)
     return env
 
 class TensorboardCallback(BaseCallback):
@@ -84,5 +85,26 @@ class FrenetObsWrapper(gym.ObservationWrapper):
         del obs['lap_counts']
         del obs['ang_vels_z']
         del obs['poses_theta']
+
+        return obs
+    
+    
+class ReducedObs(gym.ObservationWrapper):
+    def __init__(self, env):
+        super(ReducedObs, self).__init__(env)
+
+        self.observation_space = spaces.Dict({
+            'scans': spaces.Box(low=0, high=100, shape=(NUM_BEAMS, ), dtype=np.float32),
+            # 'poses_s': spaces.Box(low=-1000, high=1000, shape=(1,), dtype=np.float32),      
+            # 'poses_d': spaces.Box(low=-1000, high=1000, shape=(1,), dtype=np.float32),       
+            # 'linear_vels_s': spaces.Box(low=-10, high=10, shape=(1,), dtype=np.float32),     
+            # 'linear_vels_d': spaces.Box(low=-10, high=10, shape=(1,), dtype=np.float32)
+        })
+
+    def observation(self, obs):
+        del obs['poses_s']
+        del obs['poses_d']
+        del obs['linear_vels_s']
+        del obs['linear_vels_d']
 
         return obs
