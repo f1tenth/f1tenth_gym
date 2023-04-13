@@ -221,9 +221,9 @@ class F110Env(gym.Env):
 
         done = (self.collisions[self.ego_idx]) or np.all(self.toggle_list >= 4)
         
-        self.max_episode_time = 50
+        self.max_episode_time = 500
         
-        if self.current_time >= self.max_episode_time:
+        if self.current_time >= self.max_episode_time or self.lap_counts == 3:
             done = True
 
         return bool(done), self.toggle_list >= 4
