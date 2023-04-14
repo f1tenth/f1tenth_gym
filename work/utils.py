@@ -5,26 +5,33 @@ from stable_baselines3.common.callbacks import BaseCallback
 from f110_gym.envs.base_classes import Integrator
 from gym import spaces
 from reward import *
+import os
+
 
 from sklearn.neighbors import KDTree
 
 NUM_BEAMS = 600
 
-def create_env():
-    map_data = read_csv('/Users/meraj/workspace/f1tenth_gym/examples/example_waypoints.csv')
-    env = gym.make('f110_gym:f110-v0', num_agents=1, map='/Users/meraj/workspace/f1tenth_gym/examples/example_map', integrator=Integrator.RK4)
+def create_env(map='map_00'):
+    cwd = os.getcwd()
+    map_name = cwd + '/maps/{}/racing_map'.format(map)
+    map_data = read_csv(map_name + '.csv')
+    env = gym.make('f110_gym:f110-v0', num_agents=1, map=map_name, integrator=Integrator.RK4)
     env = FrenetObsWrapper(env, map_data=map_data)
-    env = NewReward(env, map_data=map_data)
+    env = NewReward(env)
     env = ReducedObs(env)
     return env
 
 class TensorboardCallback(BaseCallback):
-    def __init__(self, save_interval, save_path, log_dir, verbose=1):
+    def __init__(self, save_interval, save_path, map, verbose=1):
         super().__init__(verbose)
+
+        map_data = 'maps/{}/racing_map.csv'.format(map)
+        
         self.save_interval = save_interval
         self.save_path = save_path
         self.poses_s = 0
-        self.map_data = read_csv('/Users/meraj/workspace/f1tenth_gym/examples/example_waypoints.csv')
+        self.map_data = read_csv(map_data)
         self.kdtree = KDTree(self.map_data[:, 1:3])
 
     def _on_step(self) -> bool:
@@ -95,10 +102,6 @@ class ReducedObs(gym.ObservationWrapper):
 
         self.observation_space = spaces.Dict({
             'scans': spaces.Box(low=0, high=100, shape=(NUM_BEAMS, ), dtype=np.float32),
-            # 'poses_s': spaces.Box(low=-1000, high=1000, shape=(1,), dtype=np.float32),      
-            # 'poses_d': spaces.Box(low=-1000, high=1000, shape=(1,), dtype=np.float32),       
-            # 'linear_vels_s': spaces.Box(low=-10, high=10, shape=(1,), dtype=np.float32),     
-            # 'linear_vels_d': spaces.Box(low=-10, high=10, shape=(1,), dtype=np.float32)
         })
 
     def observation(self, obs):

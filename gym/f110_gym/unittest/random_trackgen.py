@@ -38,7 +38,7 @@ from matplotlib.collections import PatchCollection
 import argparse
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--seed', type=int, default=123, help='Seed for the numpy rng.')
+parser.add_argument('--seed', type=int, default=13, help='Seed for the numpy rng.')
 parser.add_argument('--num_maps', type=int, default=1, help='Number of maps to generate.')
 args = parser.parse_args()
 
@@ -167,8 +167,11 @@ def create_track():
     track_poly = shp.Polygon(track_xy)
     track_xy_offset_in = track_poly.buffer(WIDTH)
     track_xy_offset_out = track_poly.buffer(-WIDTH)
-    track_xy_offset_in_np = np.array(track_xy_offset_in.exterior)
-    track_xy_offset_out_np = np.array(track_xy_offset_out.exterior)
+    # track_xy_offset_in_np = np.array(track_xy_offset_in.exterior)
+    # track_xy_offset_out_np = np.array(track_xy_offset_out.exterior)
+    track_xy_offset_in_np = np.array(track_xy_offset_in.exterior.coords)
+    track_xy_offset_out_np = np.array(track_xy_offset_out.exterior.coords)
+
     return track_xy, track_xy_offset_in_np, track_xy_offset_out_np
 
 

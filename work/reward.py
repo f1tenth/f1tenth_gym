@@ -1,10 +1,10 @@
 import gym
 import numpy as np
+import os
 
 class NewReward(gym.Wrapper):
-    def __init__(self, env, map_data):
+    def __init__(self, env):
         super().__init__(env)
-        self.map_data = map_data
 
 
     def reward(self, obs):
@@ -63,7 +63,6 @@ class NewReward(gym.Wrapper):
         obs, original_reward, done, info = self.env.step(action)
         new_reward = self.reward(obs)
         return obs, new_reward.item(), done, info
-    
     
 def read_csv(file_path):
     data = np.genfromtxt(file_path, delimiter=';', skip_header=3)

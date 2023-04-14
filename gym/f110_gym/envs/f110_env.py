@@ -20,34 +20,26 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-# gym imports
+
 import gym
-from gym import  spaces
-
-# base classes
-from f110_gym.envs.base_classes import Simulator, Integrator
-
-# others
+from gym import spaces
 import numpy as np
 import os
 import time
-
-# gl
 import pyglet
-pyglet.options['debug_gl'] = False
 from pyglet import gl
 import random
 
-# constants
+from f110_gym.envs.base_classes import Simulator, Integrator
 
-# rendering
+# pyglet.options['debug_gl'] = False
+
+# Constants
 VIDEO_W = 600
 VIDEO_H = 400
 WINDOW_W = 1000
 WINDOW_H = 800
-
 DTYPE = np.float32
-
 NUM_BEAMS = 600
 
 class F110Env(gym.Env):
@@ -298,7 +290,10 @@ class F110Env(gym.Env):
         if poses is None:
             random.seed(time.time())
             # Generate random poses for the agents
-            poses = np.array([[np.random.uniform(-0.3, 0.3), np.random.uniform(-1.0, 1.0), np.random.uniform(np.pi/3, np.pi *2/3)]])
+            # poses = np.array([[np.random.uniform(-0.3, 0.3), np.random.uniform(-1.0, 1.0), np.random.uniform(np.pi/3, np.pi *2/3)]])
+            # 434.3352348;203.1326276
+            poses = np.array([[-25, 0, np.pi/2]])
+
         """
         Args:
             poses (np.ndarray (num_agents, 3)): poses to reset agents to
@@ -338,45 +333,42 @@ class F110Env(gym.Env):
 
     def update_map(self, map_path, map_ext):
         """
-        Updates the map used by simulation
+        Updates the map used by the simulation.
 
         Args:
-            map_path (str): absolute path to the map yaml file
-            map_ext (str): extension of the map image file
-
-        Returns:
-            None
+            map_path (str): Absolute path to the map YAML file.
+            map_ext (str): Extension of the map image file.
         """
         self.sim.set_map(map_path, map_ext)
 
     def update_params(self, params, index=-1):
         """
-        Updates the parameters used by simulation for vehicles
+        Updates the parameters used by the simulation for vehicles.
 
         Args:
-            params (dict): dictionary of parameters
-            index (int, default=-1): if >= 0 then only update a specific agent's params
+            params (dict): Dictionary of parameters.
+            index (int, default=-1): If >= 0 then only update a specific agent's params.
         """
         self.sim.update_params(params, agent_idx=index)
 
     def add_render_callback(self, callback_func):
         """
-        Add extra drawing function to call during rendering.
+        Add an extra drawing function to call during rendering.
 
         Args:
-            callback_func (function (EnvRenderer) -> None): custom function to called during render()
+            callback_func (function (EnvRenderer) -> None): Custom function to be called during render().
         """
 
         F110Env.render_callbacks.append(callback_func)
 
     def render(self, mode='human'):
         """
-        Renders the environment with pyglet. Use mouse scroll in the window to zoom in/out, use mouse click drag to pan. Shows the agents, the map, current fps (bottom left corner), and the race information near as text.
+        Renders the environment with Pyglet. Use mouse scroll in the window to zoom in/out, use mouse click drag to pan. Shows the agents, the map, current FPS (bottom-left corner), and the race information as text.
 
         Args:
-            mode (str, default='human'): rendering mode, currently supports:
-                'human': slowed down rendering such that the env is rendered in a way that sim time elapsed is close to real time elapsed
-                'human_fast': render as fast as possible
+            mode (str, default='human'): Rendering mode, currently supports:
+                'human': Slowed down rendering such that the env is rendered in a way that sim time elapsed is close to real time elapsed.
+                'human_fast': Render as fast as possible.
         """
         assert mode in ['human', 'human_fast']
 
