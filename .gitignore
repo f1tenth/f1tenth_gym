@@ -1,7 +1,10 @@
 *.zip
 events.*
 monitor.csv
-
+*.csv
+*.yaml
+*.png
+*.pgm
 
 build/
 gym/f110_gym.egg-info
