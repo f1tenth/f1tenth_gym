@@ -19,7 +19,7 @@ def create_env(maps=[0]):
     env = FrenetObsWrapper(env=env)
     env = NewReward(env)
     env = ReducedObs(env)
-    env.reset()
+    # env.reset()
     return env
 
 class FrenetObsWrapper(gym.ObservationWrapper):
@@ -30,7 +30,17 @@ class FrenetObsWrapper(gym.ObservationWrapper):
         self.kdtree = KDTree(self.map_data[:, 1:3])
                 
         self.observation_space = spaces.Dict({
-            'scans': spaces.Box(low=0, high=100, shape=(NUM_BEAMS, ), dtype=np.float32),
+            'ego_idx': spaces.Box(low=0, high=self.num_agents - 1, shape=(1,), dtype=np.int32),
+            'scans': spaces.Box(low=0, high=100, shape=(self.num_beams, ), dtype=np.float32),
+            'poses_x': spaces.Box(low=-1000, high=1000, shape=(self.num_agents,), dtype=np.float32),      
+            'poses_y': spaces.Box(low=-1000, high=1000, shape=(self.num_agents,), dtype=np.float32),       
+            'poses_theta': spaces.Box(low=-2*np.pi, high=2*np.pi, shape=(self.num_agents,), dtype=np.float32),       
+            'linear_vels_x': spaces.Box(low=-10, high=10, shape=(self.num_agents,), dtype=np.float32),     
+            'linear_vels_y': spaces.Box(low=-10, high=10, shape=(self.num_agents,), dtype=np.float32),    
+            'ang_vels_z': spaces.Box(low=-10, high=10, shape=(self.num_agents,), dtype=np.float32),    
+            'collisions': spaces.Box(low=0, high=1, shape=(self.num_agents,), dtype=np.float32),   
+            'lap_times': spaces.Box(low=0, high=1e6, shape=(self.num_agents,), dtype=np.float32), 
+            'lap_counts': spaces.Box(low=0, high=9999, shape=(self.num_agents,), dtype=np.int32),
             'poses_s': spaces.Box(low=-1000, high=1000, shape=(1,), dtype=np.float32),      
             'poses_d': spaces.Box(low=-1000, high=1000, shape=(1,), dtype=np.float32),       
             'linear_vels_s': spaces.Box(low=-10, high=10, shape=(1,), dtype=np.float32),     
@@ -49,19 +59,6 @@ class FrenetObsWrapper(gym.ObservationWrapper):
         obs['poses_d'] = np.array(frenet_coords[1])
         obs['linear_vels_s'] = np.array(frenet_coords[2]).reshape((1, -1))
         obs['linear_vels_d'] = np.array(frenet_coords[3])
-                
-        # Remove the redundant obs keys
-        del obs['poses_x']
-        del obs['poses_y']
-        del obs['linear_vels_x']
-        del obs['linear_vels_y']
-        
-        del obs['ego_idx']
-        del obs['collisions']
-        del obs['lap_times']
-        del obs['lap_counts']
-        del obs['ang_vels_z']
-        del obs['poses_theta']
 
         return obs
     
@@ -74,16 +71,25 @@ class ReducedObs(gym.ObservationWrapper):
             'scans': spaces.Box(low=0, high=100, shape=(NUM_BEAMS, ), dtype=np.float32),
         })
 
-    def observation(self, obs):
+    def observation(self, obs):        
+        del obs['poses_x']
+        del obs['poses_y']
+        del obs['linear_vels_x']
+        del obs['linear_vels_y']
+        
+        del obs['ego_idx']
+        del obs['collisions']
+        del obs['lap_times']
+        del obs['lap_counts']
+        del obs['ang_vels_z']
+        del obs['poses_theta']
+        
         del obs['poses_s']
         del obs['poses_d']
         del obs['linear_vels_s']
         del obs['linear_vels_d']
 
         return obs
-    
-    
-    
     
     
 class TensorboardCallback(BaseCallback):

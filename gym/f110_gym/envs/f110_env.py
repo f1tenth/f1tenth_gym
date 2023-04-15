@@ -162,7 +162,6 @@ class F110Env(gym.Env):
         self.map_dir = '/Users/meraj/workspace/f1tenth_gym/work/tracks'
         self.map_name = 'map{}'.format(self.maps[map_idx])
         self.map_path = f"{self.map_dir}/maps/{self.map_name}.yaml"
-        # self.map_csv_path = f"{self.map_dir}/centerline/{self.map_name}.csv"
         self.map_csv = self.read_csv(f"{self.map_dir}/centerline/{self.map_name}.csv")
 
         self.update_map(self.map_path, '.png')
@@ -170,6 +169,20 @@ class F110Env(gym.Env):
     def read_csv(self, file_path):
         data = np.genfromtxt(file_path, delimiter=';', skip_header=1)
         return data
+
+    def update_map(self, map_path, map_ext):
+        """
+        Updates the map used by the simulation.
+
+        Args:
+            map_path (str): Absolute path to the map YAML file.
+            map_ext (str): Extension of the map image file.
+        """
+        # print(map_path)
+        self.sim.set_map(map_path, map_ext)
+
+        # if F110Env.renderer is not None:
+        #     F110Env.renderer.update_map(map_path[:-5], map_ext)
         
     def __del__(self):
         """
@@ -283,7 +296,7 @@ class F110Env(gym.Env):
             done (bool): if the simulation is done
             info (dict): auxillary information dictionary
         """
-        
+        random.seed(time.time())
         self._set_random_map()
         
         if poses is None:
@@ -318,18 +331,8 @@ class F110Env(gym.Env):
         self._update_render_obs(obs)
         obs = self._convert_obs_to_arrays(obs)
         obs = self._format_obs(obs)
-                
+
         return obs
-
-    def update_map(self, map_path, map_ext):
-        """
-        Updates the map used by the simulation.
-
-        Args:
-            map_path (str): Absolute path to the map YAML file.
-            map_ext (str): Extension of the map image file.
-        """
-        self.sim.set_map(map_path, map_ext)
 
     def update_params(self, params, index=-1):
         """

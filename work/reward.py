@@ -4,13 +4,16 @@ import numpy as np
 class NewReward(gym.Wrapper):
     def __init__(self, env):
         super().__init__(env)
+        
+        self.first = 0.0
+        self.second = 0.0
+        self.third = 0.0
 
 
     def reward(self, obs):
         ego_d = obs["poses_d"]
         vs = obs['linear_vels_s'][self.ego_idx]
         vd = obs['linear_vels_d'][self.ego_idx]
-        # lap_count = obs['lap_count'][self.ego_idx]
 
         reward = 0
 
@@ -23,12 +26,12 @@ class NewReward(gym.Wrapper):
 
         # Penalize the agent for collisions
         if self.env.collisions[0]:
-            reward -= 100.0
+            reward -= 500.0
         else:
             reward += 1.0
 
         # Encourage the agent to maintain a safe distance from the walls
-        wall_distance_threshold = 0.5
+        wall_distance_threshold = 0.9
         if abs(ego_d) < wall_distance_threshold:
             reward -= 3.0 * (wall_distance_threshold - abs(ego_d)) * abs(wall_distance_threshold - abs(ego_d))
 
@@ -40,6 +43,25 @@ class NewReward(gym.Wrapper):
         lateral_vel_penalty_weight = 2.0
         reward -= lateral_vel_penalty_weight * abs(vd)
         
+        lap_count = obs['lap_counts'][self.ego_idx]
+        lap_time  = obs['lap_times'][self.ego_idx]
+        
+            
+        if self.first == 0 and lap_count == 1:
+            self.first = lap_time
+            reward += max(1000 - 5 * self.first, 500)
+            
+        if self.second == 0 and lap_count == 2:
+            reward += max(1000 - 5 * self.first, 500)
+            self.second = lap_time
+            
+        if self.third == 0 and lap_count == 3:
+            reward += max(1000 - 5 * self.first, 500)
+            self.third = lap_time
+
+        eval_mode = False
+        if eval_mode:
+            print(self.first, self.second, self.third)        
         return reward
 
     def step(self, action):
@@ -48,7 +70,6 @@ class NewReward(gym.Wrapper):
         return obs, new_reward.item(), done, info
     
 def read_csv(file_path):
-    # print(file_path)
     data = np.genfromtxt(file_path, delimiter=';', skip_header=1)
     return data
 
