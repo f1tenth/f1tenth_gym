@@ -48,6 +48,7 @@ class NewReward(gym.Wrapper):
         return obs, new_reward.item(), done, info
     
 def read_csv(file_path):
+    # print(file_path)
     data = np.genfromtxt(file_path, delimiter=';', skip_header=1)
     return data
 

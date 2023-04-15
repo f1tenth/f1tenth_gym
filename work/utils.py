@@ -11,52 +11,22 @@ from sklearn.neighbors import KDTree
 
 NUM_BEAMS = 600
 
-def create_env(map='map0'):
+def create_env(maps=[0]):
     cwd = os.getcwd()
-    map_name = cwd + '/tracks/maps/{}'.format(map)
-    map_csv = read_csv('tracks/centerline/{}.csv'.format(map))
+    # map_name = cwd + '/tracks/maps/{}'.format(map)
     
-    env = gym.make('f110_gym:f110-v0', num_agents=1, map=map_name, map_csv=map_csv, num_beams = 600, integrator=Integrator.RK4)
-    env = FrenetObsWrapper(env=env, map_data=map_csv)
+    env = gym.make('f110_gym:f110-v0', num_agents=1, maps=maps, num_beams = 600, integrator=Integrator.RK4)
+    env = FrenetObsWrapper(env=env)
     env = NewReward(env)
     env = ReducedObs(env)
     env.reset()
     return env
 
-class TensorboardCallback(BaseCallback):
-    def __init__(self, save_interval, save_path, map, verbose=1):
-        super().__init__(verbose)
-
-        map_csv = 'tracks/centerline/{}.csv'.format(map)
-        
-        self.save_interval = save_interval
-        self.save_path = save_path
-        self.poses_s = 0
-        self.map_data = read_csv(map_csv)
-        self.kdtree = KDTree(self.map_data[:, 1:3])
-
-    def _on_step(self) -> bool:
-        if self.num_timesteps % self.save_interval == 0:
-            self.model.save(f"{self.save_path}_{self.num_timesteps}")
-        
-        infos = self.locals.get("infos", [{}])[0]['checkpoint_done']
-        if infos == True:
-            obs = self.training_env.get_attr("curr_obs")[0]
-            poses_x = obs["poses_x"][0]
-            poses_y = obs["poses_y"][0]
-
-            self.poses_s = convert_to_frenet(x= poses_x, y = poses_y, vel_magnitude = 0, pose_theta = 0, map_data=self.map_data, kdtree=self.kdtree)[0]
-            
-        if self.poses_s > 150:
-            self.poses_s -= 156.3585883 
-
-        self.logger.record("rollout/poses_s", self.poses_s)
-        return True
-
 class FrenetObsWrapper(gym.ObservationWrapper):
-    def __init__(self, env, map_data):
+    def __init__(self, env):
         super(FrenetObsWrapper, self).__init__(env)
-        self.map_data = map_data
+
+        self.map_data = self.map_csv
         self.kdtree = KDTree(self.map_data[:, 1:3])
                 
         self.observation_space = spaces.Dict({
@@ -111,4 +81,36 @@ class ReducedObs(gym.ObservationWrapper):
         del obs['linear_vels_d']
 
         return obs
+    
+    
+    
+    
+    
+class TensorboardCallback(BaseCallback):
+    def __init__(self, save_interval, save_path, verbose=1):
+        super().__init__(verbose)
+        
+        self.save_interval = save_interval
+        self.save_path = save_path
+        self.poses_s = 0
+        self.map_data = read_csv(self.training_env.get_attr('map_csv'))
+        self.kdtree = KDTree(self.map_data[:, 1:3])
+
+    def _on_step(self) -> bool:
+        if self.num_timesteps % self.save_interval == 0:
+            self.model.save(f"{self.save_path}_{self.num_timesteps}")
+        
+        infos = self.locals.get("infos", [{}])[0]['checkpoint_done']
+        if infos == True:
+            obs = self.training_env.get_attr("curr_obs")[0]
+            poses_x = obs["poses_x"][0]
+            poses_y = obs["poses_y"][0]
+
+            self.poses_s = convert_to_frenet(x= poses_x, y = poses_y, vel_magnitude = 0, pose_theta = 0, map_data=self.map_data, kdtree=self.kdtree)[0]
+            
+        if self.poses_s > 150:
+            self.poses_s -= 156.3585883 
+
+        self.logger.record("rollout/poses_s", self.poses_s)
+        return True
     

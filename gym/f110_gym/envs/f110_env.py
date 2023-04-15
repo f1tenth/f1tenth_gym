@@ -20,7 +20,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-
 import gym
 from gym import spaces
 import numpy as np
@@ -90,16 +89,8 @@ class F110Env(gym.Env):
         # kwargs extraction     
         self.seed = kwargs.get('seed', 12345)
         
-        self.map_name = kwargs.get('map', 'vegas')
-        self.map_csv = kwargs.get('map_csv')
-        map_mapping = {
-            'berlin': 'berlin.yaml',
-            'skirk': 'skirk.yaml',
-            'levine': 'levine.yaml'}
+        self.maps = kwargs.get('maps')
         
-        self.map_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'maps', map_mapping.get(self.map_name, self.map_name + '.yaml'))
-        self.map_ext = kwargs.get('map_ext', '.png')
-
         default_params = {'mu': 1.0489, 'C_Sf': 4.718, 'C_Sr': 5.4562, 'lf': 0.15875, 'lr': 0.17145, 
                           'h': 0.074, 'm': 3.74, 'I': 0.04712, 's_min': -0.4189, 's_max': 0.4189, 
                           'sv_min': -3.2, 'sv_max': 3.2, 'v_switch': 7.319, 'a_max': 9.51, 'v_min':-5.0, 
@@ -143,9 +134,9 @@ class F110Env(gym.Env):
         self.start_rot = np.eye(2)
 
         # initiate stuff
-        self.sim = Simulator(self.params, self.num_agents, seed=self.seed, num_beams= self.num_beams, time_step=self.timestep, integrator=self.integrator)
-        self.sim.set_map(self.map_path, self.map_ext)
-
+        self.sim = Simulator(self.params, self.num_agents, seed=self.seed, num_beams= self.num_beams, time_step=self.timestep, integrator=self.integrator)        
+        self._set_random_map()
+        
         # stateful observations for rendering
         self.render_obs = None
         
@@ -165,7 +156,21 @@ class F110Env(gym.Env):
             'lap_counts': spaces.Box(low=0, high=9999, shape=(self.num_agents,), dtype=np.int32)    
         })
 
+    def _set_random_map(self):
+        random.seed(time.time())
+        map_idx = random.randint(0, len(self.maps) - 1)
+        self.map_dir = '/Users/meraj/workspace/f1tenth_gym/work/tracks'
+        self.map_name = 'map{}'.format(self.maps[map_idx])
+        self.map_path = f"{self.map_dir}/maps/{self.map_name}.yaml"
+        # self.map_csv_path = f"{self.map_dir}/centerline/{self.map_name}.csv"
+        self.map_csv = self.read_csv(f"{self.map_dir}/centerline/{self.map_name}.csv")
 
+        self.update_map(self.map_path, '.png')
+        
+    def read_csv(self, file_path):
+        data = np.genfromtxt(file_path, delimiter=';', skip_header=1)
+        return data
+        
     def __del__(self):
         """
         Finalizer, does cleanup
@@ -247,7 +252,6 @@ class F110Env(gym.Env):
     
 
     def step(self, action):
-       
         # call simulation step
         obs = self.sim.step(action)
         obs['lap_times'] = self.lap_times
@@ -263,23 +267,12 @@ class F110Env(gym.Env):
         info = {'checkpoint_done': done, 'lap_count' : self.lap_counts, 'lap_times' : self.lap_times}
         
         obs['scans'] = obs['scans'][0]
-
         obs = self._format_obs(obs)
         self.curr_obs = obs
         return obs, 0, done, info
 
 
     def reset(self, poses=None):
-        if poses is None:
-            random.seed(time.time())
-            init_x = np.random.uniform(-0.3, 0.3)
-            init_y = np.random.uniform(-0.3, 0.3)
-            init_angle = np.pi/2 + self.map_csv[1, 3] + np.random.uniform(-np.pi/12, np.pi/12)
-            # init_angle = self.map_csv[1, 3] + np.random.uniform(-np.pi/12, np.pi/12)
-            # Generate random poses for the agents
-            poses = np.array([[init_x, init_y, init_angle]])
-            # poses = np.array([[-25, 0, np.pi/2]])
-
         """
         Args:
             poses (np.ndarray (num_agents, 3)): poses to reset agents to
@@ -290,6 +283,17 @@ class F110Env(gym.Env):
             done (bool): if the simulation is done
             info (dict): auxillary information dictionary
         """
+        
+        self._set_random_map()
+        
+        if poses is None:
+            # Generate random poses for the agents
+            random.seed(time.time())
+            init_x = np.random.uniform(-0.3, 0.3)
+            init_y = np.random.uniform(-0.3, 0.3)
+            init_angle = np.pi/2 + self.map_csv[1, 3] + np.random.uniform(-np.pi/12, np.pi/12)
+            poses = np.array([[init_x, init_y, init_angle]])
+            
         # reset counters and data members
         self.current_time = 0.0
         self.collisions = np.zeros((self.num_agents, ))
@@ -362,7 +366,10 @@ class F110Env(gym.Env):
             # first call, initialize everything
             from f110_gym.envs.rendering import EnvRenderer
             F110Env.renderer = EnvRenderer(WINDOW_W, WINDOW_H)
-            F110Env.renderer.update_map(self.map_name, self.map_ext)
+            # print(self.map_name)
+            # exit()
+            yaml_path = self.map_dir + '/maps/' + self.map_name
+            F110Env.renderer.update_map(yaml_path, '.png')
 
         F110Env.renderer.update_obs(self.render_obs)
 
