@@ -2,6 +2,7 @@ import gym
 import numpy as np
 from stable_baselines3.common.callbacks import BaseCallback
 from f110_gym.envs.base_classes import Integrator
+from stable_baselines3.common.monitor import Monitor
 from gym import spaces
 from reward import *
 import os
@@ -9,17 +10,17 @@ import os
 
 from sklearn.neighbors import KDTree
 
-NUM_BEAMS = 600
+NUM_BEAMS = 300
 
 def create_env(maps=[0]):
     cwd = os.getcwd()
     # map_name = cwd + '/tracks/maps/{}'.format(map)
     
-    env = gym.make('f110_gym:f110-v0', num_agents=1, maps=maps, num_beams = 600, integrator=Integrator.RK4)
+    env = gym.make('f110_gym:f110-v0', num_agents=1, maps=maps, num_beams = NUM_BEAMS, integrator=Integrator.RK4)
     env = FrenetObsWrapper(env=env)
     env = NewReward(env)
     env = ReducedObs(env)
-    # env.reset()
+    env = Monitor(env)
     return env
 
 class FrenetObsWrapper(gym.ObservationWrapper):
@@ -31,7 +32,7 @@ class FrenetObsWrapper(gym.ObservationWrapper):
                 
         self.observation_space = spaces.Dict({
             'ego_idx': spaces.Box(low=0, high=self.num_agents - 1, shape=(1,), dtype=np.int32),
-            'scans': spaces.Box(low=0, high=100, shape=(self.num_beams, ), dtype=np.float32),
+            'scans': spaces.Box(low=0, high=100, shape=(NUM_BEAMS, ), dtype=np.float32),
             'poses_x': spaces.Box(low=-1000, high=1000, shape=(self.num_agents,), dtype=np.float32),      
             'poses_y': spaces.Box(low=-1000, high=1000, shape=(self.num_agents,), dtype=np.float32),       
             'poses_theta': spaces.Box(low=-2*np.pi, high=2*np.pi, shape=(self.num_agents,), dtype=np.float32),       
@@ -92,31 +93,45 @@ class ReducedObs(gym.ObservationWrapper):
         return obs
     
     
+# class TensorboardCallback(BaseCallback):
+#     def __init__(self, save_interval, save_path, verbose=1):
+#         super().__init__(verbose)
+        
+#         self.save_interval = save_interval
+#         self.save_path = save_path
+        
+#         self.lap_counts = np.zeros(100, dtype=int)
+#         self.first_lap_times = np.zeros(100, dtype=float)
+#         self.episode_index = 0
+
+#     def _on_step(self) -> bool:
+#         if self.num_timesteps % self.save_interval == 0:
+#             self.model.save(f"{self.save_path}_{self.num_timesteps}")
+        
+#         infos = self.locals.get("infos", [{}])[0]
+#         checkpoint_done = infos.get("checkpoint_done", False)
+        
+
+#         if checkpoint_done:
+#             self.lap_counts[self.episode_index] = infos.get("lap_count", 0)
+#             self.episode_index = (self.episode_index + 1) % 10
+            
+#             success_rate = np.mean(self.lap_counts > 1)
+#             self.logger.record("rollout/success_rate", success_rate)
+            
+#         # self.logger.record("rollout/poses_s", self.poses_s)
+#         return True
+
 class TensorboardCallback(BaseCallback):
     def __init__(self, save_interval, save_path, verbose=1):
         super().__init__(verbose)
         
         self.save_interval = save_interval
         self.save_path = save_path
-        self.poses_s = 0
-        self.map_data = read_csv(self.training_env.get_attr('map_csv'))
-        self.kdtree = KDTree(self.map_data[:, 1:3])
 
     def _on_step(self) -> bool:
         if self.num_timesteps % self.save_interval == 0:
             self.model.save(f"{self.save_path}_{self.num_timesteps}")
-        
-        infos = self.locals.get("infos", [{}])[0]['checkpoint_done']
-        if infos == True:
-            obs = self.training_env.get_attr("curr_obs")[0]
-            poses_x = obs["poses_x"][0]
-            poses_y = obs["poses_y"][0]
 
-            self.poses_s = convert_to_frenet(x= poses_x, y = poses_y, vel_magnitude = 0, pose_theta = 0, map_data=self.map_data, kdtree=self.kdtree)[0]
-            
-        if self.poses_s > 150:
-            self.poses_s -= 156.3585883 
-
-        self.logger.record("rollout/poses_s", self.poses_s)
         return True
     

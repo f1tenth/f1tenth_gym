@@ -26,12 +26,12 @@ class NewReward(gym.Wrapper):
 
         # Penalize the agent for collisions
         if self.env.collisions[0]:
-            reward -= 500.0
+            reward -= 50000.0
         else:
             reward += 1.0
 
         # Encourage the agent to maintain a safe distance from the walls
-        wall_distance_threshold = 0.9
+        wall_distance_threshold = 0.2
         if abs(ego_d) < wall_distance_threshold:
             reward -= 3.0 * (wall_distance_threshold - abs(ego_d)) * abs(wall_distance_threshold - abs(ego_d))
 
@@ -39,30 +39,37 @@ class NewReward(gym.Wrapper):
         direction_reward_weight = 2.0
         reward += direction_reward_weight * vs 
 
-        # Penalize the agent for high lateral velocity (to discourage erratic behavior)
-        lateral_vel_penalty_weight = 2.0
-        reward -= lateral_vel_penalty_weight * abs(vd)
+        # # Penalize the agent for high lateral velocity (to discourage erratic behavior)
+        # lateral_vel_penalty_weight = 2.0
+        # reward -= lateral_vel_penalty_weight * abs(vd)
         
         lap_count = obs['lap_counts'][self.ego_idx]
         lap_time  = obs['lap_times'][self.ego_idx]
         
+        
+        eval_mode = True
             
         if self.first == 0 and lap_count == 1:
             self.first = lap_time
-            reward += max(1000 - 5 * self.first, 500)
+            reward += max(2000 - 10 * self.first, 1000)
+            if eval_mode:
+                print(self.first)
             
         if self.second == 0 and lap_count == 2:
-            reward += max(1000 - 5 * self.first, 500)
+            reward += max(4000 - 20 * self.second, 2000)
             self.second = lap_time
-            
+            if eval_mode:
+                print(self.second)
+                
         if self.third == 0 and lap_count == 3:
-            reward += max(1000 - 5 * self.first, 500)
+            reward += max(8000 - 40 * self.third, 4000)
             self.third = lap_time
-
-        eval_mode = False
-        if eval_mode:
-            print(self.first, self.second, self.third)        
+            if eval_mode:
+                print(self.third)
+        
         return reward
+
+
 
     def step(self, action):
         obs, original_reward, done, info = self.env.step(action)

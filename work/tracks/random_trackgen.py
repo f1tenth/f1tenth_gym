@@ -37,6 +37,7 @@ from matplotlib.patches import Polygon
 from matplotlib.collections import PatchCollection
 import argparse
 import csv
+import random
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--seed', type=int, default=13, help='Seed for the numpy rng.')
@@ -53,13 +54,14 @@ if not os.path.exists('centerline'):
     os.makedirs('centerline')
 
 NUM_MAPS = args.num_maps
-WIDTH = 10.0
+
 def create_track():
     CHECKPOINTS = 16
     SCALE = 6.0
     TRACK_RAD = 900/SCALE
     TRACK_DETAIL_STEP = 21/SCALE
     TRACK_TURN_RATE = 0.31
+    WIDTH = 10.0 + random.randint(-5,5)
 
     start_alpha = 0.
 

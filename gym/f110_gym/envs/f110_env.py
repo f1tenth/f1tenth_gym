@@ -245,7 +245,7 @@ class F110Env(gym.Env):
     
     def get_obs(self):
         return self.curr_obs
-    
+
     def _format_obs(self, obs):
         formatted_obs = {
             key: np.array(value, dtype=DTYPE)
@@ -277,7 +277,9 @@ class F110Env(gym.Env):
 
         # check done
         done, toggle_list = self._check_done()
-        info = {'checkpoint_done': done, 'lap_count' : self.lap_counts, 'lap_times' : self.lap_times}
+        info = {'checkpoint_done': done, 'lap_count' : self.lap_counts, 'lap_times' : obs['lap_times']}
+        # if done:
+        #     print('info printing session', info)
         
         obs['scans'] = obs['scans'][0]
         obs = self._format_obs(obs)
