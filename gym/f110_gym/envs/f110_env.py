@@ -26,8 +26,6 @@ from gym import spaces
 import numpy as np
 import os
 import time
-import pyglet
-from pyglet import gl
 import random
 
 from f110_gym.envs.base_classes import Simulator, Integrator
@@ -40,7 +38,6 @@ VIDEO_H = 400
 WINDOW_W = 1000
 WINDOW_H = 800
 DTYPE = np.float32
-NUM_BEAMS = 600
 
 class F110Env(gym.Env):
     """
@@ -94,6 +91,7 @@ class F110Env(gym.Env):
         self.seed = kwargs.get('seed', 12345)
         
         self.map_name = kwargs.get('map', 'vegas')
+        self.map_csv = kwargs.get('map_csv')
         map_mapping = {
             'berlin': 'berlin.yaml',
             'skirk': 'skirk.yaml',
@@ -112,8 +110,11 @@ class F110Env(gym.Env):
         self.num_agents = kwargs.get('num_agents', 2)
         self.timestep = kwargs.get('timestep', 0.01)
         self.ego_idx = kwargs.get('ego_idx', 0)
-
+        
         self.integrator = kwargs.get('integrator', Integrator.RK4)
+           
+        # number of lidar beams
+        self.num_beams = kwargs.get('num_beams', 600)
 
         # radius to consider done
         self.start_thresh = 0.5  # 10cm
@@ -142,7 +143,7 @@ class F110Env(gym.Env):
         self.start_rot = np.eye(2)
 
         # initiate stuff
-        self.sim = Simulator(self.params, self.num_agents, self.seed, time_step=self.timestep, integrator=self.integrator)
+        self.sim = Simulator(self.params, self.num_agents, seed=self.seed, num_beams= self.num_beams, time_step=self.timestep, integrator=self.integrator)
         self.sim.set_map(self.map_path, self.map_ext)
 
         # stateful observations for rendering
@@ -152,7 +153,7 @@ class F110Env(gym.Env):
         
         self.observation_space = spaces.Dict({
             'ego_idx': spaces.Box(low=0, high=self.num_agents - 1, shape=(1,), dtype=np.int32),
-            'scans': spaces.Box(low=0, high=100, shape=(NUM_BEAMS, ), dtype=np.float32),
+            'scans': spaces.Box(low=0, high=100, shape=(self.num_beams, ), dtype=np.float32),
             'poses_x': spaces.Box(low=-1000, high=1000, shape=(self.num_agents,), dtype=np.float32),      
             'poses_y': spaces.Box(low=-1000, high=1000, shape=(self.num_agents,), dtype=np.float32),       
             'poses_theta': spaces.Box(low=-2*np.pi, high=2*np.pi, shape=(self.num_agents,), dtype=np.float32),       
@@ -223,27 +224,9 @@ class F110Env(gym.Env):
     def _update_state(self, obs_dict):
         for key in ['poses_x', 'poses_y', 'poses_theta', 'collisions']:
             setattr(self, key, obs_dict[key])
-
-    def reward(self, obs):
-        reward = 0
-        return reward
     
     def get_obs(self):
         return self.curr_obs
-    
-    def _check_invalid_values(self, obs):
-        invalid = False
-        for key, value in obs.items():
-            if np.any(np.isnan(value)) or np.any(np.isinf(value)):
-                invalid = True
-                break
-        return invalid
-    
-    def _handle_invalid_values(self, obs):
-        for key, value in obs.items():
-            if np.any(np.isnan(value)) or np.any(np.isinf(value)):
-                obs[key] = np.zeros_like(value)
-        return obs
     
     def _format_obs(self, obs):
         formatted_obs = {
@@ -283,16 +266,19 @@ class F110Env(gym.Env):
 
         obs = self._format_obs(obs)
         self.curr_obs = obs
-        return obs, self.reward(obs), done, info
+        return obs, 0, done, info
 
 
     def reset(self, poses=None):
         if poses is None:
             random.seed(time.time())
+            init_x = np.random.uniform(-0.3, 0.3)
+            init_y = np.random.uniform(-0.3, 0.3)
+            init_angle = np.pi/2 + self.map_csv[1, 3] + np.random.uniform(-np.pi/12, np.pi/12)
+            # init_angle = self.map_csv[1, 3] + np.random.uniform(-np.pi/12, np.pi/12)
             # Generate random poses for the agents
-            # poses = np.array([[np.random.uniform(-0.3, 0.3), np.random.uniform(-1.0, 1.0), np.random.uniform(np.pi/3, np.pi *2/3)]])
-            # 434.3352348;203.1326276
-            poses = np.array([[-25, 0, np.pi/2]])
+            poses = np.array([[init_x, init_y, init_angle]])
+            # poses = np.array([[-25, 0, np.pi/2]])
 
         """
         Args:

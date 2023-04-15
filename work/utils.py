@@ -1,6 +1,5 @@
 import gym
 import numpy as np
-from sklearn.preprocessing import StandardScaler
 from stable_baselines3.common.callbacks import BaseCallback
 from f110_gym.envs.base_classes import Integrator
 from gym import spaces
@@ -12,26 +11,28 @@ from sklearn.neighbors import KDTree
 
 NUM_BEAMS = 600
 
-def create_env(map='map_00'):
+def create_env(map='map0'):
     cwd = os.getcwd()
-    map_name = cwd + '/maps/{}/racing_map'.format(map)
-    map_data = read_csv(map_name + '.csv')
-    env = gym.make('f110_gym:f110-v0', num_agents=1, map=map_name, integrator=Integrator.RK4)
-    env = FrenetObsWrapper(env, map_data=map_data)
+    map_name = cwd + '/tracks/maps/{}'.format(map)
+    map_csv = read_csv('tracks/centerline/{}.csv'.format(map))
+    
+    env = gym.make('f110_gym:f110-v0', num_agents=1, map=map_name, map_csv=map_csv, num_beams = 600, integrator=Integrator.RK4)
+    env = FrenetObsWrapper(env=env, map_data=map_csv)
     env = NewReward(env)
     env = ReducedObs(env)
+    env.reset()
     return env
 
 class TensorboardCallback(BaseCallback):
     def __init__(self, save_interval, save_path, map, verbose=1):
         super().__init__(verbose)
 
-        map_data = 'maps/{}/racing_map.csv'.format(map)
+        map_csv = 'tracks/centerline/{}.csv'.format(map)
         
         self.save_interval = save_interval
         self.save_path = save_path
         self.poses_s = 0
-        self.map_data = read_csv(map_data)
+        self.map_data = read_csv(map_csv)
         self.kdtree = KDTree(self.map_data[:, 1:3])
 
     def _on_step(self) -> bool:
@@ -45,7 +46,6 @@ class TensorboardCallback(BaseCallback):
             poses_y = obs["poses_y"][0]
 
             self.poses_s = convert_to_frenet(x= poses_x, y = poses_y, vel_magnitude = 0, pose_theta = 0, map_data=self.map_data, kdtree=self.kdtree)[0]
-            # self.poses_s = obs[0]["poses_s"][0]
             
         if self.poses_s > 150:
             self.poses_s -= 156.3585883 
@@ -57,7 +57,7 @@ class FrenetObsWrapper(gym.ObservationWrapper):
     def __init__(self, env, map_data):
         super(FrenetObsWrapper, self).__init__(env)
         self.map_data = map_data
-        self.kdtree = KDTree(map_data[:, 1:3])
+        self.kdtree = KDTree(self.map_data[:, 1:3])
                 
         self.observation_space = spaces.Dict({
             'scans': spaces.Box(low=0, high=100, shape=(NUM_BEAMS, ), dtype=np.float32),
@@ -111,3 +111,4 @@ class ReducedObs(gym.ObservationWrapper):
         del obs['linear_vels_d']
 
         return obs
+    

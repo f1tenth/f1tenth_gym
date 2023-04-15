@@ -358,7 +358,7 @@ class Simulator(object):
 
     """
 
-    def __init__(self, params, num_agents, seed, time_step=0.01, ego_idx=0, integrator=Integrator.RK4):
+    def __init__(self, params, num_agents, seed, num_beams, time_step=0.01, ego_idx=0, integrator=Integrator.RK4):
         """
         Init function
 
@@ -385,10 +385,10 @@ class Simulator(object):
         # initializing agents
         for i in range(self.num_agents):
             if i == ego_idx:
-                ego_car = RaceCar(params, self.seed, is_ego=True, time_step=self.time_step, integrator=integrator)
+                ego_car = RaceCar(params=params, seed=self.seed, num_beams=num_beams, is_ego=True, time_step=self.time_step, integrator=integrator)
                 self.agents.append(ego_car)
             else:
-                agent = RaceCar(params, self.seed, is_ego=False, time_step=self.time_step, integrator=integrator)
+                agent = RaceCar(params=params, seed=self.seed, num_beams=num_beams, is_ego=False, time_step=self.time_step, integrator=integrator)
                 self.agents.append(agent)
 
     def set_map(self, map_path, map_ext):

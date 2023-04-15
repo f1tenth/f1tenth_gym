@@ -1,6 +1,5 @@
 import gym
 import numpy as np
-import os
 
 class NewReward(gym.Wrapper):
     def __init__(self, env):
@@ -38,24 +37,8 @@ class NewReward(gym.Wrapper):
         reward += direction_reward_weight * vs 
 
         # Penalize the agent for high lateral velocity (to discourage erratic behavior)
-        lateral_vel_penalty_weight = 1.0
+        lateral_vel_penalty_weight = 2.0
         reward -= lateral_vel_penalty_weight * abs(vd)
-        
-        # reward += 500 * lap_count
-
-
-        # pose_theta_penalty_weight = 0.3
-        # desired_orientation = np.pi / 2
-
-        # # Normalize the pose_theta
-        # normalized_pose_theta = (obs['poses_theta'][self.ego_idx] + np.pi) % (2 * np.pi) - np.pi
-
-        # # Calculate the difference between the current orientation and desired orientation
-        # angle_diff = normalized_pose_theta - desired_orientation
-
-        # # Normalize the angle difference
-        # angle_diff = (angle_diff + np.pi) % (2 * np.pi) - np.pi
-        # reward += 1 - pose_theta_penalty_weight * abs(angle_diff) ** 2
         
         return reward
 
@@ -65,7 +48,7 @@ class NewReward(gym.Wrapper):
         return obs, new_reward.item(), done, info
     
 def read_csv(file_path):
-    data = np.genfromtxt(file_path, delimiter=';', skip_header=3)
+    data = np.genfromtxt(file_path, delimiter=';', skip_header=1)
     return data
 
 def get_closest_point_index(x, y, kdtree):

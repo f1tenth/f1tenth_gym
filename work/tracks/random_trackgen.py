@@ -36,6 +36,7 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Polygon
 from matplotlib.collections import PatchCollection
 import argparse
+import csv
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--seed', type=int, default=13, help='Seed for the numpy rng.')
@@ -174,6 +175,51 @@ def create_track():
 
     return track_xy, track_xy_offset_in_np, track_xy_offset_out_np
 
+def save_custom_format_csv(xy_pixels, file_name):
+    with open(file_name, 'w', newline='') as csvfile:
+        csv_writer = csv.writer(csvfile, delimiter=';')
+        csv_writer.writerow(['# s_m', 'x_m', 'y_m', 'psi_rad', 'kappa_radpm', 'vx_mps', 'ax_mps2'])
+        
+        delta_t = 0.1
+        s_m = 0.0
+        
+        for idx, row in enumerate(xy_pixels):
+            x_m = 0.05 * row[0]
+            y_m = 0.05 * row[1]
+
+            if idx > 0:
+                delta_x = x_m - (0.05 * xy_pixels[idx - 1][0])
+                delta_y = y_m - (0.05 * xy_pixels[idx - 1][1])
+                delta_s = math.sqrt(delta_x**2 + delta_y**2)
+
+                s_m += delta_s
+                psi_rad = math.pi / 2 + math.atan2(-delta_y, -delta_x)
+                psi_rad = (psi_rad + math.pi) % (2 * math.pi) - math.pi
+                # psi_rad = math.atan2(delta_y, delta_x)
+                vx_mps = delta_s / delta_t
+            else:
+                psi_rad = 0.0
+                vx_mps = 0.0
+                
+                
+            if idx > 1:
+                dx = delta_x
+                dy = delta_y
+                ddx = (0.05 * xy_pixels[idx][0] - 2 * 0.05 * xy_pixels[idx - 1][0] + 0.05 * xy_pixels[idx - 2][0]) / 0.1999470
+                ddy = (0.05 * xy_pixels[idx][1] - 2 * 0.05 * xy_pixels[idx - 1][1] + 0.05 * xy_pixels[idx - 2][1]) / 0.1999470
+                kappa_radpm = (dy * ddx - dx * ddy) / ((dx**2 + dy**2)**(3/2))
+            
+                previous_delta_s = math.sqrt((delta_x - 0.05 * xy_pixels[idx - 2][0])**2 + (delta_y - 0.05 * xy_pixels[idx - 2][1])**2)
+                previous_vx_mps = previous_delta_s / delta_t
+                delta_vx = vx_mps - previous_vx_mps
+                ax_mps2 = delta_vx / delta_t
+            else:
+                kappa_radpm = 0.0
+                ax_mps2 = 0.0
+                            
+            csv_writer.writerow([f"{s_m:.7f}", f"{x_m:.7f}", f"{y_m:.7f}", f"{psi_rad:.7f}",
+                                 f"{kappa_radpm:.7f}", f"{vx_mps:.7f}", f"{ax_mps2:.7f}"])
+
 
 def convert_track(track, track_int, track_ext, iter):
 
@@ -220,11 +266,8 @@ def convert_track(track, track_int, track_ext, iter):
     plt.close()
 
     # saving track centerline as a csv in ros coords
-    waypoints_csv = open('centerline/map' + str(iter) + '.csv', 'w')
-    for row in xy_pixels:
-        waypoints_csv.write(str(0.05*row[0]) + ', ' + str(0.05*row[1]) + '\n')
-    waypoints_csv.close()
-
+    csv_file = 'centerline/map' + str(iter) + '.csv'
+    save_custom_format_csv(xy_pixels, csv_file)
 
 
 if __name__ == '__main__':
