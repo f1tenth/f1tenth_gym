@@ -26,7 +26,7 @@ class FrenetObsWrapper(gym.ObservationWrapper):
     def __init__(self, env):
         super(FrenetObsWrapper, self).__init__(env)
 
-        self.map_data = self.map_csv
+        self.map_data = self.map_csv_data
         self.kdtree = KDTree(self.map_data[:, 1:3])
                 
         self.observation_space = spaces.Dict({

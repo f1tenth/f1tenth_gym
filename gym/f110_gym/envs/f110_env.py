@@ -27,7 +27,6 @@ import time
 import random
 
 from f110_gym.envs.base_classes import Simulator, Integrator
-from f110_gym.envs.rendering import EnvRenderer
 
 # pyglet.options['debug_gl'] = False
 
@@ -166,13 +165,13 @@ class F110Env(gym.Env):
         self.map_csv = f"{self.map_dir}/centerline/{self.map_name}.csv"
         self.map_csv_data = self.read_csv(self.map_csv)
 
-        self.update_map(self.map_yaml, '.png')
+        self.update_map(self.map_yaml)
         
     def read_csv(self, file_path):
         data = np.genfromtxt(file_path, delimiter=';', skip_header=1)
         return data
 
-    def update_map(self, map_path, map_ext):
+    def update_map(self, map_path):
         """
         Updates the map used by the simulation.
 
@@ -181,7 +180,7 @@ class F110Env(gym.Env):
             map_ext (str): Extension of the map image file.
         """
         # print(map_path)
-        self.sim.set_map(map_path, map_ext)
+        self.sim.set_map(map_path, '.png')
         
     def __del__(self):
         """
@@ -332,6 +331,9 @@ class F110Env(gym.Env):
         self._update_render_obs(obs)
         obs = self._convert_obs_to_arrays(obs)
         obs = self._format_obs(obs)
+        
+        self.obstacles = [(1.0, 1.0, 50.0)]
+        # self.renderer.create_obstacles(obstacles)
 
         return obs
 
@@ -368,8 +370,10 @@ class F110Env(gym.Env):
 
         if F110Env.renderer is None:
             # first call, initialize everything
+            from f110_gym.envs.rendering import EnvRenderer
             F110Env.renderer = EnvRenderer(WINDOW_W, WINDOW_H)
-            F110Env.renderer.update_map(self.map_png)
+            F110Env.renderer.update_map(f"{self.map_dir}/maps/{self.map_name}", '.png')
+            self.renderer.create_obstacles(self.obstacles)
 
         F110Env.renderer.update_obs(self.render_obs)
 

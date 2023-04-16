@@ -109,6 +109,27 @@ class EnvRenderer(pyglet.window.Window):
 
         self.fps_display = pyglet.window.FPSDisplay(self)
 
+
+    def create_obstacles(self, obstacles):
+        """
+        Creates and stores obstacles in the environment.
+        
+        Args:
+            obstacles (list): List of tuples containing obstacle coordinates and size.
+                              Each tuple should be in the form (x, y, size).
+        """
+        self.obstacles = []
+
+        for x, y, size in obstacles:
+            obstacle = self.batch.add(4, GL_QUADS, None,
+                                      ('v2f', [x - size / 2, y - size / 2,
+                                               x + size / 2, y - size / 2,
+                                               x + size / 2, y + size / 2,
+                                               x - size / 2, y + size / 2]),
+                                      ('c3B', [255, 0, 0, 255, 0, 0, 255, 0, 0, 255, 0, 0]))
+            self.obstacles.append(obstacle)            
+            
+
     def update_map(self, map_path, map_ext):
         """
         Update the map being drawn by the renderer. Converts image to a list of 3D points representing each obstacle pixel in the map.
