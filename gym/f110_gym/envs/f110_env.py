@@ -23,11 +23,11 @@
 import gym
 from gym import spaces
 import numpy as np
-import os
 import time
 import random
 
 from f110_gym.envs.base_classes import Simulator, Integrator
+from f110_gym.envs.rendering import EnvRenderer
 
 # pyglet.options['debug_gl'] = False
 
@@ -161,10 +161,12 @@ class F110Env(gym.Env):
         map_idx = random.randint(0, len(self.maps) - 1)
         self.map_dir = '/Users/meraj/workspace/f1tenth_gym/work/tracks'
         self.map_name = 'map{}'.format(self.maps[map_idx])
-        self.map_path = f"{self.map_dir}/maps/{self.map_name}.yaml"
-        self.map_csv = self.read_csv(f"{self.map_dir}/centerline/{self.map_name}.csv")
+        self.map_yaml= f"{self.map_dir}/maps/{self.map_name}.yaml"
+        self.map_png = f"{self.map_dir}/maps/{self.map_name}.png"
+        self.map_csv = f"{self.map_dir}/centerline/{self.map_name}.csv"
+        self.map_csv_data = self.read_csv(self.map_csv)
 
-        self.update_map(self.map_path, '.png')
+        self.update_map(self.map_yaml, '.png')
         
     def read_csv(self, file_path):
         data = np.genfromtxt(file_path, delimiter=';', skip_header=1)
@@ -180,9 +182,6 @@ class F110Env(gym.Env):
         """
         # print(map_path)
         self.sim.set_map(map_path, map_ext)
-
-        # if F110Env.renderer is not None:
-        #     F110Env.renderer.update_map(map_path[:-5], map_ext)
         
     def __del__(self):
         """
@@ -306,7 +305,7 @@ class F110Env(gym.Env):
             random.seed(time.time())
             init_x = np.random.uniform(-0.3, 0.3)
             init_y = np.random.uniform(-0.3, 0.3)
-            init_angle = np.pi/2 + self.map_csv[1, 3] + np.random.uniform(-np.pi/12, np.pi/12)
+            init_angle = np.pi/2 + self.map_csv_data[1, 3] + np.random.uniform(-np.pi/12, np.pi/12)
             poses = np.array([[init_x, init_y, init_angle]])
             
         # reset counters and data members
@@ -369,12 +368,8 @@ class F110Env(gym.Env):
 
         if F110Env.renderer is None:
             # first call, initialize everything
-            from f110_gym.envs.rendering import EnvRenderer
             F110Env.renderer = EnvRenderer(WINDOW_W, WINDOW_H)
-            # print(self.map_name)
-            # exit()
-            yaml_path = self.map_dir + '/maps/' + self.map_name
-            F110Env.renderer.update_map(yaml_path, '.png')
+            F110Env.renderer.update_map(self.map_png)
 
         F110Env.renderer.update_obs(self.render_obs)
 
