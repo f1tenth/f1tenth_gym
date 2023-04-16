@@ -2,11 +2,13 @@ from stable_baselines3 import PPO
 from utils import *
 from reward import *
 
-maps = list(range(2,180))
+maps = list(range(1,200))
 
 env = create_env(maps=maps)
 
-model = "models/ppo_model_1950000"
+env.training=False
+
+model = "models/ppo_model_100000"
 model = PPO.load(path=model, env=env)
 
 # model = PPO.load("/Users/meraj/workspace/f1tenth_gym/work/models/base/01_100423.zip", env=env)

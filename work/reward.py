@@ -8,6 +8,7 @@ class NewReward(gym.Wrapper):
         self.first = 0.0
         self.second = 0.0
         self.third = 0.0
+        self.known_lap_count = 0
 
 
     def reward(self, obs):
@@ -21,51 +22,31 @@ class NewReward(gym.Wrapper):
         stationary_threshold = 0.25
         ego_linear_speed = np.sqrt(vs ** 2 + vd ** 2)
         if ego_linear_speed < stationary_threshold:
-            reward -= 10.0
-
+            reward -= 1.0
 
         # Penalize the agent for collisions
         if self.env.collisions[0]:
-            reward -= 50000.0
+            reward -= 1000.0
         else:
             reward += 1.0
 
-        # Encourage the agent to maintain a safe distance from the walls
-        wall_distance_threshold = 0.2
-        if abs(ego_d) < wall_distance_threshold:
-            reward -= 3.0 * (wall_distance_threshold - abs(ego_d)) * abs(wall_distance_threshold - abs(ego_d))
+        # # Encourage the agent to maintain a safe distance from the walls
+        # wall_distance_threshold = 0.5
+        # if abs(ego_d) < wall_distance_threshold:
+        #     reward -= 1.0 * (wall_distance_threshold - abs(ego_d)) * abs(wall_distance_threshold - abs(ego_d))
 
         # Encourage the agent to move in the desired direction (along the s-axis)
-        direction_reward_weight = 2.0
-        reward += direction_reward_weight * vs 
-
-        # # Penalize the agent for high lateral velocity (to discourage erratic behavior)
-        # lateral_vel_penalty_weight = 2.0
-        # reward -= lateral_vel_penalty_weight * abs(vd)
+        reward += 1.0 * vs 
+        reward -= 0.5 * abs(vd)
         
-        lap_count = obs['lap_counts'][self.ego_idx]
-        lap_time  = obs['lap_times'][self.ego_idx]
+        # lap_count = obs['lap_counts'][self.ego_idx]
+        # lap_time  = obs['lap_times'][self.ego_idx]
         
-        
-        eval_mode = True
-            
-        if self.first == 0 and lap_count == 1:
-            self.first = lap_time
-            reward += max(2000 - 10 * self.first, 1000)
-            if eval_mode:
-                print(self.first)
-            
-        if self.second == 0 and lap_count == 2:
-            reward += max(4000 - 20 * self.second, 2000)
-            self.second = lap_time
-            if eval_mode:
-                print(self.second)
-                
-        if self.third == 0 and lap_count == 3:
-            reward += max(8000 - 40 * self.third, 4000)
-            self.third = lap_time
-            if eval_mode:
-                print(self.third)
+        # if lap_count != self.known_lap_count and lap_time >= 50.0:
+        #     self.known_lap_count = lap_count
+        #     reward += max(500 - 2.5 * self.first, 500)
+        #     print(lap_time)
+        # print('reward ', reward)
         
         return reward
 

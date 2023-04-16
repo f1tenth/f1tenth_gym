@@ -3,6 +3,8 @@ import numpy as np
 from stable_baselines3.common.callbacks import BaseCallback
 from f110_gym.envs.base_classes import Integrator
 from stable_baselines3.common.monitor import Monitor
+from stable_baselines3.common.vec_env import DummyVecEnv
+from stable_baselines3.common.vec_env import VecNormalize
 from gym import spaces
 from reward import *
 import os
@@ -13,15 +15,43 @@ from sklearn.neighbors import KDTree
 NUM_BEAMS = 300
 
 def create_env(maps=[0]):
-    cwd = os.getcwd()
-    # map_name = cwd + '/tracks/maps/{}'.format(map)
-    
     env = gym.make('f110_gym:f110-v0', num_agents=1, maps=maps, num_beams = NUM_BEAMS, integrator=Integrator.RK4)
+    
     env = FrenetObsWrapper(env=env)
     env = NewReward(env)
     env = ReducedObs(env)
+    # env = NormalizeActionWrapper(env)    
+    # env = VecNormalize(env)
+    # env = DummyVecEnv([lambda: env])
     env = Monitor(env)
     return env
+
+class NormalizeActionWrapper(gym.Wrapper):
+    def __init__(self, env):
+        super().__init__(env)
+        
+        # Normalize action space
+        self.action_space = spaces.Box(low=np.array([-1, -1]), high=np.array([1, 1]), dtype=np.float32)
+        self.low = self.env.action_space.low
+        self.high = self.env.action_space.high
+
+    def step(self, action):
+        print('before action', action)
+        
+        action[0] = (self.high[0] - self.low[0]) * action[0] / 2
+        action[1] = (self.high[1] - self.low[1]) * action[1] / 2
+
+        # action = low + action * (high - low)
+        print(self.low)
+        print(self.high)
+        print('after action ', action)
+        
+        # Call the original environment's step function
+        observation, reward, done, info = self.env.step(action)
+        return observation, reward, done, info
+
+    def reset(self, **kwargs):
+        return self.env.reset(**kwargs)
 
 class FrenetObsWrapper(gym.ObservationWrapper):
     def __init__(self, env):
