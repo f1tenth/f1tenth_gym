@@ -3,6 +3,7 @@ import numpy as np
 from stable_baselines3.common.callbacks import BaseCallback
 from f110_gym.envs.base_classes import Integrator
 from stable_baselines3.common.monitor import Monitor
+from stable_baselines3.common.vec_env import DummyVecEnv
 from gym import spaces
 from reward import NewReward, convert_to_frenet
 
@@ -11,13 +12,13 @@ from sklearn.neighbors import KDTree
 NUM_BEAMS = 300
 
 def create_env(maps=[0]):
-    env = gym.make('f110_gym:f110-v0', num_agents=1, maps=maps, num_beams = NUM_BEAMS, 
-                   integrator=Integrator.RK4)
+    env = gym.make('f110_gym:f110-v0', num_agents=1, maps=maps, num_beams = NUM_BEAMS, integrator=Integrator.RK4)
     
-    env = FrenetObsWrapper(env=env)
+    env = FrenetObsWrapper(env)
     env = NewReward(env)
     env = ReducedObs(env)
     env = Monitor(env)
+    env = DummyVecEnv([lambda: env])
     return env
 
 
@@ -52,7 +53,8 @@ class FrenetObsWrapper(gym.ObservationWrapper):
         vel_magnitude = obs['linear_vels_x']
         poses_theta = obs['poses_theta'][0]
         
-        frenet_coords = convert_to_frenet(poses_x, poses_y, vel_magnitude, poses_theta, self.map_data, self.kdtree)
+        frenet_coords = convert_to_frenet(poses_x, poses_y, vel_magnitude, 
+                                          poses_theta, self.map_data, self.kdtree)
         
         obs['poses_s'] = np.array(frenet_coords[0]).reshape((1, -1))
         obs['poses_d'] = np.array(frenet_coords[1])

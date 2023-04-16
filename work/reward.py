@@ -12,7 +12,6 @@ class NewReward(gym.Wrapper):
 
 
     def reward(self, obs):
-        ego_d = obs["poses_d"]
         vs = obs['linear_vels_s'][self.ego_idx]
         vd = obs['linear_vels_d'][self.ego_idx]
 
@@ -29,11 +28,6 @@ class NewReward(gym.Wrapper):
             reward -= 1000.0
         else:
             reward += 1.0
-
-        # # Encourage the agent to maintain a safe distance from the walls
-        # wall_distance_threshold = 0.5
-        # if abs(ego_d) < wall_distance_threshold:
-        #     reward -= 1.0 * (wall_distance_threshold - abs(ego_d)) * abs(wall_distance_threshold - abs(ego_d))
 
         # Encourage the agent to move in the desired direction (along the s-axis)
         reward += 1.0 * vs 
@@ -66,10 +60,10 @@ def get_closest_point_index(x, y, kdtree):
     closest_point_index = indices[0, 0]
     return closest_point_index
 
-def convert_to_frenet(x, y,vel_magnitude, pose_theta, map_data, kdtree):
+def convert_to_frenet(x, y, vel_magnitude, pose_theta, map_data, kdtree):
     closest_point_index = get_closest_point_index(x, y, kdtree)
     closest_point = map_data[closest_point_index]
-    s_m, x_m, y_m, psi_rad = closest_point[0], closest_point[1], closest_point[2], closest_point[3]
+    s_m, x_m, y_m, psi_rad = closest_point[0:4]
     
     dx = x - x_m
     dy = y - y_m

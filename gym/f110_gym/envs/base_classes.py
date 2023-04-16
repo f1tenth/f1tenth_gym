@@ -49,8 +49,9 @@ class RaceCar(object):
         time_step (float): physics timestep
         num_beams (int): number of beams in laser
         fov (float): field of view of laser
-        state (np.ndarray (7, )): state vector [x, y, theta, vel, steer_angle, ang_vel, slip_angle]
-        odom (np.ndarray(13, )): odometry vector [x, y, z, qx, qy, qz, qw, linear_x, linear_y, linear_z, angular_x, angular_y, angular_z]
+        state (np.ndarray (7, )): [x, y, theta, vel, steer_angle, ang_vel, slip_angle]
+        odom (np.ndarray(13, )): odometry vector [x, y, z, qx, qy, qz, qw, linear_x, 
+                                    linear_y, linear_z, angular_x, angular_y, angular_z]
         accel (float): current acceleration input
         steer_angle_vel (float): current steering velocity input
         in_collision (bool): collision indicator
@@ -63,12 +64,15 @@ class RaceCar(object):
     scan_angles = None
     side_distances = None
 
-    def __init__(self, params, seed, is_ego=False, time_step=0.01, num_beams=600, fov=4.7, integrator=Integrator.Euler):   # 1080
+    def __init__(self, params, seed, is_ego=False, time_step=0.01, 
+                 num_beams=600, fov=4.7, integrator=Integrator.Euler):   # 1080
         """
         Init function
 
         Args:
-            params (dict): vehicle parameter dictionary, includes {'mu', 'C_Sf', 'C_Sr', 'lf', 'lr', 'h', 'm', 'I', 's_min', 's_max', 'sv_min', 'sv_max', 'v_switch', 'a_max': 9.51, 'v_min', 'v_max', 'length', 'width'}
+            params (dict): vehicle parameter dictionary, includes {'mu', 'C_Sf', 'C_Sr',
+            'lf', 'lr', 'h', 'm', 'I', 's_min', 's_max', 'sv_min', 'sv_max', 'v_switch',
+            'a_max': 9.51, 'v_min', 'v_max', 'length', 'width'}
             is_ego (bool, default=False): ego identifier
             time_step (float, default=0.01): physics sim time step
             num_beams (int, default=1080): number of beams in the laser scan
@@ -115,7 +119,9 @@ class RaceCar(object):
         dist_fr = (self.params['lf'] + self.params['lr']) / 2
 
         angles_abs = np.abs(RaceCar.scan_angles)
-        angles_mirrored = np.where(RaceCar.scan_angles > 0, np.pi - RaceCar.scan_angles, -np.pi - RaceCar.scan_angles)
+        angles_mirrored = np.where(RaceCar.scan_angles > 0, 
+                                   np.pi - RaceCar.scan_angles, 
+                                   -np.pi - RaceCar.scan_angles)
 
         to_side = dist_sides / np.sin(angles_abs)
         to_fr = dist_fr / np.cos(angles_abs)
@@ -126,7 +132,9 @@ class RaceCar(object):
         side_distances_original = np.minimum(to_side, to_fr)
         side_distances_mirrored = np.minimum(to_side_mirrored, to_fr_mirrored)
 
-        RaceCar.side_distances = np.where(RaceCar.scan_angles > 0, side_distances_original, side_distances_mirrored)
+        RaceCar.side_distances = np.where(RaceCar.scan_angles > 0, 
+                                          side_distances_original, 
+                                          side_distances_mirrored)
 
     def update_params(self, params):
         """
@@ -191,15 +199,18 @@ class RaceCar(object):
         # loop over all opponent vehicle poses
         for opp_pose in self.opp_poses:
             # get vertices of current oppoenent
-            opp_vertices = get_vertices(opp_pose, self.params['length'], self.params['width'])
+            opp_vertices = get_vertices(opp_pose, 
+                                        self.params['length'], 
+                                        self.params['width'])
 
-            new_scan = ray_cast(np.append(self.state[0:2], self.state[4]), new_scan, self.scan_angles, opp_vertices)
+            new_scan = ray_cast(np.append(self.state[0:2], self.state[4]), new_scan, 
+                                          self.scan_angles, opp_vertices)
 
         return new_scan
 
     def check_ttc(self, current_scan):
         """
-        Check iTTC against the environment, sets vehicle states accordingly if collision occurs.
+        Check iTTC against the environment, sets states accordingly if collision occurs.
         Note that this does NOT check collision with other agents.
 
         state is [x, y, steer_angle, vel, yaw_angle, yaw_rate, slip_angle]
@@ -211,7 +222,8 @@ class RaceCar(object):
             None
         """
         
-        in_collision = check_ttc_jit(current_scan, self.state[3], self.scan_angles, self.cosines, self.side_distances, self.ttc_thresh)
+        in_collision = check_ttc_jit(current_scan, self.state[3], self.scan_angles, 
+                                     self.cosines, self.side_distances, self.ttc_thresh)
 
         # if in collision stop vehicle
         if in_collision:
@@ -271,7 +283,8 @@ class RaceCar(object):
 
 
         # steering angle velocity input to steering velocity acceleration input
-        accl, sv = pid(vel, steer, self.state[3], self.state[2], self.params['sv_max'], self.params['a_max'], self.params['v_max'], self.params['v_min'])
+        accl, sv = pid(vel, steer, self.state[3], self.state[2], self.params['sv_max'], 
+                       self.params['a_max'], self.params['v_max'], self.params['v_min'])
         
         if self.integrator is Integrator.RK4:
             # RK4 integration
@@ -291,7 +304,7 @@ class RaceCar(object):
             self.state += self.time_step * f
         
         else:
-            raise SyntaxError(f"Invalid Integrator Specified. Provided {self.integrator.name}. Please choose RK4 or Euler")
+            raise SyntaxError("Invalid Integrator Specified.")
 
         # bound yaw angle
         if self.state[4] > 2*np.pi:
@@ -301,7 +314,9 @@ class RaceCar(object):
             
         # update scan
         
-        current_scan = RaceCar.scan_simulator.scan(np.append(self.state[0:2], self.state[4]), self.scan_rng)
+        current_scan = RaceCar.scan_simulator.scan(np.append(self.state[0:2], 
+                                                             self.state[4]), 
+                                                             self.scan_rng)
 
         return current_scan
 
@@ -321,7 +336,8 @@ class RaceCar(object):
     def update_scan(self, agent_scans, agent_index):
         """
         Steps the vehicle's laser scan simulation
-        Separated from update_pose because needs to update scan based on NEW poses of agents in the environment
+        Separated from update_pose because needs to update scan based on 
+            NEW poses of agents in the environment
 
         Args:
             agent scans list (modified in-place),
@@ -343,24 +359,27 @@ class RaceCar(object):
 
 class Simulator(object):
     """
-    Simulator class, handles the interaction and update of all vehicles in the environment
+    Simulator class, handles the interaction and update of all vehicles in the env
 
     Data Members:
         num_agents (int): number of agents in the environment
         time_step (float): physics time step
         agent_poses (np.ndarray(num_agents, 3)): all poses of all agents
         agents (list[RaceCar]): container for RaceCar objects
-        collisions (np.ndarray(num_agents, )): array of collision indicator for each agent
-        collision_idx (np.ndarray(num_agents, )): which agent is each agent in collision with
+        collisions (np.ndarray(num_agents, )): array of collision indicator for agents
+        collision_idx (np.ndarray(num_agents, )): agent collision indices
 
     """
 
-    def __init__(self, params, num_agents, seed, num_beams, time_step=0.01, ego_idx=0, integrator=Integrator.RK4):
+    def __init__(self, params, num_agents, seed, num_beams, 
+                 time_step=0.01, ego_idx=0, integrator=Integrator.RK4):
         """
         Init function
 
         Args:
-            params (dict): vehicle parameter dictionary, includes {'mu', 'C_Sf', 'C_Sr', 'lf', 'lr', 'h', 'm', 'I', 's_min', 's_max', 'sv_min', 'sv_max', 'v_switch', 'a_max', 'v_min', 'v_max', 'length', 'width'}
+            params (dict): vehicle parameter dictionary, includes {'mu', 'C_Sf', 'C_Sr',
+                'lf', 'lr', 'h', 'm', 'I', 's_min', 's_max', 'sv_min', 'sv_max', 
+                'v_switch', 'a_max', 'v_min', 'v_max', 'length', 'width'}
             num_agents (int): number of agents in the environment
             seed (int): seed of the rng in scan simulation
             time_step (float, default=0.01): physics time step
@@ -382,10 +401,14 @@ class Simulator(object):
         # initializing agents
         for i in range(self.num_agents):
             if i == ego_idx:
-                ego_car = RaceCar(params=params, seed=self.seed, num_beams=num_beams, is_ego=True, time_step=self.time_step, integrator=integrator)
+                ego_car = RaceCar(params=params, seed=self.seed, 
+                                  num_beams=num_beams, is_ego=True, 
+                                  time_step=self.time_step, integrator=integrator)
                 self.agents.append(ego_car)
             else:
-                agent = RaceCar(params=params, seed=self.seed, num_beams=num_beams, is_ego=False, time_step=self.time_step, integrator=integrator)
+                agent = RaceCar(params=params, seed=self.seed, 
+                                num_beams=num_beams, is_ego=False, 
+                                time_step=self.time_step, integrator=integrator)
                 self.agents.append(agent)
 
     def set_map(self, map_path, map_ext):

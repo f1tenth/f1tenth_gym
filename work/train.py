@@ -1,27 +1,35 @@
 from stable_baselines3 import PPO
-from utils import *
-from reward import *
+from utils import create_env, TensorboardCallback
 
 save_interval = 50_000
-save_path = "./models/ppo_model"
+save_path = "./models/ppo_model/ent_001"
 log_dir = "./metrics/"
 maps = list(range(1,180))
 
 env = create_env(maps=maps)
 
-model_index = 'ppo_model_{}'.format(int(4 * 100000))
-model_index = 'base/01_100423'
+# model = PPO("MultiInputPolicy", env, verbose=2, tensorboard_log=log_dir)
+model = PPO("MultiInputPolicy",
+            env,
+            verbose=2,
+            # n_steps=2048,
+            ent_coef=0.001,
+            learning_rate=0.0001,
+            # vf_coef=0.5,
+            # max_grad_norm=0.5,
+            # gae_lambda=0.95,
+            # gamma=0.99,
+            # n_epochs=10,
+            # clip_range=0.2,  # Adjust this value as needed
+            # use_sde=True,
+            tensorboard_log=log_dir
+)
 
-model = PPO("MultiInputPolicy", env, verbose=1, tensorboard_log=log_dir, device='cuda')
-
-# model = PPO.load("/Users/meraj/workspace/f1tenth_gym/work/models/ppo_model_7000000.zip", env=env, tensorboard_log=log_dir)
+# model = PPO.load("models/ppo_model_7000000.zip", env=env, tensorboard_log=log_dir)
 
 combined_callback = TensorboardCallback(save_interval, save_path, verbose=1)
 
 model.learn(total_timesteps=10000_000, callback=combined_callback, progress_bar=True)
-# model.learn(total_timesteps=10000_000)
-
-
 
 env.env.close()
 env.close()

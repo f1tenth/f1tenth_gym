@@ -6,7 +6,9 @@ maps = list(range(1,200))
 env = create_env(maps=maps)
 env.training=False
 
-model = "models/ppo_model_400000"
+# model = "models/ppo_model_950000"
+model = "models/ppo_model/ent_1_200000"
+
 model = PPO.load(path=model, env=env)
 
 obs = env.reset()
