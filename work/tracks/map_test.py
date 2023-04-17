@@ -3,17 +3,17 @@ import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 
 
-image = mpimg.imread('/Users/meraj/workspace/f1tenth_gym/work/maps/map_00/racing_map.png')
+image = mpimg.imread('/Users/meraj/workspace/f1tenth_gym/work/tracks/maps/map6.png')
 
 def read_csv(file_path):
     data = np.genfromtxt(file_path, delimiter=';', skip_header=3)
     return data
 
 
-map_data = read_csv('/Users/meraj/workspace/f1tenth_gym/work/maps/map_00/racing_map.csv')
+map_data = read_csv('/Users/meraj/workspace/f1tenth_gym/work/tracks/centerline/map6.csv')
 map_data_np = np.array(map_data)
 
-map_x, map_y = (map_data_np[:, 1] + 78.21853769831466) / 0.062500, (map_data_np[:, 2] + 44.37590462453829)/ 0.062500
+map_x, map_y = (map_data_np[:, 1] + 54.176041943946956) / 0.062500, (map_data_np[:, 2] + 48.35154856753476)/ 0.062500
 print(map_data_np[0])
 
 

@@ -25,6 +25,10 @@ from gym import spaces
 import numpy as np
 import time
 import random
+import cv2
+import os
+import yaml
+import matplotlib.image as mpimg
 
 from f110_gym.envs.base_classes import Simulator, Integrator
 
@@ -155,21 +159,126 @@ class F110Env(gym.Env):
             'lap_counts': spaces.Box(low=0, high=9999, shape=(self.num_agents,), dtype=np.int32)    
         })
 
+    def add_random_shapes(self, image_path, coordinates_list):
+        image = cv2.imread(image_path)
+        shape_choices = ["rectangle", "circle", "triangle", "ellipse", "rounded_rectangle"]
+
+        for coord in coordinates_list:
+            x, y, size = int(coord[0]), int(coord[1]), int(coord[2])
+            shape = random.choice(shape_choices)
+            color = (0, 0, 0)  # Black
+
+            if shape == "rectangle":
+                center_x, center_y = x + size//2, y + size//2
+                cv2.rectangle(image, (center_x - size//2, center_y - size//2), (center_x + size//2, center_y + size//2), color, -1)
+            elif shape == "circle":
+                cv2.circle(image, (x, y), size // 2, color, -1)
+            elif shape == "triangle":
+                points = np.array([[(x + size//2, y), (x + size, y + size), (x, y + size)]], dtype=np.int32)
+                cv2.fillPoly(image, points, color)
+            elif shape == "ellipse":
+                center_x, center_y = x + size//2, y + size//2
+                cv2.ellipse(image, (center_x, center_y), (size//2, size//4), 0, 0, 360, color, -1)
+            elif shape == "rounded_rectangle":
+                rx, ry = size // 5, size // 5
+                cv2.rectangle(image, (x + rx, y), (x + size - rx, y + size), color, -1)
+                cv2.rectangle(image, (x, y + ry), (x + size, y + size - ry), color, -1)
+                cv2.circle(image, (x + rx, y + ry), ry, color, -1)
+                cv2.circle(image, (x + size - rx, y + ry), ry, color, -1)
+                cv2.circle(image, (x + rx, y + size - ry), ry, color, -1)
+                cv2.circle(image, (x + size - rx, y + size - ry), ry, color, -1)
+
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        # Save the edited image
+        file_name, file_extension = os.path.splitext(image_path)
+        output_image_path = file_name + "_obs" + file_extension
+        self.map_name = self.map_name + "_obs"
+        cv2.imwrite(output_image_path, image)
+
+
+    def find_closest_index(self, sorted_list, target):
+        left, right = 0, len(sorted_list) - 1
+
+        while left < right:
+            mid = (left + right) // 2
+
+            if sorted_list[mid] == target:
+                return mid
+            elif sorted_list[mid] < target:
+                left = mid + 1
+            else:
+                right = mid
+
+        if left > 0 and abs(sorted_list[left - 1] - target) <= abs(sorted_list[left] - target):
+            return left - 1
+
+        return left
+
+
+    def add_obstacles(self):
+        s_data = self.map_csv_data[:,0]
+        max_s = s_data[-1]
+        num_obstacles = 5
+        ds = max_s / num_obstacles
+        obs_data = []
+                
+        for i in range(num_obstacles):
+            target = i * ds
+            closest_index = self.find_closest_index(s_data, target)
+            obs_size = 80.0
+            obs_x = self.map_csv_data[closest_index, 1] 
+            obs_y = self.map_csv_data[closest_index, 2] 
+                        
+            obs_x_img =  (obs_x - self.map_origin[0]) / self.map_resolution
+            obs_y_img = -(obs_y + self.map_origin[1]) / self.map_resolution - self.map_origin[1]
+            obs_data.append((obs_x_img, obs_y_img, obs_size))
+        
+        self.add_random_shapes(image_path=self.map_png, coordinates_list=obs_data)
+
+        
+    
     def _set_random_map(self):
         random.seed(time.time())
-        map_idx = random.randint(0, len(self.maps) - 1)
+        self.map_idx = random.randint(0, len(self.maps) - 1)
         self.map_dir = '/Users/meraj/workspace/f1tenth_gym/work/tracks'
-        self.map_name = 'map{}'.format(self.maps[map_idx])
+        self.map_name = 'map{}'.format(self.maps[self.map_idx])
+        
+
+        self.map_csv = f"{self.map_dir}/centerline/{self.map_name}.csv"
+        self.map_csv_data = np.array(self.read_csv(self.map_csv))
+        
+        
         self.map_yaml= f"{self.map_dir}/maps/{self.map_name}.yaml"
         self.map_png = f"{self.map_dir}/maps/{self.map_name}.png"
-        self.map_csv = f"{self.map_dir}/centerline/{self.map_name}.csv"
-        self.map_csv_data = self.read_csv(self.map_csv)
 
+        
+        with open(self.map_yaml, 'r') as file:
+            yaml_data = yaml.safe_load(file)
+            
+        self.map_origin = yaml_data['origin'][0:2]
+        self.map_resolution = yaml_data['resolution']
+        
+
+        
+        self.add_obstacles()
+        
+        
+        self.map_yaml= f"{self.map_dir}/maps/{self.map_name}.yaml"
+        self.map_png = f"{self.map_dir}/maps/{self.map_name}.png"
+
+
+        
         self.update_map(self.map_yaml)
+        
+    
+        
+        
         
     def read_csv(self, file_path):
         data = np.genfromtxt(file_path, delimiter=';', skip_header=1)
         return data
+    
+    
 
     def update_map(self, map_path):
         """

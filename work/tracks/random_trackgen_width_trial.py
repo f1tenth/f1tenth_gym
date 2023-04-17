@@ -35,6 +35,11 @@ import shapely.geometry as shp
 import matplotlib.pyplot as plt
 from matplotlib.patches import Polygon
 from matplotlib.collections import PatchCollection
+from shapely.geometry import LineString, Point
+from shapely.ops import substring
+from random import uniform
+from shapely.geometry import LineString
+from scipy.interpolate import CubicSpline
 import argparse
 import csv
 import random
@@ -61,8 +66,8 @@ def create_track():
     TRACK_RAD = 900/SCALE
     TRACK_DETAIL_STEP = 21/SCALE
     TRACK_TURN_RATE = 0.31
-    WIDTH = 10.0 + random.randint(-5,5)
-    
+    # WIDTH = 10.0 + random.randint(-5,5)
+    WIDTH = lambda: uniform(5.0, 15.0)
     start_alpha = 0.
 
     # Create checkpoints
@@ -168,17 +173,150 @@ def create_track():
     track_xy = [(x, y) for (a1, b1, x, y) in track]
     track_xy = np.asarray(track_xy)
     track_poly = shp.Polygon(track_xy)
-    track_xy_offset_in = track_poly.buffer(WIDTH)
-    track_xy_offset_out = track_poly.buffer(-WIDTH)
-    track_xy_offset_in_np = np.array(track_xy_offset_in.exterior.coords)
-    track_xy_offset_out_np = np.array(track_xy_offset_out.exterior.coords)
+    # track_xy_offset_in = track_poly.buffer(WIDTH)
+    # track_xy_offset_out = track_poly.buffer(-WIDTH)
+    
+    # track_line = LineString(track_xy)
+    # total_length = track_line.length
+    # intervals = np.linspace(0, total_length, num=len(track_xy))
+    
+    # track_xy_offset_in_coords = []
+    # track_xy_offset_out_coords = []
+    # for i in range(len(intervals)-1):
+    #     start = intervals[i]
+    #     end = intervals[i+1]
+    #     segment = substring(track_line, start, end)
+        
+    #     segment_in = segment.parallel_offset(random_width(), 'left', join_style=2, mitre_limit=1.0)
+    #     segment_out = segment.parallel_offset(random_width(), 'right', join_style=2, mitre_limit=1.0)
+        
+    #     track_xy_offset_in_coords.extend(segment_in.coords[:-1])
+    #     track_xy_offset_out_coords.extend(segment_out.coords[:-1])
+    
+    # track_xy_offset_in_np = np.array(track_xy_offset_in_coords)
+    # track_xy_offset_out_np = np.array(track_xy_offset_out_coords)
 
-    return track_xy, track_xy_offset_in_np, track_xy_offset_out_np, WIDTH
 
-def save_custom_format_csv(xy_pixels, file_name, WIDTH):
+    
+    # track_line = LineString(track_xy)
+    # total_length = track_line.length
+    # n_intervals = len(track_xy)
+    # intervals = np.linspace(0, total_length, num=n_intervals)
+
+    # # Generate a few random width control points
+    # n_control_points = 10
+    # control_points = np.linspace(0, total_length, num=n_control_points)
+    # control_widths = [random_width() for _ in range(n_control_points)]
+
+    # # Interpolate the random widths using a cubic spline
+    # cs = CubicSpline(control_points, control_widths)
+    # interpolated_widths = cs(intervals)
+
+    # track_xy_offset_in_coords = []
+    # track_xy_offset_out_coords = []
+    # for i in range(n_intervals - 1):
+    #     start = intervals[i]
+    #     end = intervals[i + 1]
+    #     segment = substring(track_line, start, end)
+
+    #     width_in = interpolated_widths[i]
+    #     width_out = -width_in
+
+    #     segment_in = segment.parallel_offset(width_in, 'left', join_style=2, mitre_limit=1.0)
+    #     segment_out = segment.parallel_offset(width_out, 'right', join_style=2, mitre_limit=1.0)
+
+    #     track_xy_offset_in_coords.extend(segment_in.coords[:-1])
+    #     track_xy_offset_out_coords.extend(segment_out.coords[:-1])
+
+    # track_xy_offset_in_np = np.array(track_xy_offset_in_coords)
+    # track_xy_offset_out_np = np.array(track_xy_offset_out_coords)
+    
+    
+    # track_line = LineString(track_xy)
+    # total_length = track_line.length
+    # n_intervals = len(track_xy)
+    # intervals = np.linspace(0, total_length, num=n_intervals)
+
+    # # Generate a few random width control points
+    # n_control_points = 10
+    # control_points = np.linspace(0, total_length, num=n_control_points)
+    # control_widths = [random_width() for _ in range(n_control_points)]
+
+    # # Interpolate the random widths using a cubic spline
+    # cs = CubicSpline(control_points, control_widths)
+    # interpolated_widths = cs(intervals)
+
+    # track_xy_offset_in_coords = []
+    # track_xy_offset_out_coords = []
+    # for i in range(n_intervals - 1):
+    #     start = intervals[i]
+    #     end = intervals[i + 1]
+    #     segment = substring(track_line, start, end)
+
+    #     width_in = interpolated_widths[i] / 2
+    #     width_out = interpolated_widths[i] / 2
+
+    #     segment_in = segment.parallel_offset(width_in, 'left', join_style=2, mitre_limit=1.0)
+    #     segment_out = segment.parallel_offset(width_out, 'right', join_style=2, mitre_limit=1.0)
+
+    #     track_xy_offset_in_coords.extend(segment_in.coords[:-1])
+    #     track_xy_offset_out_coords.extend(segment_out.coords[:-1])
+
+    # track_xy_offset_in_np = np.array(track_xy_offset_in_coords)
+    # track_xy_offset_out_np = np.array(track_xy_offset_out_coords)
+
+    # # Combine the two offset lines to create the final track polygon
+    # track_polygon_coords = np.concatenate((track_xy_offset_in_np, track_xy_offset_out_np[::-1], track_xy_offset_in_np[:1]), axis=0)
+    # track_polygon = Polygon(track_polygon_coords)
+    
+    track_line = LineString(track_xy)
+    total_length = track_line.length
+    n_intervals = len(track_xy)
+    intervals = np.linspace(0, total_length, num=n_intervals)
+
+    # Generate a few random width control points
+    n_control_points = 5
+    control_points = np.linspace(0, total_length, num=n_control_points)
+    control_widths = [random_width() for _ in range(n_control_points - 1)]
+    control_widths.append(control_widths[0])  # Ensure the same width at the start and end points
+
+    # Interpolate the random widths using a cubic spline
+    cs = CubicSpline(control_points, control_widths)
+
+    interpolated_widths = cs(intervals)
+
+    track_xy_offset_in_coords = []
+    track_xy_offset_out_coords = []
+    for i in range(n_intervals - 1):
+        start = intervals[i]
+        end = intervals[i + 1]
+        segment = substring(track_line, start, end)
+
+        width_in = interpolated_widths[i] / 2
+        width_out = interpolated_widths[i] / 2
+
+        segment_in = segment.parallel_offset(width_in, 'left', join_style=3, mitre_limit=1.0)
+        segment_out = segment.parallel_offset(width_out, 'right', join_style=3, mitre_limit=1.0)
+
+        track_xy_offset_in_coords.extend(segment_in.coords[:-1])
+        track_xy_offset_out_coords.extend(segment_out.coords[:-1])
+
+    track_xy_offset_in_np = np.array(track_xy_offset_in_coords)
+    track_xy_offset_out_np = np.array(track_xy_offset_out_coords)
+
+    # Combine the two offset lines to create the final track polygon
+    track_polygon_coords = np.concatenate((track_xy_offset_in_np, track_xy_offset_out_np[::-1], track_xy_offset_in_np[:1]), axis=0)
+    track_polygon = Polygon(track_polygon_coords)
+
+    return track_xy, track_xy_offset_in_np, track_xy_offset_out_np
+
+def random_width():
+    return uniform(8.0, 15.0)
+
+def save_custom_format_csv(xy_pixels, file_name):
     with open(file_name, 'w', newline='') as csvfile:
         csv_writer = csv.writer(csvfile, delimiter=';')
-        csv_writer.writerow(['# s_m', 'x_m', 'y_m', 'psi_rad', 'kappa_radpm', 'vx_mps', 'ax_mps2', 'width'])
+        csv_writer.writerow(['# s_m', 'x_m', 'y_m', 'psi_rad', 'kappa_radpm', 'vx_mps', 'ax_mps2'])
         
         delta_t = 0.1
         s_m = 0.0
@@ -216,14 +354,12 @@ def save_custom_format_csv(xy_pixels, file_name, WIDTH):
             else:
                 kappa_radpm = 0.0
                 ax_mps2 = 0.0
-            
-            width = WIDTH
                             
             csv_writer.writerow([f"{s_m:.7f}", f"{x_m:.7f}", f"{y_m:.7f}", f"{psi_rad:.7f}",
-                                 f"{kappa_radpm:.7f}", f"{vx_mps:.7f}", f"{ax_mps2:.7f}", f"{width:.7f}"])
+                                 f"{kappa_radpm:.7f}", f"{vx_mps:.7f}", f"{ax_mps2:.7f}"])
 
 
-def convert_track(track, track_int, track_ext, iter, width):
+def convert_track(track, track_int, track_ext, iter):
 
     # converts track to image and saves the centerline as waypoints
     fig, ax = plt.subplots()
@@ -269,16 +405,16 @@ def convert_track(track, track_int, track_ext, iter, width):
 
     # saving track centerline as a csv in ros coords
     csv_file = 'centerline/map' + str(iter) + '.csv'
-    save_custom_format_csv(xy_pixels, csv_file, width)
+    save_custom_format_csv(xy_pixels, csv_file)
 
 
 if __name__ == '__main__':
     map_idx = 0
     for i in range(NUM_MAPS):
         try:
-            track, track_int, track_ext, width = create_track()
+            track, track_int, track_ext = create_track()
             map_idx += 1
-            convert_track(track, track_int, track_ext, map_idx, width)
+            convert_track(track, track_int, track_ext, map_idx)
         except:
             print('Random generator failed, retrying')
             continue

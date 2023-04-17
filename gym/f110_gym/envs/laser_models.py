@@ -405,8 +405,14 @@ class ScanSimulator2D(object):
         self.map_height = self.map_img.shape[0]
         self.map_width = self.map_img.shape[1]
 
+        if map_path[-9:-5] == '_obs':
+            yaml_path = map_path[:-9] + '.yaml' 
+        else:
+            yaml_path = map_path
+            
+
         # load map yaml
-        with open(map_path, 'r') as yaml_stream:
+        with open(yaml_path, 'r') as yaml_stream:
             try:
                 map_metadata = yaml.safe_load(yaml_stream)
                 self.map_resolution = map_metadata['resolution']

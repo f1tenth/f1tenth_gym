@@ -5,7 +5,7 @@ import time
 import numpy as np
 
 # instantiating the environment
-maps = list(range(1,150))
+maps = list(range(1,5))
 env = create_env(maps=maps)
 
 obs = env.reset()

@@ -2,6 +2,7 @@ from stable_baselines3 import PPO
 from utils import create_env
 
 maps = list(range(1,200))
+# maps = [6]
 
 env = create_env(maps=maps)
 env.training=False

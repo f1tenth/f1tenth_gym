@@ -143,7 +143,13 @@ class EnvRenderer(pyglet.window.Window):
         """
 
         # load map metadata
-        with open(map_path + '.yaml', 'r') as yaml_stream:
+        if map_path[-4:] == '_obs':
+            print('YESSS')
+            yaml_path = map_path[:-4] 
+        else:
+            yaml_path = map_path
+            
+        with open(yaml_path + '.yaml', 'r') as yaml_stream:
             try:
                 map_metadata = yaml.safe_load(yaml_stream)
                 map_resolution = map_metadata['resolution']
