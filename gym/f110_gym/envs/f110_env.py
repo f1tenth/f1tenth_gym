@@ -247,7 +247,7 @@ class F110Env(gym.Env):
         ds = max_s / num_obstacles
         obs_data = []
                 
-        for i in range(num_obstacles):
+        for i in range(1, num_obstacles):
             target = i * ds
             closest_index = self.find_closest_index(s_data, target)
             width = self.map_width[closest_index]
