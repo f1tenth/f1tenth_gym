@@ -144,7 +144,6 @@ class EnvRenderer(pyglet.window.Window):
 
         # load map metadata
         if map_path[-4:] == '_obs':
-            print('YESSS')
             yaml_path = map_path[:-4] 
         else:
             yaml_path = map_path

@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from stable_baselines3 import PPO
 from utils import create_env
 
-maps = list(range(1, 5))
+maps = list(range(2, 3))
 # maps=list(range(1,2))
 
 env = create_env(maps=maps)

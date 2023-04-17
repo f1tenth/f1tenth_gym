@@ -164,7 +164,9 @@ class F110Env(gym.Env):
         shape_choices = ["rectangle", "circle", "triangle", "ellipse", "rounded_rectangle"]
 
         for coord in coordinates_list:
-            x, y, size = int(coord[0]), int(coord[1]), int(coord[2])
+            x = int(coord[0])
+            y = 1600 - int(coord[1])
+            size = int(coord[2])
             shape = random.choice(shape_choices)
             color = (0, 0, 0)  # Black
 
@@ -218,19 +220,23 @@ class F110Env(gym.Env):
     def add_obstacles(self):
         s_data = self.map_csv_data[:,0]
         max_s = s_data[-1]
-        num_obstacles = 5
+        num_obstacles = 50
         ds = max_s / num_obstacles
         obs_data = []
                 
         for i in range(num_obstacles):
             target = i * ds
             closest_index = self.find_closest_index(s_data, target)
-            obs_size = 80.0
+            width = self.map_width[closest_index]
+            
+            obs_size = width / 2.0
             obs_x = self.map_csv_data[closest_index, 1] 
             obs_y = self.map_csv_data[closest_index, 2] 
                         
             obs_x_img =  (obs_x - self.map_origin[0]) / self.map_resolution
-            obs_y_img = -(obs_y + self.map_origin[1]) / self.map_resolution - self.map_origin[1]
+            # obs_y_img = -(obs_y + self.map_origin[1]) / self.map_resolution - self.map_origin[1]
+            
+            obs_y_img = (obs_y - self.map_origin[1]) / self.map_resolution
             obs_data.append((obs_x_img, obs_y_img, obs_size))
         
         self.add_random_shapes(image_path=self.map_png, coordinates_list=obs_data)
@@ -243,14 +249,12 @@ class F110Env(gym.Env):
         self.map_dir = '/Users/meraj/workspace/f1tenth_gym/work/tracks'
         self.map_name = 'map{}'.format(self.maps[self.map_idx])
         
-
         self.map_csv = f"{self.map_dir}/centerline/{self.map_name}.csv"
         self.map_csv_data = np.array(self.read_csv(self.map_csv))
-        
+        self.map_width = self.map_csv_data[:, -1] * 2.0
         
         self.map_yaml= f"{self.map_dir}/maps/{self.map_name}.yaml"
         self.map_png = f"{self.map_dir}/maps/{self.map_name}.png"
-
         
         with open(self.map_yaml, 'r') as file:
             yaml_data = yaml.safe_load(file)
@@ -258,20 +262,12 @@ class F110Env(gym.Env):
         self.map_origin = yaml_data['origin'][0:2]
         self.map_resolution = yaml_data['resolution']
         
-
-        
         self.add_obstacles()
-        
         
         self.map_yaml= f"{self.map_dir}/maps/{self.map_name}.yaml"
         self.map_png = f"{self.map_dir}/maps/{self.map_name}.png"
-
-
         
         self.update_map(self.map_yaml)
-        
-    
-        
         
         
     def read_csv(self, file_path):
@@ -385,8 +381,6 @@ class F110Env(gym.Env):
         # check done
         done, toggle_list = self._check_done()
         info = {'checkpoint_done': done, 'lap_count' : self.lap_counts, 'lap_times' : obs['lap_times']}
-        # if done:
-        #     print('info printing session', info)
         
         obs['scans'] = obs['scans'][0]
         obs = self._format_obs(obs)
@@ -440,9 +434,6 @@ class F110Env(gym.Env):
         self._update_render_obs(obs)
         obs = self._convert_obs_to_arrays(obs)
         obs = self._format_obs(obs)
-        
-        self.obstacles = [(1.0, 1.0, 50.0)]
-        # self.renderer.create_obstacles(obstacles)
 
         return obs
 
@@ -482,7 +473,6 @@ class F110Env(gym.Env):
             from f110_gym.envs.rendering import EnvRenderer
             F110Env.renderer = EnvRenderer(WINDOW_W, WINDOW_H)
             F110Env.renderer.update_map(f"{self.map_dir}/maps/{self.map_name}", '.png')
-            self.renderer.create_obstacles(self.obstacles)
 
         F110Env.renderer.update_obs(self.render_obs)
 
