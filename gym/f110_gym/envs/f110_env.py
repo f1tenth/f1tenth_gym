@@ -158,17 +158,38 @@ class F110Env(gym.Env):
             'lap_times': spaces.Box(low=0, high=1e6, shape=(self.num_agents,), dtype=np.float32), 
             'lap_counts': spaces.Box(low=0, high=9999, shape=(self.num_agents,), dtype=np.int32)    
         })
+        
+        
+    def find_closest_index(self, sorted_list, target):
+        left, right = 0, len(sorted_list) - 1
 
+        while left < right:
+            mid = (left + right) // 2
+
+            if sorted_list[mid] == target:
+                return mid
+            elif sorted_list[mid] < target:
+                left = mid + 1
+            else:
+                right = mid
+
+        if left > 0 and abs(sorted_list[left - 1] - target) <= abs(sorted_list[left] - target):
+            return left - 1
+
+        return left
+    
+    
     def add_random_shapes(self, image_path, coordinates_list):
         image = cv2.imread(image_path)
-        shape_choices = ["rectangle", "circle", "triangle", "ellipse", "rounded_rectangle"]
+        # shape_choices = ["rectangle", "circle", "triangle", "ellipse", "rounded_rectangle"]
+        shape_choices = ["rectangle", "circle", "triangle", "ellipse", "rounded_rectangle", "pentagon", "hexagon", "star"]
 
         for coord in coordinates_list:
             x = int(coord[0])
             y = 1600 - int(coord[1])
             size = int(coord[2])
             shape = random.choice(shape_choices)
-            color = (0, 0, 0)  # Black
+            color = (0, 0, 0) 
 
             if shape == "rectangle":
                 center_x, center_y = x + size//2, y + size//2
@@ -189,6 +210,27 @@ class F110Env(gym.Env):
                 cv2.circle(image, (x + size - rx, y + ry), ry, color, -1)
                 cv2.circle(image, (x + rx, y + size - ry), ry, color, -1)
                 cv2.circle(image, (x + size - rx, y + size - ry), ry, color, -1)
+            elif shape == "pentagon":
+                points = np.array([[x + size // 2, y], [x + size, y + size // 3], [x + 3 * size // 4, y + size], [x + size // 4, y + size], [x, y + size // 3]], dtype=np.int32)
+                cv2.fillPoly(image, [points], color)
+            elif shape == "hexagon":
+                points = np.array([[x + size // 4, y], [x + 3 * size // 4, y], [x + size, y + size // 2], [x + 3 * size // 4, y + size], [x + size // 4, y + size], [x, y + size // 2]], dtype=np.int32)
+                cv2.fillPoly(image, [points], color)
+            elif shape == "star":
+                outer_radius = size // 2
+                inner_radius = outer_radius // 2
+                angle = 2 * np.pi / 10
+                points = []
+                for i in range(10):
+                    if i % 2 == 0:
+                        r = outer_radius
+                    else:
+                        r = inner_radius
+                    x_offset = x + r * np.cos(i * angle)
+                    y_offset = y + r * np.sin(i * angle)
+                    points.append([x_offset, y_offset])
+                points = np.array(points, dtype=np.int32)
+                cv2.fillPoly(image, [points], color)
 
         image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         # Save the edited image
@@ -196,31 +238,12 @@ class F110Env(gym.Env):
         output_image_path = file_name + "_obs" + file_extension
         self.map_name = self.map_name + "_obs"
         cv2.imwrite(output_image_path, image)
-
-
-    def find_closest_index(self, sorted_list, target):
-        left, right = 0, len(sorted_list) - 1
-
-        while left < right:
-            mid = (left + right) // 2
-
-            if sorted_list[mid] == target:
-                return mid
-            elif sorted_list[mid] < target:
-                left = mid + 1
-            else:
-                right = mid
-
-        if left > 0 and abs(sorted_list[left - 1] - target) <= abs(sorted_list[left] - target):
-            return left - 1
-
-        return left
-
-
+        
+        
     def add_obstacles(self):
         s_data = self.map_csv_data[:,0]
         max_s = s_data[-1]
-        num_obstacles = 50
+        num_obstacles = random.randint(3, 20)
         ds = max_s / num_obstacles
         obs_data = []
                 
@@ -229,19 +252,19 @@ class F110Env(gym.Env):
             closest_index = self.find_closest_index(s_data, target)
             width = self.map_width[closest_index]
             
-            obs_size = width / 2.0
+            obs_size = width / random.uniform(1.0, 4.0)
             obs_x = self.map_csv_data[closest_index, 1] 
             obs_y = self.map_csv_data[closest_index, 2] 
-                        
-            obs_x_img =  (obs_x - self.map_origin[0]) / self.map_resolution
-            # obs_y_img = -(obs_y + self.map_origin[1]) / self.map_resolution - self.map_origin[1]
             
-            obs_y_img = (obs_y - self.map_origin[1]) / self.map_resolution
+            random_disp = random.uniform(0, width)
+            random_angle = random.uniform(0, 2*np.pi)
+                        
+            obs_x_img = (obs_x - self.map_origin[0]) / self.map_resolution + random_disp * np.cos(random_angle)
+            obs_y_img = (obs_y - self.map_origin[1]) / self.map_resolution + random_disp * np.sin(random_angle)
             obs_data.append((obs_x_img, obs_y_img, obs_size))
         
         self.add_random_shapes(image_path=self.map_png, coordinates_list=obs_data)
-
-        
+    
     
     def _set_random_map(self):
         random.seed(time.time())
