@@ -5,7 +5,7 @@ from f110_gym.envs.base_classes import Integrator
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.vec_env import DummyVecEnv
 from gym import spaces
-from reward import NewReward, convert_to_frenet
+from reward import NewReward
 
 from sklearn.neighbors import KDTree
 
@@ -135,3 +135,32 @@ class TensorboardCallback(BaseCallback):
 
         return True
     
+    
+    
+def read_csv(file_path):
+    data = np.genfromtxt(file_path, delimiter=';', skip_header=1)
+    return data
+
+def get_closest_point_index(x, y, kdtree):
+    _, indices = kdtree.query(np.array([[x, y]]), k=1)
+    closest_point_index = indices[0, 0]
+    return closest_point_index
+
+def convert_to_frenet(x, y, vel_magnitude, pose_theta, map_data, kdtree):
+    closest_point_index = get_closest_point_index(x, y, kdtree)
+    closest_point = map_data[closest_point_index]
+    s_m, x_m, y_m, psi_rad = closest_point[0:4]
+    
+    dx = x - x_m
+    dy = y - y_m
+    
+    vx = vel_magnitude * np.cos(pose_theta)
+    vy = vel_magnitude * np.sin(pose_theta)
+    
+    s = -dx * np.sin(psi_rad) + dy * np.cos(psi_rad) + s_m
+    d =  dx * np.cos(psi_rad) + dy * np.sin(psi_rad)
+    
+    vs = -vx * np.sin(psi_rad) + vy * np.cos(psi_rad)
+    vd =  vx * np.cos(psi_rad) + vy * np.sin(psi_rad)
+        
+    return s, d, vs, vd

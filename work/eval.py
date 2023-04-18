@@ -7,8 +7,7 @@ maps = list(range(1,200))
 env = create_env(maps=maps)
 env.training=False
 
-# model = "models/ppo_model_950000"
-model = "models/ppo_model/ent_1_200000"
+model = "models/new_reward_500000.zip"
 
 model = PPO.load(path=model, env=env)
 
@@ -16,7 +15,7 @@ obs = env.reset()
 done = False
 
 while not done:
-    action, _state = model.predict(obs, deterministic=True)
+    action, _state = model.predict(obs, deterministic=False)
     obs, reward, done, info = env.step(action)
     env.render(mode='human_fast')
     

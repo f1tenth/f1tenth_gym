@@ -9,6 +9,7 @@ class NewReward(gym.Wrapper):
         self.second = 0.0
         self.third = 0.0
         self.known_lap_count = 0
+        self.current_action = None
 
 
     def reward(self, obs):
@@ -31,7 +32,7 @@ class NewReward(gym.Wrapper):
 
         # Encourage the agent to move in the desired direction (along the s-axis)
         reward += 1.0 * vs 
-        reward -= 0.5 * abs(vd)
+        # reward -= 0.5 * abs(vd)
         
         # lap_count = obs['lap_counts'][self.ego_idx]
         # lap_time  = obs['lap_times'][self.ego_idx]
@@ -48,33 +49,8 @@ class NewReward(gym.Wrapper):
 
     def step(self, action):
         obs, original_reward, done, info = self.env.step(action)
+        self.current_action = action
         new_reward = self.reward(obs)
         return obs, new_reward.item(), done, info
     
-def read_csv(file_path):
-    data = np.genfromtxt(file_path, delimiter=';', skip_header=1)
-    return data
 
-def get_closest_point_index(x, y, kdtree):
-    _, indices = kdtree.query(np.array([[x, y]]), k=1)
-    closest_point_index = indices[0, 0]
-    return closest_point_index
-
-def convert_to_frenet(x, y, vel_magnitude, pose_theta, map_data, kdtree):
-    closest_point_index = get_closest_point_index(x, y, kdtree)
-    closest_point = map_data[closest_point_index]
-    s_m, x_m, y_m, psi_rad = closest_point[0:4]
-    
-    dx = x - x_m
-    dy = y - y_m
-    
-    vx = vel_magnitude * np.cos(pose_theta)
-    vy = vel_magnitude * np.sin(pose_theta)
-    
-    s = -dx * np.sin(psi_rad) + dy * np.cos(psi_rad) + s_m
-    d =  dx * np.cos(psi_rad) + dy * np.sin(psi_rad)
-    
-    vs = -vx * np.sin(psi_rad) + vy * np.cos(psi_rad)
-    vd =  vx * np.cos(psi_rad) + vy * np.sin(psi_rad)
-        
-    return s, d, vs, vd

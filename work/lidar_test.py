@@ -3,15 +3,12 @@ import matplotlib.pyplot as plt
 from stable_baselines3 import PPO
 from utils import create_env
 
-maps = list(range(2, 3))
-# maps=list(range(1,2))
+maps = list(range(1, 250))
 
 env = create_env(maps=maps)
 env.training = False
-# exit()
 
-# model = "models/ppo_model_950000"
-model = "models/ppo_model/ent_1_200000"
+model = "models/new_reward_350000.zip"
 
 model = PPO.load(path=model, env=env)
 
@@ -42,7 +39,7 @@ while not done:
     ax.set_theta_zero_location('N')
     ax.set_theta_direction(-1)
     plt.draw()
-    plt.pause(0.001)
+    plt.pause(0.00001)
 
     env.render(mode='human_fast')
 

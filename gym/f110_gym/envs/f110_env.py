@@ -28,11 +28,8 @@ import random
 import cv2
 import os
 import yaml
-import matplotlib.image as mpimg
 
 from f110_gym.envs.base_classes import Simulator, Integrator
-
-# pyglet.options['debug_gl'] = False
 
 # Constants
 VIDEO_W = 600
@@ -142,6 +139,8 @@ class F110Env(gym.Env):
         
         # stateful observations for rendering
         self.render_obs = None
+        
+        # self.current_action = None
         
         self.action_space = spaces.Box(low=np.array([self.params['s_min'], 0]), high=np.array([self.params['s_max'], self.params['sv_max']]), dtype=np.float32)
         
