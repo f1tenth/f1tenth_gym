@@ -194,7 +194,7 @@ class F110Env(gym.Env):
         # observation space
         # NOTE: keep original structure of observation space (dict). just define it as a dict space and define bounds
         scan_size, scan_range = self.sim.agents[0].scan_simulator.num_beams, self.sim.agents[0].scan_simulator.max_range
-        large_num = 1e5  # large number to avoid unbounded obs space (ie., low=-inf or high=inf)
+        large_num = 1e30  # large number to avoid unbounded obs space (ie., low=-inf or high=inf)
         self.observation_space = gym.spaces.Dict({
             'ego_idx': gym.spaces.Discrete(self.num_agents),
             'scans': gym.spaces.Box(low=0.0, high=scan_range, shape=(self.num_agents, scan_size), dtype=np.float32),
