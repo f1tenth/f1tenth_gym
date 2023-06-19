@@ -318,7 +318,7 @@ class ScanTests(unittest.TestCase):
         self.berlin_scan = sample_scan['berlin']
         self.skirk_scan = sample_scan['skirk']
 
-    def test_map_berlin(self):
+    def test_map_berlin(self, debug=False):
         scan_sim = ScanSimulator2D(self.num_beams, self.fov)
         new_berlin = np.empty((self.num_test, self.num_beams))
         map_path = '../../../maps/berlin.yaml'
@@ -332,16 +332,17 @@ class ScanTests(unittest.TestCase):
         mse = np.mean(diff**2)
         # print('Levine distance test, norm: ' + str(norm))
 
-        # plotting
-        import matplotlib.pyplot as plt
-        theta = np.linspace(-self.fov/2., self.fov/2., num=self.num_beams)
-        plt.polar(theta, new_berlin[1,:], '.', lw=0)
-        plt.polar(theta, self.berlin_scan[1,:], '.', lw=0)
-        plt.show()
+        if debug:
+            # plotting
+            import matplotlib.pyplot as plt
+            theta = np.linspace(-self.fov/2., self.fov/2., num=self.num_beams)
+            plt.polar(theta, new_berlin[1,:], '.', lw=0)
+            plt.polar(theta, self.berlin_scan[1,:], '.', lw=0)
+            plt.show()
 
         self.assertLess(mse, 2.)
 
-    def test_map_skirk(self):
+    def test_map_skirk(self, debug=False):
         scan_sim = ScanSimulator2D(self.num_beams, self.fov)
         new_skirk = np.empty((self.num_test, self.num_beams))
         map_path = '../../../maps/skirk.yaml'
@@ -356,12 +357,13 @@ class ScanTests(unittest.TestCase):
         mse = np.mean(diff**2)
         print('skirk distance test, mse: ' + str(mse))
 
-        # plotting
-        import matplotlib.pyplot as plt
-        theta = np.linspace(-self.fov/2., self.fov/2., num=self.num_beams)
-        plt.polar(theta, new_skirk[1,:], '.', lw=0)
-        plt.polar(theta, self.skirk_scan[1,:], '.', lw=0)
-        plt.show()
+        if debug:
+            # plotting
+            import matplotlib.pyplot as plt
+            theta = np.linspace(-self.fov/2., self.fov/2., num=self.num_beams)
+            plt.polar(theta, new_skirk[1,:], '.', lw=0)
+            plt.polar(theta, self.skirk_scan[1,:], '.', lw=0)
+            plt.show()
 
         self.assertLess(mse, 2.)
 
@@ -426,5 +428,5 @@ def main():
     plt.show()
 
 if __name__ == '__main__':
-    # unittest.main()
-    main()
+    unittest.main()
+    #main()

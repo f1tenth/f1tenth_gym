@@ -24,3 +24,6 @@ class TestEnvInterface(unittest.TestCase):
                        integrator=Integrator.Euler)
 
         check_env(env.unwrapped)
+
+if __name__ == '__main__':
+    unittest.main()
