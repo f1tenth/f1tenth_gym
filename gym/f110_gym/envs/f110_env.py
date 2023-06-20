@@ -269,7 +269,7 @@ class F110Env(gym.Env):
         """
         return {
             "seed": 12345,
-            "map_name": "vegas.yaml",
+            "map": os.path.dirname(os.path.abspath(__file__)) + "/maps/skirk",
             "map_ext": ".png",
             "params": {
                 "mu": 1.0489,
