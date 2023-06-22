@@ -41,6 +41,9 @@ class Integrator(Enum):
     RK4 = 1
     Euler = 2
 
+class Model(Enum):
+    KS = 1      # Kinematic Single Track
+    ST = 2      # Single Track
 
 class RaceCar(object):
     """
@@ -66,7 +69,7 @@ class RaceCar(object):
     scan_angles = None
     side_distances = None
 
-    def __init__(self, params, seed, is_ego=False, time_step=0.01, num_beams=1080, fov=4.7, integrator=Integrator.Euler):
+    def __init__(self, params, seed, is_ego=False, time_step=0.01, num_beams=1080, fov=4.7, integrator=Integrator.Euler, model=Model.ST):
         """
         Init function
 
@@ -92,6 +95,10 @@ class RaceCar(object):
         if self.integrator is Integrator.RK4:
             warnings.warn(f"Chosen integrator is RK4. This is different from previous versions of the gym.")
 
+        self.model = model
+        if self.model is not Model.ST:
+            warnings.warn(f"Chosen model is not ST. This is different from previous versions of the gym.")
+            
         # state is [x, y, steer_angle, vel, yaw_angle, yaw_rate, slip_angle]
         self.state = np.zeros((7, ))
 
@@ -456,7 +463,7 @@ class Simulator(object):
 
     """
 
-    def __init__(self, params, num_agents, seed, time_step=0.01, ego_idx=0, integrator=Integrator.RK4):
+    def __init__(self, params, num_agents, seed, time_step=0.01, ego_idx=0, integrator=Integrator.RK4, model=Model.ST):
         """
         Init function
 
@@ -466,7 +473,8 @@ class Simulator(object):
             seed (int): seed of the rng in scan simulation
             time_step (float, default=0.01): physics time step
             ego_idx (int, default=0): ego vehicle's index in list of agents
-
+            integrator (Integrator, default=Integrator.RK4): integrator to use for vehicle dynamics
+            model (Model, default=Model.ST): vehicle dynamics model to use
         Returns:
             None
         """
@@ -483,10 +491,10 @@ class Simulator(object):
         # initializing agents
         for i in range(self.num_agents):
             if i == ego_idx:
-                ego_car = RaceCar(params, self.seed, is_ego=True, time_step=self.time_step, integrator=integrator)
+                ego_car = RaceCar(params, self.seed, is_ego=True, time_step=self.time_step, integrator=integrator, model=model)
                 self.agents.append(ego_car)
             else:
-                agent = RaceCar(params, self.seed, is_ego=False, time_step=self.time_step, integrator=integrator)
+                agent = RaceCar(params, self.seed, is_ego=False, time_step=self.time_step, integrator=integrator, model=model)
                 self.agents.append(agent)
 
     def set_map(self, map_path, map_ext):
