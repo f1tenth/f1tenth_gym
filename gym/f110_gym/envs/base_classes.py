@@ -298,9 +298,9 @@ class RaceCar(object):
         # steering angle velocity input to steering velocity acceleration input
         accl, sv = pid(vel, steer, self.state[3], self.state[2], self.params['sv_max'], self.params['a_max'], self.params['v_max'], self.params['v_min'])
         
-        if self.model == Model.KS:
+        if self.model is Model.KS:
             f_dynamics = vehicle_dynamics_ks
-        elif self.model == Model.ST:
+        elif self.model is Model.ST:
             f_dynamics = vehicle_dynamics_st
         else:
             raise ValueError('Invalid vehicle model')
@@ -634,6 +634,8 @@ class Simulator(object):
                 observations['ang_vels_z'].append(agent.state[5])
             elif self.model == Model.KS:
                 observations['ang_vels_z'].append(0.)
+            else:
+                raise NotImplementedError(f"Model {self.model} not implemented")
 
         return observations
 
