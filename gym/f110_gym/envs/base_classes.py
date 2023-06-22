@@ -489,6 +489,10 @@ class Simulator(object):
                 agent = RaceCar(params, self.seed, is_ego=False, time_step=self.time_step, integrator=integrator)
                 self.agents.append(agent)
 
+        # initialize agents scan, to be accessed from observation types
+        num_beams = self.agents[0].scan_simulator.num_beams
+        self.agent_scans = np.empty((self.num_agents, num_beams))
+
     def set_map(self, map_path, map_ext):
         """
         Sets the map of the environment and sets the map for scan simulator of each agent
@@ -580,29 +584,6 @@ class Simulator(object):
             # update agent collision with environment
             if agent.in_collision:
                 self.collisions[i] = 1.
-
-        # fill in observations
-        # state is [x, y, steer_angle, vel, yaw_angle, yaw_rate, slip_angle]
-        # collision_angles is removed from observations
-        observations = {'ego_idx': self.ego_idx,
-            'scans': [],
-            'poses_x': [],
-            'poses_y': [],
-            'poses_theta': [],
-            'linear_vels_x': [],
-            'linear_vels_y': [],
-            'ang_vels_z': [],
-            'collisions': self.collisions}
-        for i, agent in enumerate(self.agents):
-            observations['scans'].append(agent_scans[i])
-            observations['poses_x'].append(agent.state[0])
-            observations['poses_y'].append(agent.state[1])
-            observations['poses_theta'].append(agent.state[4])
-            observations['linear_vels_x'].append(agent.state[3])
-            observations['linear_vels_y'].append(0.)
-            observations['ang_vels_z'].append(agent.state[5])
-
-        return observations
 
     def reset(self, poses):
         """

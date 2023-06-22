@@ -38,6 +38,8 @@ import time
 # gl
 import pyglet
 
+from f110_gym.envs.observation import observation_factory
+
 pyglet.options['debug_gl'] = False
 from pyglet import gl
 
@@ -156,6 +158,13 @@ class F110Env(gym.Env):
         except:
             self.integrator = Integrator.RK4
 
+        # observation
+        try:
+            assert isinstance(kwargs['observation_config'], dict), "expected 'observation_config' to be a dictionary"
+            self.observation_config = kwargs['observation_config']
+        except:
+            self.observation_config = {"type": "original"}
+
         # radius to consider done
         self.start_thresh = 0.5  # 10cm
 
@@ -191,23 +200,12 @@ class F110Env(gym.Env):
                              integrator=self.integrator)
         self.sim.set_map(self.map_path, self.map_ext)
 
-        # observation space
-        # NOTE: keep original structure of observation space (dict). just define it as a dict space and define bounds
-        scan_size, scan_range = self.sim.agents[0].scan_simulator.num_beams, self.sim.agents[0].scan_simulator.max_range
-        large_num = 1e30  # large number to avoid unbounded obs space (ie., low=-inf or high=inf)
-        self.observation_space = gym.spaces.Dict({
-            'ego_idx': gym.spaces.Discrete(self.num_agents),
-            'scans': gym.spaces.Box(low=0.0, high=scan_range, shape=(self.num_agents, scan_size), dtype=np.float32),
-            'poses_x': gym.spaces.Box(low=-large_num, high=large_num, shape=(self.num_agents,), dtype=np.float32),
-            'poses_y': gym.spaces.Box(low=-large_num, high=large_num, shape=(self.num_agents,), dtype=np.float32),
-            'poses_theta': gym.spaces.Box(low=-large_num, high=large_num, shape=(self.num_agents,), dtype=np.float32),
-            'linear_vels_x': gym.spaces.Box(low=-large_num, high=large_num, shape=(self.num_agents,), dtype=np.float32),
-            'linear_vels_y': gym.spaces.Box(low=-large_num, high=large_num, shape=(self.num_agents,), dtype=np.float32),
-            'ang_vels_z': gym.spaces.Box(low=-large_num, high=large_num, shape=(self.num_agents,), dtype=np.float32),
-            'collisions': gym.spaces.Box(low=0.0, high=1.0, shape=(self.num_agents,), dtype=np.float32),
-            'lap_times': gym.spaces.Box(low=0.0, high=large_num, shape=(self.num_agents,), dtype=np.float32),
-            'lap_counts': gym.spaces.Box(low=0.0, high=large_num, shape=(self.num_agents,), dtype=np.float32),
-        })
+        # observations
+        self.agent_ids = [f"agent_{i}" for i in range(self.num_agents)]
+
+        assert "type" in self.observation_config, "observation_config must contain 'type' key"
+        self.observation_type = observation_factory(env=self, **self.observation_config)
+        self.observation_space = self.observation_type.space()
 
         # action space
         # NOTE: keep original structure of action space (box space), just define bounds
@@ -273,20 +271,14 @@ class F110Env(gym.Env):
 
         return bool(done), self.toggle_list >= 4
 
-    def _update_state(self, obs_dict):
+    def _update_state(self):
         """
-        Update the env's states according to observations
-        
-        Args:
-            obs_dict (dict): dictionary of observation
-
-        Returns:
-            None
+        Update the env's states according to observations.
         """
-        self.poses_x = obs_dict['poses_x']
-        self.poses_y = obs_dict['poses_y']
-        self.poses_theta = obs_dict['poses_theta']
-        self.collisions = obs_dict['collisions']
+        self.poses_x = self.sim.agent_poses[:, 0]
+        self.poses_y = self.sim.agent_poses[:, 1]
+        self.poses_theta = self.sim.agent_poses[:, 2]
+        self.collisions = self.sim.collisions
 
     def step(self, action):
         """
@@ -303,24 +295,20 @@ class F110Env(gym.Env):
         """
 
         # call simulation step
-        obs = self.sim.step(action)
-        obs['lap_times'] = self.lap_times
-        obs['lap_counts'] = self.lap_counts
+        self.sim.step(action)
 
-        # cast to match observation space
-        for key in obs.keys():
-            if isinstance(obs[key], np.ndarray) or isinstance(obs[key], list):
-                obs[key] = np.array(obs[key], dtype=np.float32)
+        # observation
+        obs = self.observation_type.observe()
 
+        # rendering observation
         F110Env.current_obs = obs
-
         self.render_obs = {
-            'ego_idx': obs['ego_idx'],
-            'poses_x': obs['poses_x'],
-            'poses_y': obs['poses_y'],
-            'poses_theta': obs['poses_theta'],
-            'lap_times': obs['lap_times'],
-            'lap_counts': obs['lap_counts']
+            'ego_idx': self.sim.ego_idx,
+            'poses_x': self.sim.agent_poses[:, 0],
+            'poses_y': self.sim.agent_poses[:, 1],
+            'poses_theta': self.sim.agent_poses[:, 2],
+            'lap_times': self.lap_times,
+            'lap_counts': self.lap_counts,
         }
 
         # times
@@ -328,7 +316,7 @@ class F110Env(gym.Env):
         self.current_time = self.current_time + self.timestep
 
         # update data member
-        self._update_state(obs)
+        self._update_state()  # note: remove dependency on observation because it could contains different features
 
         # check done
         done, toggle_list = self._check_done()
@@ -383,15 +371,6 @@ class F110Env(gym.Env):
         # get no input observations
         action = np.zeros((self.num_agents, 2))
         obs, _, _, _, info = self.step(action)
-
-        self.render_obs = {
-            'ego_idx': obs['ego_idx'],
-            'poses_x': obs['poses_x'],
-            'poses_y': obs['poses_y'],
-            'poses_theta': obs['poses_theta'],
-            'lap_times': obs['lap_times'],
-            'lap_counts': obs['lap_counts']
-        }
 
         return obs, info
 
