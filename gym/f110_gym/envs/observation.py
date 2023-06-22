@@ -57,8 +57,7 @@ class OriginalObservation(Observation):
 
     def observe(self):
         # state indices
-        agent = self.env.sim.agents[0]
-        xi, yi, deltai, vxi, yawi, yaw_ratei, slipi = range(len(agent.state))
+        xi, yi, deltai, vxi, yawi, yaw_ratei, slipi = range(7)  # 7 largest state size (ST Model)
 
         observations = {'ego_idx': self.env.sim.ego_idx,
                         'scans': [],
@@ -78,13 +77,17 @@ class OriginalObservation(Observation):
             lap_count = self.env.lap_counts[i]
             collision = self.env.sim.collisions[i]
 
+            x, y, theta = agent.state[xi], agent.state[yi], agent.state[yawi]
+            vx, vy = agent.state[vxi], 0.0
+            angvel = 0.0 if len(agent.state) < 7 else agent.state[yaw_ratei]  # set 0.0 when KST Model
+
             observations['scans'].append(agent_scan)
-            observations['poses_x'].append(agent.state[xi])
-            observations['poses_y'].append(agent.state[yi])
-            observations['poses_theta'].append(agent.state[yawi])
-            observations['linear_vels_x'].append(agent.state[vxi])
-            observations['linear_vels_y'].append(0.0)
-            observations['ang_vels_z'].append(agent.state[yaw_ratei])
+            observations['poses_x'].append(x)
+            observations['poses_y'].append(y)
+            observations['poses_theta'].append(theta)
+            observations['linear_vels_x'].append(vx)
+            observations['linear_vels_y'].append(vy)
+            observations['ang_vels_z'].append(angvel)
             observations['collisions'].append(collision)
             observations['lap_times'].append(lap_time)
             observations['lap_counts'].append(lap_count)
@@ -130,29 +133,36 @@ class FeaturesObservation(Observation):
 
     def observe(self):
         # state indices
-        agent = self.env.sim.agents[0]
-        xi, yi, deltai, vxi, yawi, yaw_ratei, slipi = range(len(agent.state))
+        xi, yi, deltai, vxi, yawi, yaw_ratei, slipi = range(7)  # 7 largest state size (ST Model)
 
         obs = {}  # dictionary agent_id -> observation dict
 
         for i, agent_id in enumerate(self.env.agent_ids):
             scan = self.env.sim.agent_scans[i]
             agent = self.env.sim.agents[i]
+            lap_time = self.env.lap_times[i]
+            lap_count = self.env.lap_counts[i]
+
+            x, y, theta = agent.state[xi], agent.state[yi], agent.state[yawi]
+            vx, vy = agent.state[vxi], 0.0
+            delta = agent.state[deltai]
+            beta = 0.0 if len(agent.state) < 7 else agent.state[slipi]  # set 0.0 when KST Model
+            angvel = 0.0 if len(agent.state) < 7 else agent.state[yaw_ratei]  # set 0.0 when KST Model
 
             # create agent's observation dict
             agent_obs = {
                 "scan": scan,
-                "pose_x": agent.state[xi],
-                "pose_y": agent.state[yi],
-                "pose_theta": agent.state[yawi],
-                "linear_vel_x": agent.state[vxi],
-                "linear_vel_y": 0.0,  # note: always set to 0.0? deprecated or not?
-                "ang_vel_z": agent.state[yaw_ratei],
-                "delta": agent.state[deltai],
-                "beta": agent.state[slipi],
+                "pose_x": x,
+                "pose_y": y,
+                "pose_theta": theta,
+                "linear_vel_x": vx,
+                "linear_vel_y": vy,
+                "ang_vel_z": angvel,
+                "delta": delta,
+                "beta": beta,
                 "collision": int(agent.in_collision),
-                "lap_time": self.env.lap_times[i],
-                "lap_count": self.env.lap_counts[i],
+                "lap_time": lap_time,
+                "lap_count": lap_count,
             }
 
             # add agent's observation to multi-agent observation
