@@ -25,9 +25,7 @@ Author: Hongrui Zheng
 '''
 
 # gym imports
-import gym
-from gym import error, spaces, utils
-from gym.utils import seeding
+import gymnasium as gym
 
 # base classes
 from f110_gym.envs.base_classes import Simulator, Integrator, Model
@@ -39,6 +37,7 @@ import time
 
 # gl
 import pyglet
+
 pyglet.options['debug_gl'] = False
 from pyglet import gl
 
@@ -49,6 +48,7 @@ VIDEO_W = 600
 VIDEO_H = 400
 WINDOW_W = 1000
 WINDOW_H = 800
+
 
 class F110Env(gym.Env):
     """
@@ -90,14 +90,17 @@ class F110Env(gym.Env):
 
             ego_idx (int, default=0): ego's index in list of agents
     """
-    metadata = {'render.modes': ['human', 'human_fast']}
+    # NOTE: change matadata with default rendering-modes, add definition of render_fps
+    metadata = {'render_modes': ['human', 'human_fast', 'rgb_array'], 'render_fps': 100}
 
     # rendering
     renderer = None
     current_obs = None
     render_callbacks = []
 
-    def __init__(self, **kwargs):        
+    def __init__(self, render_mode=None, **kwargs):
+        # NOTE: change signature, add render_mode
+
         # kwargs extraction
         try:
             self.seed = kwargs['seed']
@@ -125,7 +128,10 @@ class F110Env(gym.Env):
         try:
             self.params = kwargs['params']
         except:
-            self.params = {'mu': 1.0489, 'C_Sf': 4.718, 'C_Sr': 5.4562, 'lf': 0.15875, 'lr': 0.17145, 'h': 0.074, 'm': 3.74, 'I': 0.04712, 's_min': -0.4189, 's_max': 0.4189, 'sv_min': -3.2, 'sv_max': 3.2, 'v_switch': 7.319, 'a_max': 9.51, 'v_min':-5.0, 'v_max': 20.0, 'width': 0.31, 'length': 0.58}
+            self.params = {'mu': 1.0489, 'C_Sf': 4.718, 'C_Sr': 5.4562, 'lf': 0.15875, 'lr': 0.17145, 'h': 0.074,
+                           'm': 3.74, 'I': 0.04712, 's_min': -0.4189, 's_max': 0.4189, 'sv_min': -3.2, 'sv_max': 3.2,
+                           'v_switch': 7.319, 'a_max': 9.51, 'v_min': -5.0, 'v_max': 20.0, 'width': 0.31,
+                           'length': 0.58}
 
         # simulation parameters
         try:
@@ -163,7 +169,7 @@ class F110Env(gym.Env):
         self.poses_x = []
         self.poses_y = []
         self.poses_theta = []
-        self.collisions = np.zeros((self.num_agents, ))
+        self.collisions = np.zeros((self.num_agents,))
         # TODO: collision_idx not used yet
         # self.collision_idx = -1 * np.ones((self.num_agents, ))
 
@@ -172,26 +178,56 @@ class F110Env(gym.Env):
         self.num_toggles = 0
 
         # race info
-        self.lap_times = np.zeros((self.num_agents, ))
-        self.lap_counts = np.zeros((self.num_agents, ))
+        self.lap_times = np.zeros((self.num_agents,))
+        self.lap_counts = np.zeros((self.num_agents,))
         self.current_time = 0.0
 
         # finish line info
         self.num_toggles = 0
         self.near_start = True
-        self.near_starts = np.array([True]*self.num_agents)
+        self.near_starts = np.array([True] * self.num_agents)
         self.toggle_list = np.zeros((self.num_agents,))
-        self.start_xs = np.zeros((self.num_agents, ))
-        self.start_ys = np.zeros((self.num_agents, ))
-        self.start_thetas = np.zeros((self.num_agents, ))
+        self.start_xs = np.zeros((self.num_agents,))
+        self.start_ys = np.zeros((self.num_agents,))
+        self.start_thetas = np.zeros((self.num_agents,))
         self.start_rot = np.eye(2)
 
         # initiate stuff
-        self.sim = Simulator(self.params, self.num_agents, self.seed, time_step=self.timestep, integrator=self.integrator, model=self.model)
+        self.sim = Simulator(self.params, self.num_agents, self.seed, time_step=self.timestep,
+                             integrator=self.integrator, model=self.model)
         self.sim.set_map(self.map_path, self.map_ext)
+
+        # observation space
+        # NOTE: keep original structure of observation space (dict). just define it as a dict space and define bounds
+        scan_size, scan_range = self.sim.agents[0].scan_simulator.num_beams, self.sim.agents[0].scan_simulator.max_range
+        large_num = 1e30  # large number to avoid unbounded obs space (ie., low=-inf or high=inf)
+        self.observation_space = gym.spaces.Dict({
+            'ego_idx': gym.spaces.Discrete(self.num_agents),
+            'scans': gym.spaces.Box(low=0.0, high=scan_range, shape=(self.num_agents, scan_size), dtype=np.float32),
+            'poses_x': gym.spaces.Box(low=-large_num, high=large_num, shape=(self.num_agents,), dtype=np.float32),
+            'poses_y': gym.spaces.Box(low=-large_num, high=large_num, shape=(self.num_agents,), dtype=np.float32),
+            'poses_theta': gym.spaces.Box(low=-large_num, high=large_num, shape=(self.num_agents,), dtype=np.float32),
+            'linear_vels_x': gym.spaces.Box(low=-large_num, high=large_num, shape=(self.num_agents,), dtype=np.float32),
+            'linear_vels_y': gym.spaces.Box(low=-large_num, high=large_num, shape=(self.num_agents,), dtype=np.float32),
+            'ang_vels_z': gym.spaces.Box(low=-large_num, high=large_num, shape=(self.num_agents,), dtype=np.float32),
+            'collisions': gym.spaces.Box(low=0.0, high=1.0, shape=(self.num_agents,), dtype=np.float32),
+            'lap_times': gym.spaces.Box(low=0.0, high=large_num, shape=(self.num_agents,), dtype=np.float32),
+            'lap_counts': gym.spaces.Box(low=0.0, high=large_num, shape=(self.num_agents,), dtype=np.float32),
+        })
+
+        # action space
+        # NOTE: keep original structure of action space (box space), just define bounds
+        steering_low, steering_high = self.sim.params['s_min'], self.sim.params['s_max']
+        velocity_low, velocity_high = self.sim.params['v_min'], self.sim.params['v_max']
+        low = np.array([[steering_low, velocity_low]]).repeat(self.num_agents, 0).astype(np.float32)
+        high = np.array([[steering_high, velocity_high]]).repeat(self.num_agents, 0).astype(np.float32)
+        self.action_space = gym.spaces.Box(low=low, high=high,
+                                           shape=(self.num_agents, 2),
+                                           dtype=np.float32)
 
         # stateful observations for rendering
         self.render_obs = None
+        self.render_mode = render_mode
 
     def __del__(self):
         """
@@ -215,18 +251,18 @@ class F110Env(gym.Env):
         # TODO: switch to maybe s-based
         left_t = 2
         right_t = 2
-        
-        poses_x = np.array(self.poses_x)-self.start_xs
-        poses_y = np.array(self.poses_y)-self.start_ys
+
+        poses_x = np.array(self.poses_x) - self.start_xs
+        poses_y = np.array(self.poses_y) - self.start_ys
         delta_pt = np.dot(self.start_rot, np.stack((poses_x, poses_y), axis=0))
-        temp_y = delta_pt[1,:]
+        temp_y = delta_pt[1, :]
         idx1 = temp_y > left_t
         idx2 = temp_y < -right_t
         temp_y[idx1] -= left_t
         temp_y[idx2] = -right_t - temp_y[idx2]
         temp_y[np.invert(np.logical_or(idx1, idx2))] = 0
 
-        dist2 = delta_pt[0, :]**2 + temp_y**2
+        dist2 = delta_pt[0, :] ** 2 + temp_y ** 2
         closes = dist2 <= 0.1
         for i in range(self.num_agents):
             if closes[i] and not self.near_starts[i]:
@@ -238,9 +274,9 @@ class F110Env(gym.Env):
             self.lap_counts[i] = self.toggle_list[i] // 2
             if self.toggle_list[i] < 4:
                 self.lap_times[i] = self.current_time
-        
+
         done = (self.collisions[self.ego_idx]) or np.all(self.toggle_list >= 4)
-        
+
         return bool(done), self.toggle_list >= 4
 
     def _update_state(self, obs_dict):
@@ -271,11 +307,16 @@ class F110Env(gym.Env):
             done (bool): if the simulation is done
             info (dict): auxillary information dictionary
         """
-        
+
         # call simulation step
         obs = self.sim.step(action)
         obs['lap_times'] = self.lap_times
         obs['lap_counts'] = self.lap_counts
+
+        # cast to match observation space
+        for key in obs.keys():
+            if isinstance(obs[key], np.ndarray) or isinstance(obs[key], list):
+                obs[key] = np.array(obs[key], dtype=np.float32)
 
         F110Env.current_obs = obs
 
@@ -286,27 +327,29 @@ class F110Env(gym.Env):
             'poses_theta': obs['poses_theta'],
             'lap_times': obs['lap_times'],
             'lap_counts': obs['lap_counts']
-            }
+        }
 
         # times
         reward = self.timestep
         self.current_time = self.current_time + self.timestep
-        
+
         # update data member
         self._update_state(obs)
 
         # check done
         done, toggle_list = self._check_done()
+        truncated = False
         info = {'checkpoint_done': toggle_list}
 
-        return obs, reward, done, info
+        return obs, reward, done, truncated, info
 
-    def reset(self, poses):
+    def reset(self, seed=None, options=None):
         """
         Reset the gym environment by given poses
 
         Args:
-            poses (np.ndarray (num_agents, 3)): poses to reset agents to
+            seed: random seed for the reset
+            options: dictionary of options for the reset containing initial poses of the agents
 
         Returns:
             obs (dict): observation of the current step
@@ -314,26 +357,38 @@ class F110Env(gym.Env):
             done (bool): if the simulation is done
             info (dict): auxillary information dictionary
         """
+        if seed is not None:
+            np.random.seed(seed=self.seed)
+        super().reset(seed=seed)
+
         # reset counters and data members
         self.current_time = 0.0
-        self.collisions = np.zeros((self.num_agents, ))
+        self.collisions = np.zeros((self.num_agents,))
         self.num_toggles = 0
         self.near_start = True
-        self.near_starts = np.array([True]*self.num_agents)
+        self.near_starts = np.array([True] * self.num_agents)
         self.toggle_list = np.zeros((self.num_agents,))
 
         # states after reset
+        if options is None or "poses" not in options:
+            options = {"poses": np.zeros((self.num_agents, 3))}
+        assert "poses" in options, "Must provide initial poses for reset"
+        assert isinstance(options["poses"], np.ndarray) and options["poses"].shape == (self.num_agents, 3), \
+            "Initial poses must be a numpy array of shape (num_agents, 3)"
+        poses = options["poses"]
         self.start_xs = poses[:, 0]
         self.start_ys = poses[:, 1]
         self.start_thetas = poses[:, 2]
-        self.start_rot = np.array([[np.cos(-self.start_thetas[self.ego_idx]), -np.sin(-self.start_thetas[self.ego_idx])], [np.sin(-self.start_thetas[self.ego_idx]), np.cos(-self.start_thetas[self.ego_idx])]])
+        self.start_rot = np.array(
+            [[np.cos(-self.start_thetas[self.ego_idx]), -np.sin(-self.start_thetas[self.ego_idx])],
+             [np.sin(-self.start_thetas[self.ego_idx]), np.cos(-self.start_thetas[self.ego_idx])]])
 
         # call reset to simulator
         self.sim.reset(poses)
 
         # get no input observations
         action = np.zeros((self.num_agents, 2))
-        obs, reward, done, info = self.step(action)
+        obs, _, _, _, info = self.step(action)
 
         self.render_obs = {
             'ego_idx': obs['ego_idx'],
@@ -342,9 +397,9 @@ class F110Env(gym.Env):
             'poses_theta': obs['poses_theta'],
             'lap_times': obs['lap_times'],
             'lap_counts': obs['lap_counts']
-            }
-        
-        return obs, reward, done, info
+        }
+
+        return obs, info
 
     def update_map(self, map_path, map_ext):
         """
@@ -394,19 +449,39 @@ class F110Env(gym.Env):
         Returns:
             None
         """
-        assert mode in ['human', 'human_fast']
-        
+        # NOTE: separate render (manage render-mode) from render_frame (actual rendering with pyglet)
+
+        if self.render_mode not in self.metadata['render_modes']:
+            return
+        if self.render_mode in ['human', 'human_fast']:
+            self.render_frame(mode=self.render_mode)
+        elif self.render_mode == 'rgb_array':
+            # NOTE: this is extremely slow and should be changed to use pygame
+            import PIL
+            from PIL.Image import Transpose
+
+            self.render_frame(mode="human_fast")
+            image_data = pyglet.image.get_buffer_manager().get_color_buffer().get_image_data()
+            fmt = "RGB"
+            pitch = image_data.width * len(fmt)
+            pil_image = PIL.Image.frombytes(fmt, (image_data.width, image_data.height), image_data.get_data(fmt, pitch))
+            pil_image = pil_image.transpose(Transpose.FLIP_TOP_BOTTOM)
+            return np.array(pil_image)
+        else:
+            raise NotImplementedError(f"mode {self.render_mode} not implemented")
+
+    def render_frame(self, mode):
         if F110Env.renderer is None:
             # first call, initialize everything
             from f110_gym.envs.rendering import EnvRenderer
             F110Env.renderer = EnvRenderer(WINDOW_W, WINDOW_H)
             F110Env.renderer.update_map(self.map_name, self.map_ext)
-            
+
         F110Env.renderer.update_obs(self.render_obs)
 
         for render_callback in F110Env.render_callbacks:
             render_callback(F110Env.renderer)
-        
+
         F110Env.renderer.dispatch_events()
         F110Env.renderer.on_draw()
         F110Env.renderer.flip()
