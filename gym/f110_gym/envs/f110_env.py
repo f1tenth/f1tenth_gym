@@ -154,7 +154,7 @@ class F110Env(gym.Env):
         try:
             self.model = kwargs['model']
         except:
-            self.model = Model.KS
+            self.model = Model.ST
 
         # radius to consider done
         self.start_thresh = 0.5  # 10cm

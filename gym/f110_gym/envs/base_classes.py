@@ -33,7 +33,7 @@ import warnings
 import numpy as np
 from numba import njit
 
-from f110_gym.envs.dynamic_models import vehicle_dynamics_st, pid
+from f110_gym.envs.dynamic_models import vehicle_dynamics_st, vehicle_dynamics_ks, pid
 from f110_gym.envs.laser_models import ScanSimulator2D, check_ttc_jit, ray_cast
 from f110_gym.envs.collision_models import get_vertices, collision_multiple
 
@@ -98,10 +98,16 @@ class RaceCar(object):
         self.model = model
         if self.model is not Model.ST:
             warnings.warn(f"Chosen model is not ST. This is different from previous versions of the gym.")
-            
-        # state is [x, y, steer_angle, vel, yaw_angle, yaw_rate, slip_angle]
-        self.state = np.zeros((7, ))
 
+        if self.model is Model.ST:
+            # state is [x, y, steer_angle, vel, yaw_angle, yaw_rate, slip_angle]
+            self.state = np.zeros((7, ))
+        elif self.model is Model.KS:
+            # state is [x, y, steer_angle, vel, yaw_angle]
+            self.state = np.zeros((5, ))
+        else:
+            raise NotImplementedError(f"Model {self.model} is not implemented.")
+        
         # pose of opponents in the world
         self.opp_poses = None
 
@@ -201,7 +207,13 @@ class RaceCar(object):
         # clear collision indicator
         self.in_collision = False
         # clear state
-        self.state = np.zeros((7, ))
+        if self.model is Model.ST:
+            self.state = np.zeros((7, ))
+        elif self.model is Model.KS:
+            self.state = np.zeros((5, ))
+        else:
+            raise NotImplementedError(f"Model {self.model} is not implemented.")
+        
         self.state[0:2] = pose[0:2]
         self.state[4] = pose[2]
         self.steer_buffer = np.empty((0, ))
@@ -286,9 +298,16 @@ class RaceCar(object):
         # steering angle velocity input to steering velocity acceleration input
         accl, sv = pid(vel, steer, self.state[3], self.state[2], self.params['sv_max'], self.params['a_max'], self.params['v_max'], self.params['v_min'])
         
+        if self.model == Model.KS:
+            f_dynamics = vehicle_dynamics_ks
+        elif self.model == Model.ST:
+            f_dynamics = vehicle_dynamics_st
+        else:
+            raise ValueError('Invalid vehicle model')
+        
         if self.integrator is Integrator.RK4:
             # RK4 integration
-            k1 = vehicle_dynamics_st(
+            k1 = f_dynamics(
                 self.state,
                 np.array([sv, accl]),
                 self.params['mu'],
@@ -310,7 +329,7 @@ class RaceCar(object):
 
             k2_state = self.state + self.time_step*(k1/2)
 
-            k2 = vehicle_dynamics_st(
+            k2 = f_dynamics(
                 k2_state,
                 np.array([sv, accl]),
                 self.params['mu'],
@@ -332,7 +351,7 @@ class RaceCar(object):
 
             k3_state = self.state + self.time_step*(k2/2)
 
-            k3 = vehicle_dynamics_st(
+            k3 = f_dynamics(
                 k3_state,
                 np.array([sv, accl]),
                 self.params['mu'],
@@ -354,7 +373,7 @@ class RaceCar(object):
 
             k4_state = self.state + self.time_step*k3
 
-            k4 = vehicle_dynamics_st(
+            k4 = f_dynamics(
                 k4_state,
                 np.array([sv, accl]),
                 self.params['mu'],
@@ -378,7 +397,7 @@ class RaceCar(object):
             self.state = self.state + self.time_step*(1/6)*(k1 + 2*k2 + 2*k3 + k4)
         
         elif self.integrator is Integrator.Euler:
-            f = vehicle_dynamics_st(
+            f = f_dynamics(
                 self.state,
                 np.array([sv, accl]),
                 self.params['mu'],
@@ -460,7 +479,8 @@ class Simulator(object):
         agents (list[RaceCar]): container for RaceCar objects
         collisions (np.ndarray(num_agents, )): array of collision indicator for each agent
         collision_idx (np.ndarray(num_agents, )): which agent is each agent in collision with
-
+        integrator (Integrator): integrator to use for vehicle dynamics
+        model (Model): model to use for vehicle dynamics
     """
 
     def __init__(self, params, num_agents, seed, time_step=0.01, ego_idx=0, integrator=Integrator.RK4, model=Model.ST):
@@ -487,6 +507,7 @@ class Simulator(object):
         self.agents = []
         self.collisions = np.zeros((self.num_agents, ))
         self.collision_idx = -1 * np.ones((self.num_agents, ))
+        self.model = model
 
         # initializing agents
         for i in range(self.num_agents):
@@ -608,7 +629,11 @@ class Simulator(object):
             observations['poses_theta'].append(agent.state[4])
             observations['linear_vels_x'].append(agent.state[3])
             observations['linear_vels_y'].append(0.)
-            observations['ang_vels_z'].append(agent.state[5])
+
+            if self.model == Model.ST:
+                observations['ang_vels_z'].append(agent.state[5])
+            elif self.model == Model.KS:
+                observations['ang_vels_z'].append(0.)
 
         return observations
 
