@@ -13,7 +13,7 @@ class TestEnvInterface(unittest.TestCase):
         from gymnasium.utils.env_checker import check_env
         import gymnasium as gym
 
-        example_dir = pathlib.Path(__file__).parent.parent.parent.parent / 'examples'
+        example_dir = pathlib.Path('examples')
 
         with open(example_dir / 'config_example_map.yaml') as file:
             conf_dict = yaml.load(file, Loader=yaml.FullLoader)
