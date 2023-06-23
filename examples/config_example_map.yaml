@@ -4,7 +4,7 @@ run_name: 'map_wide'
 perf_num: 6
 
 # map paths
-map_path: './example_map'
+map_path: '../gym/f110_gym/maps/Example/example_map'
 map_ext: '.png'
 
 # starting pose for map
