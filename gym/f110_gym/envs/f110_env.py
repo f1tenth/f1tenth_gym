@@ -110,15 +110,15 @@ class F110Env(gym.Env):
             self.map_name = kwargs['map']
             # different default maps
             if self.map_name == 'berlin':
-                self.map_path = os.path.dirname(os.path.abspath(__file__)) + '/maps/berlin.yaml'
+                self.map_path = os.path.dirname(os.path.abspath(__file__)) + '/maps/Berlin_map.yaml'
             elif self.map_name == 'skirk':
-                self.map_path = os.path.dirname(os.path.abspath(__file__)) + '/maps/skirk.yaml'
+                self.map_path = os.path.dirname(os.path.abspath(__file__)) + '/maps/Skirk_map.yaml'
             elif self.map_name == 'levine':
-                self.map_path = os.path.dirname(os.path.abspath(__file__)) + '/maps/levine.yaml'
+                self.map_path = os.path.dirname(os.path.abspath(__file__)) + '/maps/Levine_map.yaml'
             else:
                 self.map_path = self.map_name + '.yaml'
         except:
-            self.map_path = os.path.dirname(os.path.abspath(__file__)) + '/maps/vegas.yaml'
+            self.map_path = os.path.dirname(os.path.abspath(__file__)) + '/maps/Vegas_map.yaml'
 
         try:
             self.map_ext = kwargs['map_ext']

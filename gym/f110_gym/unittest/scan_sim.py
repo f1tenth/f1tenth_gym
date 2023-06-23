@@ -321,7 +321,7 @@ class ScanTests(unittest.TestCase):
     def test_map_berlin(self):
         scan_sim = ScanSimulator2D(self.num_beams, self.fov)
         new_berlin = np.empty((self.num_test, self.num_beams))
-        map_path = '../../../maps/berlin.yaml'
+        map_path = '../../../maps/Berlin_map.yaml'
         map_ext = '.png'
         scan_sim.set_map(map_path, map_ext)
         # scan gen loop
@@ -344,7 +344,7 @@ class ScanTests(unittest.TestCase):
     def test_map_skirk(self):
         scan_sim = ScanSimulator2D(self.num_beams, self.fov)
         new_skirk = np.empty((self.num_test, self.num_beams))
-        map_path = '../../../maps/skirk.yaml'
+        map_path = '../../../maps/Skirk_map.yaml'
         map_ext = '.png'
         scan_sim.set_map(map_path, map_ext)
         print('map set')
@@ -368,7 +368,7 @@ class ScanTests(unittest.TestCase):
     def test_fps(self):
         # scan fps should be greater than 500
         scan_sim = ScanSimulator2D(self.num_beams, self.fov)
-        map_path = '../../../maps/skirk.yaml'
+        map_path = '../../../maps/Skirk_map.yaml'
         map_ext = '.png'
         scan_sim.set_map(map_path, map_ext)
         
@@ -387,7 +387,7 @@ class ScanTests(unittest.TestCase):
 def main():
     num_beams = 1080
     fov = 4.7
-    # map_path = '../envs/maps/berlin.yaml'
+    # map_path = '../envs/maps/Berlin_map.yaml'
     map_path = '/home/f1tenth-eval/tunercar/es/maps/map0.yaml'
     map_ext = '.png'
     scan_sim = ScanSimulator2D(num_beams, fov)

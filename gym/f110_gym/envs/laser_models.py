@@ -486,7 +486,7 @@ class ScanTests(unittest.TestCase):
     #     scan_rng = np.random.default_rng(seed=12345)
     #     scan_sim = ScanSimulator2D(self.num_beams, self.fov)
     #     new_berlin = np.empty((self.num_test, self.num_beams))
-    #     map_path = '../../../maps/berlin.yaml'
+    #     map_path = '../../../maps/Berlin_map.yaml'
     #     map_ext = '.png'
     #     scan_sim.set_map(map_path, map_ext)
     #     # scan gen loop
@@ -510,7 +510,7 @@ class ScanTests(unittest.TestCase):
     #     scan_rng = np.random.default_rng(seed=12345)
     #     scan_sim = ScanSimulator2D(self.num_beams, self.fov)
     #     new_skirk = np.empty((self.num_test, self.num_beams))
-    #     map_path = '../../../maps/skirk.yaml'
+    #     map_path = '../../../maps/Skirk_map.yaml'
     #     map_ext = '.png'
     #     scan_sim.set_map(map_path, map_ext)
     #     print('map set')
@@ -536,7 +536,7 @@ class ScanTests(unittest.TestCase):
 
         scan_rng = np.random.default_rng(seed=12345)
         scan_sim = ScanSimulator2D(self.num_beams, self.fov)
-        map_path = '../maps/Berlin/berlin.yaml'
+        map_path = '../maps/Berlin/Berlin_map.yaml'
         map_ext = '.png'
         scan_sim.set_map(map_path, map_ext)
         
@@ -554,7 +554,7 @@ class ScanTests(unittest.TestCase):
     def test_rng(self):
         num_beams = 1080
         fov = 4.7
-        map_path = '../maps/Berlin/berlin.yaml'
+        map_path = '../maps/Berlin/Berlin_map.yaml'
         map_ext = '.png'
         it = 100
 
@@ -583,8 +583,8 @@ class ScanTests(unittest.TestCase):
 def main():
     num_beams = 1080
     fov = 4.7
-    # map_path = '../envs/maps/berlin.yaml'
-    map_path = '../maps/Example/example_map.yaml'
+    # map_path = '../envs/maps/Berlin_map.yaml'
+    map_path = '../maps/Example/Example_map.yaml'
     map_ext = '.png'
     scan_rng = np.random.default_rng(seed=12345)
     scan_sim = ScanSimulator2D(num_beams, fov)
