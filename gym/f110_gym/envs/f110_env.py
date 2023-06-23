@@ -27,6 +27,7 @@ Author: Hongrui Zheng
 # gym imports
 import gymnasium as gym
 
+from f110_gym.envs.track import Track
 # base classes
 from f110_gym.envs.base_classes import Simulator, Integrator
 
@@ -108,22 +109,8 @@ class F110Env(gym.Env):
             self.seed = 12345
         try:
             self.map_name = kwargs['map']
-            # different default maps
-            if self.map_name == 'berlin':
-                self.map_path = os.path.dirname(os.path.abspath(__file__)) + '/maps/Berlin_map.yaml'
-            elif self.map_name == 'skirk':
-                self.map_path = os.path.dirname(os.path.abspath(__file__)) + '/maps/Skirk_map.yaml'
-            elif self.map_name == 'levine':
-                self.map_path = os.path.dirname(os.path.abspath(__file__)) + '/maps/Levine_map.yaml'
-            else:
-                self.map_path = self.map_name + '.yaml'
         except:
-            self.map_path = os.path.dirname(os.path.abspath(__file__)) + '/maps/Vegas_map.yaml'
-
-        try:
-            self.map_ext = kwargs['map_ext']
-        except:
-            self.map_ext = '.png'
+            self.map_name = "Vegas"
 
         try:
             self.params = kwargs['params']
@@ -189,11 +176,13 @@ class F110Env(gym.Env):
         # initiate stuff
         self.sim = Simulator(self.params, self.num_agents, self.seed, time_step=self.timestep,
                              integrator=self.integrator)
-        self.sim.set_map(self.map_path, self.map_ext)
+        self.sim.set_map(self.map_name)
+        self.track = Track.from_track_name(self.map_name)  # load track in gym env for convenience
 
         # observation space
         # NOTE: keep original structure of observation space (dict). just define it as a dict space and define bounds
-        scan_size, scan_range = self.sim.agents[0].scan_simulator.num_beams, self.sim.agents[0].scan_simulator.max_range
+        scan_size = self.sim.agents[0].scan_simulator.num_beams
+        scan_range = self.sim.agents[0].scan_simulator.max_range + 0.1  # add 10cm because scan is not capped
         large_num = 1e30  # large number to avoid unbounded obs space (ie., low=-inf or high=inf)
         self.observation_space = gym.spaces.Dict({
             'ego_idx': gym.spaces.Discrete(self.num_agents),
@@ -395,18 +384,18 @@ class F110Env(gym.Env):
 
         return obs, info
 
-    def update_map(self, map_path, map_ext):
+    def update_map(self, map_name: str):
         """
         Updates the map used by simulation
 
         Args:
-            map_path (str): absolute path to the map yaml file
-            map_ext (str): extension of the map image file
+            map_name (str): name of the map
 
         Returns:
             None
         """
-        self.sim.set_map(map_path, map_ext)
+        self.sim.set_map(map_name)
+        self.track = Track.from_track_name(map_name)
 
     def update_params(self, params, index=-1):
         """
@@ -469,7 +458,7 @@ class F110Env(gym.Env):
             # first call, initialize everything
             from f110_gym.envs.rendering import EnvRenderer
             F110Env.renderer = EnvRenderer(WINDOW_W, WINDOW_H)
-            F110Env.renderer.update_map(self.map_name, self.map_ext)
+            F110Env.renderer.update_map(track=self.track)
 
         F110Env.renderer.update_obs(self.render_obs)
 

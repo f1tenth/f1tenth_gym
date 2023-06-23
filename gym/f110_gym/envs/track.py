@@ -8,6 +8,101 @@ from PIL import Image
 from PIL.Image import Transpose
 from yamldataclassconfig.config import YamlDataClassConfig
 
+from f110_gym.envs.cubic_spline import CubicSpline2D
+
+
+class Raceline:
+    n: int
+
+    ss: np.ndarray  # cumulative distance along the raceline
+    xs: np.ndarray  # x-coordinates of the raceline
+    ys: np.ndarray  # y-coordinates of the raceline
+    yaws: np.ndarray  # yaw angle of the raceline
+    ks: np.ndarray  # curvature of the raceline
+    vxs: np.ndarray  # velocity along the raceline
+    axs: np.ndarray  # acceleration along the raceline
+
+    length: float
+
+    def __init__(self,
+                 xs: np.ndarray,
+                 ys: np.ndarray,
+                 velxs: np.ndarray,
+                 ss: np.ndarray = None,
+                 psis: np.ndarray = None,
+                 kappas: np.ndarray = None,
+                 accxs: np.ndarray = None,
+                 spline: CubicSpline2D = None):
+        assert xs.shape == ys.shape == velxs.shape, "inconsistent shapes for x, y, vel"
+
+        self.n = xs.shape[0]
+        self.ss = ss
+        self.xs = xs
+        self.ys = ys
+        self.yaws = psis
+        self.ks = kappas
+        self.vxs = velxs
+        self.axs = accxs
+
+        # approximate track length by linear-interpolation of x,y waypoints
+        # note: we could use 'ss' but sometimes it is normalized to [0,1], so we recompute it here
+        self.length = np.sum(np.sqrt(np.diff(xs) ** 2 + np.diff(ys) ** 2))
+
+        # compute spline
+        self.spline = spline if spline is not None else CubicSpline2D(xs, ys)
+
+    @staticmethod
+    def from_centerline_file(filepath: pathlib.Path, delimiter: str = ',', fixed_speed: float = 1.0):
+        assert filepath.exists(), f"input filepath does not exist ({filepath})"
+        waypoints = np.loadtxt(filepath, delimiter=delimiter)
+        assert waypoints.shape[1] == 4, "expected waypoints as [x, y, w_left, w_right]"
+
+        # fit cubic spline to waypoints
+        xx, yy = waypoints[:, 0], waypoints[:, 1]
+        # close loop
+        xx = np.append(xx, xx[0])
+        yy = np.append(yy, yy[0])
+        spline = CubicSpline2D(xx, yy)
+        ds = 0.1
+
+        ss, xs, ys, yaws, ks = [], [], [], [], []
+
+        for i_s in np.arange(0, spline.s[-1], ds):
+            x, y = spline.calc_position(i_s)
+            yaw = spline.calc_yaw(i_s)
+            k = spline.calc_curvature(i_s)
+
+            xs.append(x)
+            ys.append(y)
+            yaws.append(yaw)
+            ks.append(k)
+            ss.append(i_s)
+
+        return Raceline(
+            ss=np.array(ss).astype(np.float32),
+            xs=np.array(xs).astype(np.float32),
+            ys=np.array(ys).astype(np.float32),
+            psis=np.array(yaws).astype(np.float32),
+            kappas=np.array(ks).astype(np.float32),
+            velxs=np.ones_like(ss).astype(np.float32),  # centerline does not have a speed profile, keep it constant at 1.0 m/s
+            accxs=np.zeros_like(ss).astype(np.float32),  # constant acceleration
+        )
+
+    @staticmethod
+    def from_raceline_file(filepath: pathlib.Path, delimiter: str = ';'):
+        assert filepath.exists(), f"input filepath does not exist ({filepath})"
+        waypoints = np.loadtxt(filepath, delimiter=delimiter).astype(np.float32)
+        assert waypoints.shape[1] == 7, "expected waypoints as [s, x, y, psi, k, vx, ax]"
+        return Raceline(
+            ss=waypoints[:, 0],
+            xs=waypoints[:, 1],
+            ys=waypoints[:, 2],
+            psis=waypoints[:, 3],
+            kappas=waypoints[:, 4],
+            velxs=waypoints[:, 5],
+            accxs=waypoints[:, 6],
+        )
+
 
 @dataclass
 class TrackSpec(YamlDataClassConfig):
@@ -42,6 +137,8 @@ class Track:
     filepath: str
     ext: str
     occupancy_map: np.ndarray
+    centerline: Raceline
+    raceline: Raceline
 
     def __init__(
             self,
@@ -49,11 +146,15 @@ class Track:
             filepath: str,
             ext: str,
             occupancy_map: np.ndarray,
+            centerline: Raceline = None,
+            raceline: Raceline = None,
     ):
         self.spec = spec
         self.filepath = filepath
         self.ext = ext
         self.occupancy_map = occupancy_map
+        self.centerline = centerline
+        self.raceline = raceline
 
     @staticmethod
     def from_track_name(track: str):
@@ -71,13 +172,26 @@ class Track:
             occupancy_map[occupancy_map <= 128] = 0.0
             occupancy_map[occupancy_map > 128] = 255.0
 
+            # if exists, load centerline
+            if (track_dir / f"{track}_centerline.csv").exists():
+                centerline = Raceline.from_centerline_file(track_dir / f"{track}_centerline.csv")
+            else:
+                centerline = None
+
+            # if exists, load raceline
+            if (track_dir / f"{track}_raceline.csv").exists():
+                raceline = Raceline.from_raceline_file(track_dir / f"{track}_raceline.csv")
+            else:
+                raceline = centerline
+
             return Track(
                 spec=track_spec,
                 filepath=str((track_dir / map_filename.stem).absolute()),
                 ext=map_filename.suffix,
                 occupancy_map=occupancy_map,
+                centerline=centerline,
+                raceline=raceline,
             )
-
         except Exception as ex:
             raise FileNotFoundError(f"could not load track {track}") from ex
 

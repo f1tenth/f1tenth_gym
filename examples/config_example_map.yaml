@@ -4,8 +4,7 @@ run_name: 'map_wide'
 perf_num: 6
 
 # map paths
-map_path: '../gym/f110_gym/maps/Example/example_map'
-map_ext: '.png'
+map_name: 'Example'
 
 # starting pose for map
 sx: 0.7
@@ -13,7 +12,7 @@ sy: 0.0
 stheta: 1.37079632679
 
 # raceline path and indices
-wpt_path: './example_waypoints.csv'
+wpt_path: './Example_raceline.csv'
 wpt_delim: ';'
 wpt_rowskip: 3
 wpt_xind: 1

@@ -154,10 +154,10 @@ class PurePursuitPlanner:
     Example Planner
     """
 
-    def __init__(self, conf, wb):
+    def __init__(self, track, conf, wb):
         self.wheelbase = wb
-        self.conf = conf
-        self.load_waypoints(conf)
+        self.conf = conf    # todo: remove this
+        self.waypoints = np.stack([track.raceline.xs, track.raceline.ys, track.raceline.vxs]).T
         self.max_reacquire = 20.
 
         self.drawn_waypoints = []
@@ -177,7 +177,7 @@ class PurePursuitPlanner:
 
         # points = self.waypoints
 
-        points = np.vstack((self.waypoints[:, self.conf.wpt_xind], self.waypoints[:, self.conf.wpt_yind])).T
+        points = self.waypoints[:, :2]
 
         scaled_points = 50. * points
 
@@ -193,7 +193,7 @@ class PurePursuitPlanner:
         """
         gets the current waypoint to follow
         """
-        wpts = np.vstack((self.waypoints[:, self.conf.wpt_xind], self.waypoints[:, self.conf.wpt_yind])).T
+        wpts = waypoints[:, :2]
         lookahead_distance = np.float32(lookahead_distance)
         nearest_point, nearest_dist, t, i = nearest_point_on_trajectory(position, wpts)
         if nearest_dist < lookahead_distance:
@@ -206,7 +206,7 @@ class PurePursuitPlanner:
             # x, y
             current_waypoint[0:2] = wpts[i2, :]
             # speed
-            current_waypoint[2] = waypoints[i, self.conf.wpt_vind]
+            current_waypoint[2] = waypoints[i, -1]
             return current_waypoint
         elif nearest_dist < self.max_reacquire:
             # NOTE: specify type or numba complains
@@ -264,7 +264,10 @@ def main():
         conf_dict = yaml.load(file, Loader=yaml.FullLoader)
     conf = Namespace(**conf_dict)
 
-    planner = PurePursuitPlanner(conf, (0.17145 + 0.15875))  # FlippyPlanner(speed=0.2, flip_every=1, steer=10)
+    env = gym.make('f110_gym:f110-v0', map=conf.map_name, num_agents=1,
+                   timestep=0.01, integrator=Integrator.RK4, render_mode='human')
+
+    planner = PurePursuitPlanner(track=env.track, conf=conf, wb=0.17145 + 0.15875)  # FlippyPlanner(speed=0.2, flip_every=1, steer=10)
 
     def render_callback(env_renderer):
         # custom extra drawing function
@@ -284,9 +287,7 @@ def main():
 
         planner.render_waypoints(env_renderer)
 
-    env = gym.make('f110_gym:f110-v0', map=conf.map_path, map_ext=conf.map_ext,
-                   num_agents=1, timestep=0.01, integrator=Integrator.RK4,
-                   render_mode='human')
+
     env.add_render_callback(render_callback)
 
     poses = np.array([[conf.sx, conf.sy, conf.stheta]])
