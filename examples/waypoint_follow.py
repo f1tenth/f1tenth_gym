@@ -154,9 +154,8 @@ class PurePursuitPlanner:
     Example Planner
     """
 
-    def __init__(self, track, conf, wb):
+    def __init__(self, track, wb):
         self.wheelbase = wb
-        self.conf = conf    # todo: remove this
         self.waypoints = np.stack([track.raceline.xs, track.raceline.ys, track.raceline.vxs]).T
         self.max_reacquire = 20.
 
@@ -210,7 +209,7 @@ class PurePursuitPlanner:
             return current_waypoint
         elif nearest_dist < self.max_reacquire:
             # NOTE: specify type or numba complains
-            return np.append(wpts[i, :], waypoints[i, self.conf.wpt_vind]).astype(np.float32)
+            return np.append(wpts[i, :], waypoints[i, -1]).astype(np.float32)
         else:
             return None
 
@@ -230,44 +229,14 @@ class PurePursuitPlanner:
         return speed, steering_angle
 
 
-class FlippyPlanner:
-    """
-    Planner designed to exploit integration methods and dynamics.
-    For testing only. To observe this error, use single track dynamics for all velocities >0.1
-    """
-
-    def __init__(self, speed=1, flip_every=1, steer=2):
-        self.speed = speed
-        self.flip_every = flip_every
-        self.counter = 0
-        self.steer = steer
-
-    def render_waypoints(self, *args, **kwargs):
-        pass
-
-    def plan(self, *args, **kwargs):
-        if self.counter % self.flip_every == 0:
-            self.counter = 0
-            self.steer *= -1
-        return self.speed, self.steer
-
-
 def main():
-    """
-    main entry point
-    """
+    work = {'mass': 3.463388126201571, 'lf': 0.15597534362552312,
+            'tlad': 0.82461887897713965, 'vgain': 1.375}
 
-    work = {'mass': 3.463388126201571, 'lf': 0.15597534362552312, 'tlad': 0.82461887897713965,
-            'vgain': 1.375}  # 0.90338203837889}
+    env = gym.make('f110_gym:f110-v0', map="Example", num_agents=1,
+                   timestep=0.01, integrator=Integrator.Euler, render_mode='human')
 
-    with open('config_example_map.yaml') as file:
-        conf_dict = yaml.load(file, Loader=yaml.FullLoader)
-    conf = Namespace(**conf_dict)
-
-    env = gym.make('f110_gym:f110-v0', map=conf.map_name, num_agents=1,
-                   timestep=0.01, integrator=Integrator.RK4, render_mode='human')
-
-    planner = PurePursuitPlanner(track=env.track, conf=conf, wb=0.17145 + 0.15875)  # FlippyPlanner(speed=0.2, flip_every=1, steer=10)
+    planner = PurePursuitPlanner(track=env.track, wb=0.17145 + 0.15875)  # FlippyPlanner(speed=0.2, flip_every=1, steer=10)
 
     def render_callback(env_renderer):
         # custom extra drawing function
@@ -287,10 +256,9 @@ def main():
 
         planner.render_waypoints(env_renderer)
 
-
     env.add_render_callback(render_callback)
 
-    poses = np.array([[conf.sx, conf.sy, conf.stheta]])
+    poses = np.array([[0.7, 0.0, 1.37]])
     obs, info = env.reset(options={"poses": poses})
     done = False
     env.render()
@@ -299,8 +267,8 @@ def main():
     start = time.time()
 
     while not done:
-        speed, steer = planner.plan(obs['poses_x'][0], obs['poses_y'][0], obs['poses_theta'][0], work['tlad'],
-                                    work['vgain'])
+        speed, steer = planner.plan(obs['poses_x'][0], obs['poses_y'][0], obs['poses_theta'][0],
+                                    work['tlad'], work['vgain'])
         obs, step_reward, done, truncated, info = env.step(np.array([[steer, speed]]))
         laptime += step_reward
         env.render()
