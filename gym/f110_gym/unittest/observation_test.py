@@ -148,3 +148,27 @@ class TestObservationInterface(unittest.TestCase):
             for ground_truth, observed in zip([pose_x, pose_y, pose_theta, velx, delta, beta],
                                               [obs_x, obs_y, obs_theta, obs_velx, obs_delta, obs_beta]):
                 self.assertAlmostEqual(ground_truth, observed)
+
+    def test_consistency_observe_space(self):
+        obs_type_ids = ["kinematic_state", "dynamic_state", "original"]
+
+        env = self._make_env()
+        env.reset()
+
+        for obs_type_id in obs_type_ids:
+            obs_type = observation_factory(env, type=obs_type_id)
+            space = obs_type.space()
+            observation = obs_type.observe()
+
+            self.assertTrue(space.contains(observation), f"Observation {obs_type_id} is not contained in its space")
+
+    def test_gymnasium_api(self):
+        import f110_gym
+        from gymnasium.utils.env_checker import check_env
+        import gymnasium as gym
+
+        obs_type_ids = ["kinematic_state", "dynamic_state", "original"]
+
+        for obs_type_id in obs_type_ids:
+            env = self._make_env(observation_config={"type": obs_type_id})
+            check_env(env.unwrapped, f"Observation {obs_type_id} breaks the gymnasium API")

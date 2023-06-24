@@ -114,17 +114,17 @@ class FeaturesObservation(Observation):
         for agent_id in self.env.agent_ids:
             agent_dict = {
                 "scan": gym.spaces.Box(low=0.0, high=scan_range, shape=(scan_size,), dtype=np.float32),
-                "pose_x": gym.spaces.Box(low=-large_num, high=large_num, shape=(1,), dtype=np.float32),
-                "pose_y": gym.spaces.Box(low=-large_num, high=large_num, shape=(1,), dtype=np.float32),
-                "pose_theta": gym.spaces.Box(low=-large_num, high=large_num, shape=(1,), dtype=np.float32),
-                "linear_vel_x": gym.spaces.Box(low=-large_num, high=large_num, shape=(1,), dtype=np.float32),
-                "linear_vel_y": gym.spaces.Box(low=-large_num, high=large_num, shape=(1,), dtype=np.float32),
-                "ang_vel_z": gym.spaces.Box(low=-large_num, high=large_num, shape=(1,), dtype=np.float32),
-                "delta": gym.spaces.Box(low=-large_num, high=large_num, shape=(1,), dtype=np.float32),
-                "beta": gym.spaces.Box(low=-large_num, high=large_num, shape=(1,), dtype=np.float32),
-                "collision": gym.spaces.Box(low=0.0, high=1.0, shape=(1,), dtype=np.float32),
-                "lap_time": gym.spaces.Box(low=0.0, high=large_num, shape=(1,), dtype=np.float32),
-                "lap_count": gym.spaces.Box(low=0.0, high=large_num, shape=(1,), dtype=np.float32),
+                "pose_x": gym.spaces.Box(low=-large_num, high=large_num, shape=(), dtype=np.float32),
+                "pose_y": gym.spaces.Box(low=-large_num, high=large_num, shape=(), dtype=np.float32),
+                "pose_theta": gym.spaces.Box(low=-large_num, high=large_num, shape=(), dtype=np.float32),
+                "linear_vel_x": gym.spaces.Box(low=-large_num, high=large_num, shape=(), dtype=np.float32),
+                "linear_vel_y": gym.spaces.Box(low=-large_num, high=large_num, shape=(), dtype=np.float32),
+                "ang_vel_z": gym.spaces.Box(low=-large_num, high=large_num, shape=(), dtype=np.float32),
+                "delta": gym.spaces.Box(low=-large_num, high=large_num, shape=(), dtype=np.float32),
+                "beta": gym.spaces.Box(low=-large_num, high=large_num, shape=(), dtype=np.float32),
+                "collision": gym.spaces.Box(low=0.0, high=1.0, shape=(), dtype=np.float32),
+                "lap_time": gym.spaces.Box(low=0.0, high=large_num, shape=(), dtype=np.float32),
+                "lap_count": gym.spaces.Box(low=0.0, high=large_num, shape=(), dtype=np.float32),
             }
             complete_space[agent_id] = gym.spaces.Dict({k: agent_dict[k] for k in self.features})
 
@@ -167,6 +167,13 @@ class FeaturesObservation(Observation):
 
             # add agent's observation to multi-agent observation
             obs[agent_id] = {k: agent_obs[k] for k in self.features}
+
+            # cast to match observation space
+            for key in obs[agent_id].keys():
+                if isinstance(obs[agent_id][key], np.ndarray) or isinstance(obs[agent_id][key], list):
+                    obs[agent_id][key] = np.array(obs[agent_id][key], dtype=np.float32)
+                if isinstance(obs[agent_id][key], float):
+                    obs[agent_id][key] = np.float32(obs[agent_id][key])
 
         return obs
 
