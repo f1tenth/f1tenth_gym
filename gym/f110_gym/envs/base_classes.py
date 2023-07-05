@@ -51,6 +51,64 @@ class Integrator(Enum):
             raise ValueError(f"Unknown integrator type {integrator}")
 
 
+class CarActionEnum(Enum):
+    Accl = 1
+    Speed = 2
+
+    @staticmethod
+    def from_string(action: str):
+        if action == "accl":
+            return AcclAction()
+        elif action == "speed":
+            return SpeedAction()
+        else:
+            raise ValueError(f"Unknown action type {action}")
+
+
+class CarAction(object):
+    def __init__(self) -> None:
+        self._action_type = None
+
+    def act(self, action: tuple[float, float]) -> tuple[float, float]:
+        return 0.0, 0.0
+
+    @property
+    def type(self) -> str:
+        return self._action_type
+
+
+class AcclAction(CarAction):
+    def __init__(self) -> None:
+        super().__init__()
+        self._action_type = "accl"
+
+    def act(
+        self, action: tuple[float, float], state=None, params=None
+    ) -> tuple[float, float]:
+        return action
+
+
+class SpeedAction(CarAction):
+    def __init__(self) -> None:
+        super().__init__()
+        self._action_type = "speed"
+
+    def act(
+        self, action: tuple[float, float], state: np.ndarray, params: dict
+    ) -> tuple[float, float]:
+        accl, sv = pid(
+            action[0],
+            action[1],
+            state[3],
+            state[2],
+            params["sv_max"],
+            params["a_max"],
+            params["v_max"],
+            params["v_min"],
+        )
+        return accl, sv
+
+
 class RaceCar(object):
     """
     Base level race car class, handles the physics and laser scan of a single vehicle
@@ -84,7 +142,7 @@ class RaceCar(object):
         num_beams=1080,
         fov=4.7,
         integrator=Integrator.Euler,
-        control_input="speed",
+        action_type=SpeedAction(),
     ):
         """
         Init function
@@ -112,7 +170,7 @@ class RaceCar(object):
             warnings.warn(
                 f"Chosen integrator is RK4. This is different from previous versions of the gym."
             )
-        self.control_input = control_input
+        self.action_type = action_type
 
         # state is [x, y, steer_angle, vel, yaw_angle, yaw_rate, slip_angle]
         self.state = np.zeros((7,))
@@ -311,24 +369,10 @@ class RaceCar(object):
             self.steer_buffer = self.steer_buffer[:-1]
             self.steer_buffer = np.append(raw_steer, self.steer_buffer)
 
-        if self.control_input == "speed":
-            # steering angle velocity input to steering velocity acceleration input
-            accl, sv = pid(
-                vel,
-                steer,
-                self.state[3],
-                self.state[2],
-                self.params["sv_max"],
-                self.params["a_max"],
-                self.params["v_max"],
-                self.params["v_min"],
-            )
-        elif self.control_input == "acceleration":
-            accl, sv = vel, steer
-        else:
-            raise SyntaxError(
-                f"Invalid Control Input Type Specified. Provided {self.control_input}. Please choose speed or acceleration"
-            )
+        if self.action_type.type is None:
+            raise ValueError("No Control Action Type Specified.")
+
+        accl, sv = self.action_type.act((vel, steer), self.state, self.params)
 
         if self.integrator is Integrator.RK4:
             # RK4 integration
@@ -526,7 +570,7 @@ class Simulator(object):
         time_step=0.01,
         ego_idx=0,
         integrator=Integrator.RK4,
-        control_input="speed",
+        action_type=SpeedAction(),
     ):
         """
         Init function
@@ -560,7 +604,7 @@ class Simulator(object):
                     is_ego=True,
                     time_step=self.time_step,
                     integrator=integrator,
-                    control_input=control_input,
+                    action_type=action_type,
                 )
                 self.agents.append(ego_car)
             else:
@@ -570,7 +614,7 @@ class Simulator(object):
                     is_ego=False,
                     time_step=self.time_step,
                     integrator=integrator,
-                    control_input=control_input,
+                    action_type=action_type,
                 )
                 self.agents.append(agent)
 
