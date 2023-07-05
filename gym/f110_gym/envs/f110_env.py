@@ -47,12 +47,6 @@ VIDEO_H = 400
 WINDOW_W = 1000
 WINDOW_H = 800
 
-# config map
-CONFIG_MAP = {
-    "rk4": Integrator.RK4,
-    "euler": Integrator.Euler,
-}
-
 
 class F110Env(gym.Env):
     """
