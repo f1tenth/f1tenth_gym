@@ -41,6 +41,15 @@ class Integrator(Enum):
     RK4 = 1
     Euler = 2
 
+    @staticmethod
+    def from_string(integrator: str):
+        if integrator == "rk4":
+            return Integrator.RK4
+        elif integrator == "euler":
+            return Integrator.Euler
+        else:
+            raise ValueError(f"Unknown integrator type {integrator}")
+
 
 class RaceCar(object):
     """
