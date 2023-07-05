@@ -112,7 +112,7 @@ class F110Env(gym.Env):
         self.num_agents = self.config["num_agents"]
         self.timestep = self.config["timestep"]
         self.ego_idx = self.config["ego_idx"]
-        self.integrator = CONFIG_MAP[self.config["integrator"]]
+        self.integrator = Integrator.from_string(self.config["integrator"])
         self.control_input = self.config["control_input"]
 
         # radius to consider done
