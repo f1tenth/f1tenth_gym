@@ -40,11 +40,11 @@ ImportError: Can't find framework /System/Library/Frameworks/OpenGL.framework.
 ```
 You can fix the error by installing a newer version of pyglet:
 ```bash
-$ pip3 install pyglet==1.5.11
+$ pip3 install pyglet==1.5.20
 ```
 And you might see an error similar to
 ```
-gym 0.17.3 requires pyglet<=1.5.0,>=1.4.0, but you'll have pyglet 1.5.11 which is incompatible.
+f110-gym 0.2.1 requires pyglet<1.5, but you have pyglet 1.5.20 which is incompatible.
 ```
 which could be ignored. The environment should still work without error.
 
