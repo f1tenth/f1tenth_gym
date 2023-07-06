@@ -1,1 +1,1 @@
-from gym.envs.unittest.scan_sim import *
+from .scan_sim import *
