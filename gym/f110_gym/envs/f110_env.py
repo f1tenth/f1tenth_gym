@@ -27,13 +27,14 @@ Author: Hongrui Zheng
 # gym imports
 import gymnasium as gym
 
+from f110_gym.envs.action import CarActionEnum
+
 # base classes
-from f110_gym.envs.base_classes import Simulator, Integrator, CarActionEnum
+from f110_gym.envs.base_classes import Simulator, Integrator
 
-# types
-from typing import Dict, Any, TypeVar
 
-KeyType = TypeVar("KeyType")
+from f110_gym.envs.utils import deep_update
+
 
 # others
 import numpy as np
@@ -254,27 +255,6 @@ class F110Env(gym.Env):
         pass
 
     @classmethod
-    def deep_update(
-        cls, mapping: Dict[KeyType, Any], *updating_mappings: Dict[KeyType, Any]
-    ) -> Dict[KeyType, Any]:
-        """
-        Dictionary deep update for nested dictionaries from pydantic:
-        https://github.com/pydantic/pydantic/blob/fd2991fe6a73819b48c906e3c3274e8e47d0f761/pydantic/utils.py#L200
-        """
-        updated_mapping = mapping.copy()
-        for updating_mapping in updating_mappings:
-            for k, v in updating_mapping.items():
-                if (
-                    k in updated_mapping
-                    and isinstance(updated_mapping[k], dict)
-                    and isinstance(v, dict)
-                ):
-                    updated_mapping[k] = F110Env.deep_update(updated_mapping[k], v)
-                else:
-                    updated_mapping[k] = v
-        return updated_mapping
-
-    @classmethod
     def default_config(cls) -> dict:
         """
         Default environment configuration.
@@ -320,7 +300,7 @@ class F110Env(gym.Env):
 
     def configure(self, config: dict) -> None:
         if config:
-            self.config = F110Env.deep_update(self.config, config)
+            self.config = deep_update(self.config, config)
 
     def _check_done(self):
         """

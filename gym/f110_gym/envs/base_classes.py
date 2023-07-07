@@ -30,9 +30,9 @@ from enum import Enum
 import warnings
 
 import numpy as np
-from numba import njit
 
-from f110_gym.envs.dynamic_models import vehicle_dynamics_st, pid
+from f110_gym.envs.action import SpeedAction
+from f110_gym.envs.dynamic_models import vehicle_dynamics_st
 from f110_gym.envs.laser_models import ScanSimulator2D, check_ttc_jit, ray_cast
 from f110_gym.envs.collision_models import get_vertices, collision_multiple
 
@@ -49,64 +49,6 @@ class Integrator(Enum):
             return Integrator.Euler
         else:
             raise ValueError(f"Unknown integrator type {integrator}")
-
-
-class CarActionEnum(Enum):
-    Accl = 1
-    Speed = 2
-
-    @staticmethod
-    def from_string(action: str):
-        if action == "accl":
-            return AcclAction()
-        elif action == "speed":
-            return SpeedAction()
-        else:
-            raise ValueError(f"Unknown action type {action}")
-
-
-class CarAction(object):
-    def __init__(self) -> None:
-        self._action_type = None
-
-    def act(self, action: tuple[float, float]) -> tuple[float, float]:
-        return 0.0, 0.0
-
-    @property
-    def type(self) -> str:
-        return self._action_type
-
-
-class AcclAction(CarAction):
-    def __init__(self) -> None:
-        super().__init__()
-        self._action_type = "accl"
-
-    def act(
-        self, action: tuple[float, float], state=None, params=None
-    ) -> tuple[float, float]:
-        return action
-
-
-class SpeedAction(CarAction):
-    def __init__(self) -> None:
-        super().__init__()
-        self._action_type = "speed"
-
-    def act(
-        self, action: tuple[float, float], state: np.ndarray, params: dict
-    ) -> tuple[float, float]:
-        accl, sv = pid(
-            action[0],
-            action[1],
-            state[3],
-            state[2],
-            params["sv_max"],
-            params["a_max"],
-            params["v_max"],
-            params["v_min"],
-        )
-        return accl, sv
 
 
 class RaceCar(object):
@@ -372,7 +314,7 @@ class RaceCar(object):
         if self.action_type.type is None:
             raise ValueError("No Control Action Type Specified.")
 
-        accl, sv = self.action_type.act((vel, steer), self.state, self.params)
+        accl, sv = self.action_type.act(action=(vel, steer), state=self.state, params=self.params)
 
         if self.integrator is Integrator.RK4:
             # RK4 integration
@@ -550,7 +492,7 @@ class RaceCar(object):
 
 class Simulator(object):
     """
-    Simulator class, handles the interaction and update of all vehicles in the environment
+    Simulator class, handles the interaction and update o0000000f all vehicles in the environment
 
     Data Members:
         num_agents (int): number of agents in the environment
@@ -643,6 +585,7 @@ class Simulator(object):
         Returns:
             None
         """
+        self.params = params
         if agent_idx < 0:
             # update params for all
             for agent in self.agents:
