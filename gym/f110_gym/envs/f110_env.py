@@ -30,6 +30,7 @@ import gymnasium as gym
 from f110_gym.envs.action import CarActionEnum
 
 from f110_gym.envs.track import Track
+
 # base classes
 from f110_gym.envs.base_classes import Simulator, Integrator
 
@@ -64,10 +65,7 @@ class F110Env(gym.Env):
     Args:
         kwargs:
             seed (int, default=12345): seed for random state and reproducibility
-
-            map (str, default='vegas'): name of the map used for the environment. Currently, available environments include: 'berlin', 'vegas', 'skirk'. You could use a string of the absolute path to the yaml file of your custom map.
-
-            map_ext (str, default='png'): image extension of the map image file. For example 'png', 'pgm'
+            map (str, default='vegas'): name of the map used for the environment.
 
             params (dict, default={'mu': 1.0489, 'C_Sf':, 'C_Sr':, 'lf': 0.15875, 'lr': 0.17145, 'h': 0.074, 'm': 3.74, 'I': 0.04712, 's_min': -0.4189, 's_max': 0.4189, 'sv_min': -3.2, 'sv_max': 3.2, 'v_switch':7.319, 'a_max': 9.51, 'v_min':-5.0, 'v_max': 20.0, 'width': 0.31, 'length': 0.58}): dictionary of vehicle parameters.
             mu: surface friction coefficient
@@ -151,16 +149,24 @@ class F110Env(gym.Env):
         self.start_rot = np.eye(2)
 
         # initiate stuff
-        self.sim = Simulator(self.params, self.num_agents, self.seed, time_step=self.timestep,
-                             integrator=self.integrator)
+        self.sim = Simulator(
+            self.params,
+            self.num_agents,
+            self.seed,
+            time_step=self.timestep,
+            integrator=self.integrator,
+        )
         self.sim.set_map(self.map_name)
-        self.track = Track.from_track_name(self.map_name)  # load track in gym env for convenience
+        self.track = Track.from_track_name(
+            self.map_name
+        )  # load track in gym env for convenience
 
         # observation space
         # NOTE: keep original structure of observation space (dict). just define it as a dict space and define bounds
         scan_size, scan_range = (
             self.sim.agents[0].scan_simulator.num_beams,
-            self.sim.agents[0].scan_simulator.max_range + 0.1,  # add 10cm because scan is not capped,
+            self.sim.agents[0].scan_simulator.max_range
+            + 0.1,  # add 10cm because scan is not capped,
         )
         large_num = 1e30  # large number to avoid unbounded obs space (ie., low=-inf or high=inf)
         self.observation_space = gym.spaces.Dict(
@@ -263,7 +269,7 @@ class F110Env(gym.Env):
         """
         return {
             "seed": 12345,
-            #"map": os.path.dirname(os.path.abspath(__file__)) + "/maps/skirk",
+            "map": "Example",
             "params": {
                 "mu": 1.0489,
                 "C_Sf": 4.718,

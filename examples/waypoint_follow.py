@@ -199,15 +199,6 @@ class PurePursuitPlanner:
         """
         update waypoints being drawn by EnvRenderer
         """
-
-        # points = self.waypoints
-
-        points = np.vstack(
-            (
-                self.waypoints[:, self.conf.wpt_xind],
-                self.waypoints[:, self.conf.wpt_yind],
-            )
-        ).T
         points = self.waypoints[:, :2]
 
         scaled_points = 50.0 * points
@@ -310,8 +301,7 @@ def main():
         "tlad": 0.82461887897713965,
         "vgain": 1.375,
     }  # 0.90338203837889}
-    env = gym.make('f110_gym:f110-v0', map="Example", num_agents=1,
-                   timestep=0.01, integrator=Integrator.Euler, render_mode='human')
+    env = gym.make('f110_gym:f110-v0', config={"map": "Example", "num_agents": 1}, render_mode='human')
 
     planner = PurePursuitPlanner(track=env.track, wb=0.17145 + 0.15875)  # FlippyPlanner(speed=0.2, flip_every=1, steer=10)
 

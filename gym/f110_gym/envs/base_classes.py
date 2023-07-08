@@ -313,7 +313,9 @@ class RaceCar(object):
         if self.action_type.type is None:
             raise ValueError("No Control Action Type Specified.")
 
-        accl, sv = self.action_type.act(action=(vel, steer), state=self.state, params=self.params)
+        accl, sv = self.action_type.act(
+            action=(vel, steer), state=self.state, params=self.params
+        )
 
         if self.integrator is Integrator.RK4:
             # RK4 integration

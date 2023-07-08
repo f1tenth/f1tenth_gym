@@ -24,15 +24,17 @@ class Raceline:
 
     length: float
 
-    def __init__(self,
-                 xs: np.ndarray,
-                 ys: np.ndarray,
-                 velxs: np.ndarray,
-                 ss: np.ndarray = None,
-                 psis: np.ndarray = None,
-                 kappas: np.ndarray = None,
-                 accxs: np.ndarray = None,
-                 spline: CubicSpline2D = None):
+    def __init__(
+        self,
+        xs: np.ndarray,
+        ys: np.ndarray,
+        velxs: np.ndarray,
+        ss: np.ndarray = None,
+        psis: np.ndarray = None,
+        kappas: np.ndarray = None,
+        accxs: np.ndarray = None,
+        spline: CubicSpline2D = None,
+    ):
         assert xs.shape == ys.shape == velxs.shape, "inconsistent shapes for x, y, vel"
 
         self.n = xs.shape[0]
@@ -52,7 +54,9 @@ class Raceline:
         self.spline = spline if spline is not None else CubicSpline2D(xs, ys)
 
     @staticmethod
-    def from_centerline_file(filepath: pathlib.Path, delimiter: str = ',', fixed_speed: float = 1.0):
+    def from_centerline_file(
+        filepath: pathlib.Path, delimiter: str = ",", fixed_speed: float = 1.0
+    ):
         assert filepath.exists(), f"input filepath does not exist ({filepath})"
         waypoints = np.loadtxt(filepath, delimiter=delimiter)
         assert waypoints.shape[1] == 4, "expected waypoints as [x, y, w_left, w_right]"
@@ -84,15 +88,19 @@ class Raceline:
             ys=np.array(ys).astype(np.float32),
             psis=np.array(yaws).astype(np.float32),
             kappas=np.array(ks).astype(np.float32),
-            velxs=np.ones_like(ss).astype(np.float32),  # centerline does not have a speed profile, keep it constant at 1.0 m/s
+            velxs=np.ones_like(ss).astype(
+                np.float32
+            ),  # centerline does not have a speed profile, keep it constant at 1.0 m/s
             accxs=np.zeros_like(ss).astype(np.float32),  # constant acceleration
         )
 
     @staticmethod
-    def from_raceline_file(filepath: pathlib.Path, delimiter: str = ';'):
+    def from_raceline_file(filepath: pathlib.Path, delimiter: str = ";"):
         assert filepath.exists(), f"input filepath does not exist ({filepath})"
         waypoints = np.loadtxt(filepath, delimiter=delimiter).astype(np.float32)
-        assert waypoints.shape[1] == 7, "expected waypoints as [s, x, y, psi, k, vx, ax]"
+        assert (
+            waypoints.shape[1] == 7
+        ), "expected waypoints as [s, x, y, psi, k, vx, ax]"
         return Raceline(
             ss=waypoints[:, 0],
             xs=waypoints[:, 1],
@@ -128,7 +136,7 @@ def find_track_dir(track_name):
             if track_name == str(dir.stem).replace(" ", ""):
                 return dir
 
-    raise FileNotFoundError(f'no mapdir matching {track_name} in {[map_dir]}')
+    raise FileNotFoundError(f"no mapdir matching {track_name} in {[map_dir]}")
 
 
 @dataclass
@@ -141,13 +149,13 @@ class Track:
     raceline: Raceline
 
     def __init__(
-            self,
-            spec: TrackSpec,
-            filepath: str,
-            ext: str,
-            occupancy_map: np.ndarray,
-            centerline: Raceline = None,
-            raceline: Raceline = None,
+        self,
+        spec: TrackSpec,
+        filepath: str,
+        ext: str,
+        occupancy_map: np.ndarray,
+        centerline: Raceline = None,
+        raceline: Raceline = None,
     ):
         self.spec = spec
         self.filepath = filepath
@@ -161,26 +169,32 @@ class Track:
         try:
             track_dir = find_track_dir(track)
             # load track spec
-            with open(track_dir / f"{track}_map.yaml", 'r') as yaml_stream:
+            with open(track_dir / f"{track}_map.yaml", "r") as yaml_stream:
                 map_metadata = yaml.safe_load(yaml_stream)
                 track_spec = TrackSpec(name=track, **map_metadata)
 
             # load occupancy grid
             map_filename = pathlib.Path(track_spec.image)
-            image = Image.open(track_dir / str(map_filename)).transpose(Transpose.FLIP_TOP_BOTTOM)
+            image = Image.open(track_dir / str(map_filename)).transpose(
+                Transpose.FLIP_TOP_BOTTOM
+            )
             occupancy_map = np.array(image).astype(np.float32)
             occupancy_map[occupancy_map <= 128] = 0.0
             occupancy_map[occupancy_map > 128] = 255.0
 
             # if exists, load centerline
             if (track_dir / f"{track}_centerline.csv").exists():
-                centerline = Raceline.from_centerline_file(track_dir / f"{track}_centerline.csv")
+                centerline = Raceline.from_centerline_file(
+                    track_dir / f"{track}_centerline.csv"
+                )
             else:
                 centerline = None
 
             # if exists, load raceline
             if (track_dir / f"{track}_raceline.csv").exists():
-                raceline = Raceline.from_raceline_file(track_dir / f"{track}_raceline.csv")
+                raceline = Raceline.from_raceline_file(
+                    track_dir / f"{track}_raceline.csv"
+                )
             else:
                 raceline = centerline
 
