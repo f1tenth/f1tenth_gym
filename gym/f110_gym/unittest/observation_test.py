@@ -10,11 +10,13 @@ from f110_gym.envs import F110Env
 from f110_gym.envs.observation import FeaturesObservation, observation_factory
 import gymnasium as gym
 
+from f110_gym.envs.utils import deep_update
+
 
 class TestObservationInterface(unittest.TestCase):
 
     @staticmethod
-    def _make_env(**kwargs) -> F110Env:
+    def _make_env(config={}) -> F110Env:
         import f110_gym
 
         example_dir = pathlib.Path(__file__).parent.parent.parent.parent / 'examples'
@@ -24,15 +26,25 @@ class TestObservationInterface(unittest.TestCase):
         conf = Namespace(**conf_dict)
         conf.map_path = str(example_dir / conf.map_path)
 
-        env = gym.make('f110_gym:f110-v0', map=conf.map_path, map_ext=conf.map_ext,
-                       num_agents=3, **kwargs)
+        conf = {
+            "map": conf.map_path,
+            "map_ext": conf.map_ext,
+            "num_agents": 1,
+            "timestep": 0.01,
+            "integrator": "rk4",
+            "control_input": "speed",
+            "params": {"mu": 1.0},
+        }
+        conf = deep_update(conf, config)
+
+        env = gym.make('f110_gym:f110-v0', config=conf)
         return env
 
     def test_original_obs_space(self):
         """
         Check backward compatibility with the original observation space.
         """
-        env = self._make_env(observation_config={"type": "original"})
+        env = self._make_env(config={"observation_config": {"type": "original"}})
 
         obs, _ = env.reset()
 
@@ -57,7 +69,7 @@ class TestObservationInterface(unittest.TestCase):
         """
         features = ["pose_x", "pose_y", "pose_theta"]
 
-        env = self._make_env(observation_config={"type": "features", "features": features})
+        env = self._make_env(config={"observation_config": {"type": "features", "features": features}})
 
         # check the observation space is a dict
         self.assertTrue(isinstance(env.observation_space, gym.spaces.Dict))
@@ -97,7 +109,7 @@ class TestObservationInterface(unittest.TestCase):
         """
         Check the kinematic state observation space contains the correct features [x, y, theta, v].
         """
-        env = self._make_env(observation_config={"type": "kinematic_state"})
+        env = self._make_env(config={"observation_config": {"type": "kinematic_state"}})
 
         kinematic_features = ["pose_x", "pose_y", "pose_theta", "linear_vel_x", "delta"]
 
@@ -124,7 +136,7 @@ class TestObservationInterface(unittest.TestCase):
         """
         Check the dynamic state observation space contains the correct features.
         """
-        env = self._make_env(observation_config={"type": "dynamic_state"})
+        env = self._make_env(config={"observation_config": {"type": "dynamic_state"}})
 
         kinematic_features = ["pose_x", "pose_y", "pose_theta", "linear_vel_x", "ang_vel_z", "delta", "beta"]
 
@@ -170,5 +182,5 @@ class TestObservationInterface(unittest.TestCase):
         obs_type_ids = ["kinematic_state", "dynamic_state", "original"]
 
         for obs_type_id in obs_type_ids:
-            env = self._make_env(observation_config={"type": obs_type_id})
+            env = self._make_env(config={"observation_config": {"type": obs_type_id}})
             check_env(env.unwrapped, f"Observation {obs_type_id} breaks the gymnasium API")

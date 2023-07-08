@@ -31,7 +31,7 @@ from f110_gym.envs.action import CarActionEnum
 
 # base classes
 from f110_gym.envs.base_classes import Simulator, Integrator
-
+from f110_gym.envs.observation import observation_factory
 
 from f110_gym.envs.utils import deep_update
 
@@ -120,13 +120,7 @@ class F110Env(gym.Env):
         self.ego_idx = self.config["ego_idx"]
         self.integrator = Integrator.from_string(self.config["integrator"])
         self.action_type = CarActionEnum.from_string(self.config["control_input"])
-
-        # observation
-        try:
-            assert isinstance(kwargs['observation_config'], dict), "expected 'observation_config' to be a dictionary"
-            self.observation_config = kwargs['observation_config']
-        except:
-            self.observation_config = {"type": "original"}
+        self.observation_config = self.config["observation_config"]
 
         # radius to consider done
         self.start_thresh = 0.5  # 10cm
@@ -246,6 +240,7 @@ class F110Env(gym.Env):
             "ego_idx": 0,
             "integrator": "rk4",
             "control_input": "speed",
+            "observation_config": {"type": "original"},
         }
 
     def configure(self, config: dict) -> None:
