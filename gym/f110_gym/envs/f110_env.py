@@ -166,7 +166,9 @@ class F110Env(gym.Env):
         # observations
         self.agent_ids = [f"agent_{i}" for i in range(self.num_agents)]
 
-        assert "type" in self.observation_config, "observation_config must contain 'type' key"
+        assert (
+            "type" in self.observation_config
+        ), "observation_config must contain 'type' key"
         self.observation_type = observation_factory(env=self, **self.observation_config)
         self.observation_space = self.observation_type.space()
 
@@ -325,12 +327,12 @@ class F110Env(gym.Env):
         # rendering observation
         F110Env.current_obs = obs
         self.render_obs = {
-            'ego_idx': self.sim.ego_idx,
-            'poses_x': self.sim.agent_poses[:, 0],
-            'poses_y': self.sim.agent_poses[:, 1],
-            'poses_theta': self.sim.agent_poses[:, 2],
-            'lap_times': self.lap_times,
-            'lap_counts': self.lap_counts,
+            "ego_idx": self.sim.ego_idx,
+            "poses_x": self.sim.agent_poses[:, 0],
+            "poses_y": self.sim.agent_poses[:, 1],
+            "poses_theta": self.sim.agent_poses[:, 2],
+            "lap_times": self.lap_times,
+            "lap_counts": self.lap_counts,
         }
 
         # times
