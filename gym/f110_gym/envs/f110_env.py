@@ -269,7 +269,7 @@ class F110Env(gym.Env):
         """
         return {
             "seed": 12345,
-            "map": "Example",
+            "map": "Vegas",
             "params": {
                 "mu": 1.0489,
                 "C_Sf": 4.718,
