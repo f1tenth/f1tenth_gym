@@ -46,11 +46,18 @@ def nearest_point_on_trajectory(point, trajectory):
         temp = point - projections[i]
         dists[i] = np.sqrt(np.sum(temp * temp))
     min_dist_segment = np.argmin(dists)
-    return projections[min_dist_segment], dists[min_dist_segment], t[min_dist_segment], min_dist_segment
+    return (
+        projections[min_dist_segment],
+        dists[min_dist_segment],
+        t[min_dist_segment],
+        min_dist_segment,
+    )
 
 
 @njit(fastmath=False, cache=True)
-def first_point_on_trajectory_intersecting_circle(point, radius, trajectory, t=0.0, wrap=False):
+def first_point_on_trajectory_intersecting_circle(
+    point, radius, trajectory, t=0.0, wrap=False
+):
     """
     starts at beginning of trajectory, and find the first point one radius away from the given point along the trajectory.
 
@@ -67,11 +74,20 @@ def first_point_on_trajectory_intersecting_circle(point, radius, trajectory, t=0
     for i in range(start_i, trajectory.shape[0] - 1):
         start = trajectory[i, :]
         end = trajectory[i + 1, :] + 1e-6
-        V = np.ascontiguousarray(end - start).astype(np.float32)  # NOTE: specify type or numba complains
+        V = np.ascontiguousarray(end - start).astype(
+            np.float32
+        )  # NOTE: specify type or numba complains
 
         a = np.dot(V, V)
-        b = np.float32(2.0) * np.dot(V, start - point)  # NOTE: specify type or numba complains
-        c = np.dot(start, start) + np.dot(point, point) - np.float32(2.0) * np.dot(start, point) - radius * radius
+        b = np.float32(2.0) * np.dot(
+            V, start - point
+        )  # NOTE: specify type or numba complains
+        c = (
+            np.dot(start, start)
+            + np.dot(point, point)
+            - np.float32(2.0) * np.dot(start, point)
+            - radius * radius
+        )
         discriminant = b * b - 4 * a * c
 
         if discriminant < 0:
@@ -111,8 +127,15 @@ def first_point_on_trajectory_intersecting_circle(point, radius, trajectory, t=0
             V = (end - start).astype(np.float32)
 
             a = np.dot(V, V)
-            b = np.float32(2.0) * np.dot(V, start - point)  # NOTE: specify type or numba complains
-            c = np.dot(start, start) + np.dot(point, point) - np.float32(2.0) * np.dot(start, point) - radius * radius
+            b = np.float32(2.0) * np.dot(
+                V, start - point
+            )  # NOTE: specify type or numba complains
+            c = (
+                np.dot(start, start)
+                + np.dot(point, point)
+                - np.float32(2.0) * np.dot(start, point)
+                - radius * radius
+            )
             discriminant = b * b - 4 * a * c
 
             if discriminant < 0:
@@ -139,12 +162,14 @@ def get_actuation(pose_theta, lookahead_point, position, lookahead_distance, whe
     """
     Returns actuation
     """
-    waypoint_y = np.dot(np.array([np.sin(-pose_theta), np.cos(-pose_theta)], dtype=np.float32),
-                        lookahead_point[0:2] - position)
+    waypoint_y = np.dot(
+        np.array([np.sin(-pose_theta), np.cos(-pose_theta)], dtype=np.float32),
+        lookahead_point[0:2] - position,
+    )
     speed = lookahead_point[2]
     if np.abs(waypoint_y) < 1e-6:
-        return speed, 0.
-    radius = 1 / (2.0 * waypoint_y / lookahead_distance ** 2)
+        return speed, 0.0
+    radius = 1 / (2.0 * waypoint_y / lookahead_distance**2)
     steering_angle = np.arctan(wheelbase / radius)
     return speed, steering_angle
 
@@ -158,7 +183,7 @@ class PurePursuitPlanner:
         self.wheelbase = wb
         self.conf = conf
         self.load_waypoints(conf)
-        self.max_reacquire = 20.
+        self.max_reacquire = 20.0
 
         self.drawn_waypoints = []
 
@@ -167,8 +192,9 @@ class PurePursuitPlanner:
         loads waypoints
         """
         # NOTE: specify type or numba complains
-        self.waypoints = np.loadtxt(conf.wpt_path, delimiter=conf.wpt_delim,
-                                    skiprows=conf.wpt_rowskip).astype(np.float32)
+        self.waypoints = np.loadtxt(
+            conf.wpt_path, delimiter=conf.wpt_delim, skiprows=conf.wpt_rowskip
+        ).astype(np.float32)
 
     def render_waypoints(self, e):
         """
@@ -177,29 +203,49 @@ class PurePursuitPlanner:
 
         # points = self.waypoints
 
-        points = np.vstack((self.waypoints[:, self.conf.wpt_xind], self.waypoints[:, self.conf.wpt_yind])).T
+        points = np.vstack(
+            (
+                self.waypoints[:, self.conf.wpt_xind],
+                self.waypoints[:, self.conf.wpt_yind],
+            )
+        ).T
 
-        scaled_points = 50. * points
+        scaled_points = 50.0 * points
 
         for i in range(points.shape[0]):
             if len(self.drawn_waypoints) < points.shape[0]:
-                b = e.batch.add(1, GL_POINTS, None, ('v3f/stream', [scaled_points[i, 0], scaled_points[i, 1], 0.]),
-                                ('c3B/stream', [183, 193, 222]))
+                b = e.batch.add(
+                    1,
+                    GL_POINTS,
+                    None,
+                    ("v3f/stream", [scaled_points[i, 0], scaled_points[i, 1], 0.0]),
+                    ("c3B/stream", [183, 193, 222]),
+                )
                 self.drawn_waypoints.append(b)
             else:
-                self.drawn_waypoints[i].vertices = [scaled_points[i, 0], scaled_points[i, 1], 0.]
+                self.drawn_waypoints[i].vertices = [
+                    scaled_points[i, 0],
+                    scaled_points[i, 1],
+                    0.0,
+                ]
 
     def _get_current_waypoint(self, waypoints, lookahead_distance, position, theta):
         """
         gets the current waypoint to follow
         """
-        wpts = np.vstack((self.waypoints[:, self.conf.wpt_xind], self.waypoints[:, self.conf.wpt_yind])).T
+        wpts = np.vstack(
+            (
+                self.waypoints[:, self.conf.wpt_xind],
+                self.waypoints[:, self.conf.wpt_yind],
+            )
+        ).T
         lookahead_distance = np.float32(lookahead_distance)
         nearest_point, nearest_dist, t, i = nearest_point_on_trajectory(position, wpts)
         if nearest_dist < lookahead_distance:
             t1 = np.float32(i + t)
-            lookahead_point, i2, t2 = first_point_on_trajectory_intersecting_circle(position, lookahead_distance, wpts,
-                                                                                    t1, wrap=True)
+            lookahead_point, i2, t2 = first_point_on_trajectory_intersecting_circle(
+                position, lookahead_distance, wpts, t1, wrap=True
+            )
             if i2 == None:
                 return None
             current_waypoint = np.empty((3,), dtype=np.float32)
@@ -210,7 +256,9 @@ class PurePursuitPlanner:
             return current_waypoint
         elif nearest_dist < self.max_reacquire:
             # NOTE: specify type or numba complains
-            return np.append(wpts[i, :], waypoints[i, self.conf.wpt_vind]).astype(np.float32)
+            return np.append(wpts[i, :], waypoints[i, self.conf.wpt_vind]).astype(
+                np.float32
+            )
         else:
             return None
 
@@ -219,12 +267,16 @@ class PurePursuitPlanner:
         gives actuation given observation
         """
         position = np.array([pose_x, pose_y])
-        lookahead_point = self._get_current_waypoint(self.waypoints, lookahead_distance, position, pose_theta)
+        lookahead_point = self._get_current_waypoint(
+            self.waypoints, lookahead_distance, position, pose_theta
+        )
 
         if lookahead_point is None:
             return 4.0, 0.0
 
-        speed, steering_angle = get_actuation(pose_theta, lookahead_point, position, lookahead_distance, self.wheelbase)
+        speed, steering_angle = get_actuation(
+            pose_theta, lookahead_point, position, lookahead_distance, self.wheelbase
+        )
         speed = vgain * speed
 
         return speed, steering_angle
@@ -257,14 +309,20 @@ def main():
     main entry point
     """
 
-    work = {'mass': 3.463388126201571, 'lf': 0.15597534362552312, 'tlad': 0.82461887897713965,
-            'vgain': 1.375}  # 0.90338203837889}
+    work = {
+        "mass": 3.463388126201571,
+        "lf": 0.15597534362552312,
+        "tlad": 0.82461887897713965,
+        "vgain": 1.375,
+    }  # 0.90338203837889}
 
-    with open('config_example_map.yaml') as file:
+    with open("config_example_map.yaml") as file:
         conf_dict = yaml.load(file, Loader=yaml.FullLoader)
     conf = Namespace(**conf_dict)
 
-    planner = PurePursuitPlanner(conf, (0.17145 + 0.15875))  # FlippyPlanner(speed=0.2, flip_every=1, steer=10)
+    planner = PurePursuitPlanner(
+        conf, (0.17145 + 0.15875)
+    )  # FlippyPlanner(speed=0.2, flip_every=1, steer=10)
 
     def render_callback(env_renderer):
         # custom extra drawing function
@@ -284,9 +342,26 @@ def main():
 
         planner.render_waypoints(env_renderer)
 
-    env = gym.make('f110_gym:f110-v0', map=conf.map_path, map_ext=conf.map_ext,
-                   num_agents=1, timestep=0.01, integrator=Integrator.RK4,
-                   render_mode='human')
+    # old API
+    # env = gym.make('f110_gym:f110-v0', map=conf.map_path, map_ext=conf.map_ext,
+    #                num_agents=1, timestep=0.01, integrator=Integrator.RK4,
+    #                render_mode='human')
+
+    # new API
+    env = gym.make(
+        "f110_gym:f110-v0",
+        config={
+            "map": conf.map_path,
+            "map_ext": conf.map_ext,
+            "num_agents": 1,
+            "timestep": 0.01,
+            "integrator": "rk4",
+            "control_input": "speed",
+            "observation_config": {"type": "kinematic_state"},
+            "params": {"mu": 1.0},
+        },
+        render_mode="human",
+    )
     env.add_render_callback(render_callback)
 
     poses = np.array([[conf.sx, conf.sy, conf.stheta]])
@@ -298,14 +373,20 @@ def main():
     start = time.time()
 
     while not done:
-        speed, steer = planner.plan(obs['poses_x'][0], obs['poses_y'][0], obs['poses_theta'][0], work['tlad'],
-                                    work['vgain'])
+        agent_id = env.agent_ids[0]
+        speed, steer = planner.plan(
+            obs[agent_id]["pose_x"],
+            obs[agent_id]["pose_y"],
+            obs[agent_id]["pose_theta"],
+            work["tlad"],
+            work["vgain"],
+        )
         obs, step_reward, done, truncated, info = env.step(np.array([[steer, speed]]))
         laptime += step_reward
         env.render()
 
-    print('Sim elapsed time:', laptime, 'Real elapsed time:', time.time() - start)
+    print("Sim elapsed time:", laptime, "Real elapsed time:", time.time() - start)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
