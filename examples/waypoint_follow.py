@@ -323,6 +323,26 @@ def main():
 
         planner.render_waypoints(env_renderer)
 
+    # old API
+    # env = gym.make('f110_gym:f110-v0', map=conf.map_path, map_ext=conf.map_ext,
+    #                num_agents=1, timestep=0.01, integrator=Integrator.RK4,
+    #                render_mode='human')
+
+    # new API
+    env = gym.make(
+        "f110_gym:f110-v0",
+        config={
+            "map": conf.map_path,
+            "map_ext": conf.map_ext,
+            "num_agents": 1,
+            "timestep": 0.01,
+            "integrator": "rk4",
+            "control_input": "speed",
+            "observation_config": {"type": "kinematic_state"},
+            "params": {"mu": 1.0},
+        },
+        render_mode="human",
+    )
     env.add_render_callback(render_callback)
 
     poses = np.array([[0.7, 0.0, 1.37]])
@@ -334,10 +354,11 @@ def main():
     start = time.time()
 
     while not done:
+        agent_id = env.agent_ids[0]
         speed, steer = planner.plan(
-            obs["poses_x"][0],
-            obs["poses_y"][0],
-            obs["poses_theta"][0],
+            obs[agent_id]["pose_x"],
+            obs[agent_id]["pose_y"],
+            obs[agent_id]["pose_theta"],
             work["tlad"],
             work["vgain"],
         )

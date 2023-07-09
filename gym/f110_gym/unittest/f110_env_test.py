@@ -73,8 +73,10 @@ class TestEnvInterface(unittest.TestCase):
                 self.assertEqual(base_val, extended_val, f"{par} should be the same")
 
         # finally, run a simulation and check that the results are the same
-        obs0, _ = base_env.reset(options={"poses": np.array([[0.0, 0.0, np.pi/2]])})
-        obs1, _ = extended_env.reset(options={"poses": np.array([[0.0, 0.0, np.pi/2]])})
+        obs0, _ = base_env.reset(options={"poses": np.array([[0.0, 0.0, np.pi / 2]])})
+        obs1, _ = extended_env.reset(
+            options={"poses": np.array([[0.0, 0.0, np.pi / 2]])}
+        )
         done0 = done1 = False
         t = 0
 
