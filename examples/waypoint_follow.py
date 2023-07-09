@@ -181,8 +181,10 @@ class PurePursuitPlanner:
 
     def __init__(self, track, wb):
         self.wheelbase = wb
-        self.waypoints = np.stack([track.raceline.xs, track.raceline.ys, track.raceline.vxs]).T
-        self.max_reacquire = 20.
+        self.waypoints = np.stack(
+            [track.raceline.xs, track.raceline.ys, track.raceline.vxs]
+        ).T
+        self.max_reacquire = 20.0
 
         self.drawn_waypoints = []
 
@@ -301,9 +303,20 @@ def main():
         "tlad": 0.82461887897713965,
         "vgain": 1.375,
     }  # 0.90338203837889}
-    env = gym.make('f110_gym:f110-v0', config={"map": "Example", "num_agents": 1}, render_mode='human')
 
-    planner = PurePursuitPlanner(track=env.track, wb=0.17145 + 0.15875)  # FlippyPlanner(speed=0.2, flip_every=1, steer=10)
+    env = gym.make(
+        "f110_gym:f110-v0",
+        config={
+            "map": "Example",
+            "num_agents": 1,
+            "observation_config": {"type": "kinematic_state"},
+        },
+        render_mode="human",
+    )
+
+    planner = PurePursuitPlanner(
+        track=env.track, wb=0.17145 + 0.15875
+    )  # FlippyPlanner(speed=0.2, flip_every=1, steer=10)
 
     def render_callback(env_renderer):
         # custom extra drawing function
@@ -323,26 +336,6 @@ def main():
 
         planner.render_waypoints(env_renderer)
 
-    # old API
-    # env = gym.make('f110_gym:f110-v0', map=conf.map_path, map_ext=conf.map_ext,
-    #                num_agents=1, timestep=0.01, integrator=Integrator.RK4,
-    #                render_mode='human')
-
-    # new API
-    env = gym.make(
-        "f110_gym:f110-v0",
-        config={
-            "map": conf.map_path,
-            "map_ext": conf.map_ext,
-            "num_agents": 1,
-            "timestep": 0.01,
-            "integrator": "rk4",
-            "control_input": "speed",
-            "observation_config": {"type": "kinematic_state"},
-            "params": {"mu": 1.0},
-        },
-        render_mode="human",
-    )
     env.add_render_callback(render_callback)
 
     poses = np.array([[0.7, 0.0, 1.37]])

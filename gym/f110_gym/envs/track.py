@@ -165,13 +165,25 @@ class Track:
         self.raceline = raceline
 
     @staticmethod
+    def load_spec(track: str, filespec: str):
+        """
+        Load track specification from yaml file.
+
+        Args:
+
+        """
+        with open(filespec, "r") as yaml_stream:
+            map_metadata = yaml.safe_load(yaml_stream)
+            track_spec = TrackSpec(name=track, **map_metadata)
+        return track_spec
+
+    @staticmethod
     def from_track_name(track: str):
         try:
             track_dir = find_track_dir(track)
-            # load track spec
-            with open(track_dir / f"{track}_map.yaml", "r") as yaml_stream:
-                map_metadata = yaml.safe_load(yaml_stream)
-                track_spec = TrackSpec(name=track, **map_metadata)
+            track_spec = Track.load_spec(
+                track=track, filespec=str(track_dir / f"{track_dir.stem}_map.yaml")
+            )
 
             # load occupancy grid
             map_filename = pathlib.Path(track_spec.image)

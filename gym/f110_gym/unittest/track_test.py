@@ -1,8 +1,9 @@
+import pathlib
 import unittest
 
 import numpy as np
 
-from f110_gym.envs.track import Track, find_track_dir
+from f110_gym.envs.track import Track, find_track_dir, Raceline
 
 
 class TestTrack(unittest.TestCase):
@@ -42,3 +43,55 @@ class TestTrack(unittest.TestCase):
         track = Track.from_track_name("Vegas")
         self.assertEqual(track.raceline, None)
         self.assertEqual(track.centerline, None)
+
+    def test_map_dir_structure(self):
+        """
+        Check that the map dir structure is correct:
+        - maps/
+            - Trackname/
+                - Trackname_map.*               # map image
+                - Trackname_map.yaml            # map specification
+                - [Trackname_raceline.csv]      # raceline (optional)
+                - [Trackname_centerline.csv]    # centerline (optional)
+        """
+        mapdir = pathlib.Path(__file__).parent.parent / "maps"
+        for trackdir in mapdir.iterdir():
+            if trackdir.is_file():
+                continue
+
+            # check subdir is capitalized (at least first letter is capitalized)
+            trackdirname = trackdir.stem
+            self.assertTrue(
+                trackdirname[0].isupper(), f"trackdir {trackdirname} is not capitalized"
+            )
+
+            # check map spec file exists
+            file_spec = trackdir / f"{trackdirname}_map.yaml"
+            self.assertTrue(
+                file_spec.exists(),
+                f"map spec file {file_spec} does not exist in {trackdir}",
+            )
+
+            # read map image file from spec
+            map_spec = Track.load_spec(track=str(trackdir), filespec=str(file_spec))
+            file_image = trackdir / map_spec.image
+
+            # check map image file exists
+            self.assertTrue(
+                file_image.exists(),
+                f"map image file {file_image} does not exist in {trackdir}",
+            )
+
+            # check raceline and centerline files
+            file_raceline = trackdir / f"{trackdir.stem}_raceline.csv"
+            file_centerline = trackdir / f"{trackdir.stem}_centerline.csv"
+
+            if file_raceline.exists():
+                # try to load raceline files
+                # it will raise an assertion error if the file format are not valid
+                raceline = Raceline.from_raceline_file(file_raceline)
+
+            if file_centerline.exists():
+                # try to load raceline files
+                # it will raise an assertion error if the file format are not valid
+                centerline = Raceline.from_raceline_file(file_centerline)
