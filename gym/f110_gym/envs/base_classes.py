@@ -539,26 +539,19 @@ class Simulator(object):
 
         # initializing agents
         for i in range(self.num_agents):
-            if i == ego_idx:
-                ego_car = RaceCar(
-                    params,
-                    self.seed,
-                    is_ego=True,
-                    time_step=self.time_step,
-                    integrator=integrator,
-                    action_type=action_type,
-                )
-                self.agents.append(ego_car)
-            else:
-                agent = RaceCar(
-                    params,
-                    self.seed,
-                    is_ego=False,
-                    time_step=self.time_step,
-                    integrator=integrator,
-                    action_type=action_type,
-                )
-                self.agents.append(agent)
+            car = RaceCar(
+                params,
+                self.seed,
+                is_ego=bool(i==ego_idx),
+                time_step=self.time_step,
+                integrator=integrator,
+                action_type=action_type,
+            )
+            self.agents.append(car)
+
+        # initialize agents scan, to be accessed from observation types
+        num_beams = self.agents[0].scan_simulator.num_beams
+        self.agent_scans = np.empty((self.num_agents, num_beams))
 
     def set_map(self, map_path, map_ext):
         """
@@ -634,7 +627,7 @@ class Simulator(object):
         for i, agent in enumerate(self.agents):
             # update each agent's pose
             current_scan = agent.update_pose(control_inputs[i, 0], control_inputs[i, 1])
-            agent_scans.append(current_scan)
+            self.agent_scans[i, :] = current_scan
 
             # update sim's information of agent poses
             self.agent_poses[i, :] = np.append(agent.state[0:2], agent.state[4])
@@ -650,36 +643,11 @@ class Simulator(object):
             agent.update_opp_poses(opp_poses)
 
             # update each agent's current scan based on other agents
-            agent.update_scan(agent_scans, i)
+            agent.update_scan(self.agent_scans, i)
 
             # update agent collision with environment
             if agent.in_collision:
                 self.collisions[i] = 1.0
-
-        # fill in observations
-        # state is [x, y, steer_angle, vel, yaw_angle, yaw_rate, slip_angle]
-        # collision_angles is removed from observations
-        observations = {
-            "ego_idx": self.ego_idx,
-            "scans": [],
-            "poses_x": [],
-            "poses_y": [],
-            "poses_theta": [],
-            "linear_vels_x": [],
-            "linear_vels_y": [],
-            "ang_vels_z": [],
-            "collisions": self.collisions,
-        }
-        for i, agent in enumerate(self.agents):
-            observations["scans"].append(agent_scans[i])
-            observations["poses_x"].append(agent.state[0])
-            observations["poses_y"].append(agent.state[1])
-            observations["poses_theta"].append(agent.state[4])
-            observations["linear_vels_x"].append(agent.state[3])
-            observations["linear_vels_y"].append(0.0)
-            observations["ang_vels_z"].append(agent.state[5])
-
-        return observations
 
     def reset(self, poses):
         """

@@ -357,6 +357,7 @@ def main():
             "timestep": 0.01,
             "integrator": "rk4",
             "control_input": "speed",
+            "observation_config": {"type": "kinematic_state"},
             "params": {"mu": 1.0},
         },
         render_mode="human",
@@ -372,10 +373,11 @@ def main():
     start = time.time()
 
     while not done:
+        agent_id = env.agent_ids[0]
         speed, steer = planner.plan(
-            obs["poses_x"][0],
-            obs["poses_y"][0],
-            obs["poses_theta"][0],
+            obs[agent_id]["pose_x"],
+            obs[agent_id]["pose_y"],
+            obs[agent_id]["pose_theta"],
             work["tlad"],
             work["vgain"],
         )
