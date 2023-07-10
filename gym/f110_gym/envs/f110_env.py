@@ -27,10 +27,11 @@ Author: Hongrui Zheng
 # gym imports
 import gymnasium as gym
 
+from f110_gym.envs import IntegratorType
 from f110_gym.envs.action import CarActionEnum
 
 # base classes
-from f110_gym.envs.base_classes import Simulator, Integrator
+from f110_gym.envs.base_classes import Simulator, DynamicModel
 from f110_gym.envs.observation import observation_factory
 
 from f110_gym.envs.utils import deep_update
@@ -118,7 +119,8 @@ class F110Env(gym.Env):
         self.num_agents = self.config["num_agents"]
         self.timestep = self.config["timestep"]
         self.ego_idx = self.config["ego_idx"]
-        self.integrator = Integrator.from_string(self.config["integrator"])
+        self.integrator = IntegratorType.from_string(self.config["integrator"])
+        self.model = DynamicModel.from_string(self.config["model"])
         self.action_type = CarActionEnum.from_string(self.config["control_input"])
         self.observation_config = self.config["observation_config"]
 
@@ -159,6 +161,7 @@ class F110Env(gym.Env):
             self.seed,
             time_step=self.timestep,
             integrator=self.integrator,
+            model=self.model,
             action_type=self.action_type,
         )
         self.sim.set_map(self.map_path, self.map_ext)
@@ -241,6 +244,7 @@ class F110Env(gym.Env):
             "timestep": 0.01,
             "ego_idx": 0,
             "integrator": "rk4",
+            "model": "st",
             "control_input": "speed",
             "observation_config": {"type": "original"},
         }
@@ -340,7 +344,7 @@ class F110Env(gym.Env):
         self.current_time = self.current_time + self.timestep
 
         # update data member
-        self._update_state()  # note: remove dependency on observation because it could contains different features
+        self._update_state()
 
         # check done
         done, toggle_list = self._check_done()
