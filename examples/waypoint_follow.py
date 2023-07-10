@@ -306,7 +306,12 @@ def main():
         config={
             "map": "Spielberg",
             "num_agents": 1,
+            "timestep": 0.01,
+            "integrator": "rk4",
+            "control_input": "speed",
+            "model": "st",
             "observation_config": {"type": "kinematic_state"},
+            "params": {"mu": 1.0},
         },
         render_mode="human",
     )
