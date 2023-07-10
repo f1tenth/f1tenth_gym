@@ -15,6 +15,7 @@ setup(name='f110_gym',
           'pyyaml>=5.3.1',
           'pyglet<1.5',
           'pyopengl',
-          'yamldataclassconfig'
+          'yamldataclassconfig',
+          'requests'
       ]
       )

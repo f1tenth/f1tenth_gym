@@ -1,15 +1,38 @@
+import os
 import pathlib
+import shutil
+import tarfile
 from dataclasses import dataclass
 from typing import Tuple
 
 import numpy as np
+import requests
 import yaml
+from f110_gym.envs.cubic_spline import CubicSpline2D
 from PIL import Image
 from PIL.Image import Transpose
 from yamldataclassconfig.config import YamlDataClassConfig
 
-from f110_gym.envs.cubic_spline import CubicSpline2D
+if not os.path.exists(pathlib.Path(__file__).parent.parent / "maps/convert.py"):
+    print('--- Downloading Race Tracks ---')
+    tracks_url = "http://api.f1tenth.org/f1tenth_racetracks-v1.0.0.tar.gz"
+    tracks_r = requests.get(url=tracks_url, allow_redirects=True)
+    open("/tmp/tracks.tar.gz", 'wb').write(tracks_r.content)
 
+    # extract
+    print('--- Extracting Race Tracks ---')
+    tracks_file = tarfile.open("/tmp/tracks.tar.gz")
+    tracks_file.extractall("/tmp/tracks/")
+    tracks_file.close()
+
+    # move
+    map_dir = pathlib.Path(__file__).parent.parent / "maps"
+
+    for fn in os.listdir("/tmp/tracks/f1tenth_racetracks-1.0.0/"):
+        src = "/tmp/tracks/f1tenth_racetracks-1.0.0/" + fn
+        dst = map_dir / fn
+        if fn  not in ["README.md", "LICENSE", ".gitignore", ".git"]:
+            shutil.move(src, dst)
 
 class Raceline:
     n: int

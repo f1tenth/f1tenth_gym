@@ -244,9 +244,7 @@ class PurePursuitPlanner:
             return current_waypoint
         elif nearest_dist < self.max_reacquire:
             # NOTE: specify type or numba complains
-            return np.append(wpts[i, :], waypoints[i, self.conf.wpt_vind]).astype(
-                np.float32
-            )
+            return wpts[i, :]
         else:
             return None
 
@@ -301,13 +299,13 @@ def main():
         "mass": 3.463388126201571,
         "lf": 0.15597534362552312,
         "tlad": 0.82461887897713965,
-        "vgain": 1.375,
+        "vgain": 1,
     }  # 0.90338203837889}
 
     env = gym.make(
         "f110_gym:f110-v0",
         config={
-            "map": "Example",
+            "map": "Spielberg",
             "num_agents": 1,
             "observation_config": {"type": "kinematic_state"},
         },
@@ -338,7 +336,7 @@ def main():
 
     env.add_render_callback(render_callback)
 
-    poses = np.array([[0.7, 0.0, 1.37]])
+    poses = np.array([[env.track.raceline.xs[0], env.track.raceline.ys[0], env.track.raceline.yaws[0]]])
     obs, info = env.reset(options={"poses": poses})
     done = False
     env.render()
