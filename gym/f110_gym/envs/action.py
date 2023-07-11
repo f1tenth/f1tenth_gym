@@ -19,6 +19,7 @@ class CarActionEnum(Enum):
         else:
             raise ValueError(f"Unknown action type {action}")
 
+
 class CarAction:
     def __init__(self) -> None:
         self._action_type = None
@@ -37,9 +38,7 @@ class AcclAction(CarAction):
         super().__init__()
         self._action_type = "accl"
 
-    def act(
-        self, action: Tuple[float, float], state, params
-    ) -> Tuple[float, float]:
+    def act(self, action: Tuple[float, float], state, params) -> Tuple[float, float]:
         return action
 
 
@@ -48,7 +47,9 @@ class SpeedAction(CarAction):
         super().__init__()
         self._action_type = "speed"
 
-    def act(self, action: Tuple[float, float], state: np.ndarray, params: Dict) -> Tuple[float, float]:
+    def act(
+        self, action: Tuple[float, float], state: np.ndarray, params: Dict
+    ) -> Tuple[float, float]:
         accl, sv = pid(
             action[0],
             action[1],

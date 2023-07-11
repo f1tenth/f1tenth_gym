@@ -178,10 +178,11 @@ class PurePursuitPlanner:
     Example Planner
     """
 
-    def __init__(self, conf, wb):
+    def __init__(self, track, wb):
         self.wheelbase = wb
-        self.conf = conf
-        self.load_waypoints(conf)
+        self.waypoints = np.stack(
+            [track.raceline.xs, track.raceline.ys, track.raceline.vxs]
+        ).T
         self.max_reacquire = 20.0
 
         self.drawn_waypoints = []
@@ -199,15 +200,7 @@ class PurePursuitPlanner:
         """
         update waypoints being drawn by EnvRenderer
         """
-
-        # points = self.waypoints
-
-        points = np.vstack(
-            (
-                self.waypoints[:, self.conf.wpt_xind],
-                self.waypoints[:, self.conf.wpt_yind],
-            )
-        ).T
+        points = self.waypoints[:, :2]
 
         scaled_points = 50.0 * points
 
@@ -232,12 +225,7 @@ class PurePursuitPlanner:
         """
         gets the current waypoint to follow
         """
-        wpts = np.vstack(
-            (
-                self.waypoints[:, self.conf.wpt_xind],
-                self.waypoints[:, self.conf.wpt_yind],
-            )
-        ).T
+        wpts = waypoints[:, :2]
         lookahead_distance = np.float32(lookahead_distance)
         nearest_point, nearest_dist, t, i = nearest_point_on_trajectory(position, wpts)
         if nearest_dist < lookahead_distance:
@@ -251,13 +239,11 @@ class PurePursuitPlanner:
             # x, y
             current_waypoint[0:2] = wpts[i2, :]
             # speed
-            current_waypoint[2] = waypoints[i, self.conf.wpt_vind]
+            current_waypoint[2] = waypoints[i, -1]
             return current_waypoint
         elif nearest_dist < self.max_reacquire:
             # NOTE: specify type or numba complains
-            return np.append(wpts[i, :], waypoints[i, self.conf.wpt_vind]).astype(
-                np.float32
-            )
+            return wpts[i, :]
         else:
             return None
 
@@ -312,15 +298,26 @@ def main():
         "mass": 3.463388126201571,
         "lf": 0.15597534362552312,
         "tlad": 0.82461887897713965,
-        "vgain": 1.375,
+        "vgain": 1,
     }  # 0.90338203837889}
 
-    with open("config_example_map.yaml") as file:
-        conf_dict = yaml.load(file, Loader=yaml.FullLoader)
-    conf = Namespace(**conf_dict)
+    env = gym.make(
+        "f110_gym:f110-v0",
+        config={
+            "map": "Spielberg",
+            "num_agents": 1,
+            "timestep": 0.01,
+            "integrator": "rk4",
+            "control_input": "speed",
+            "model": "st",
+            "observation_config": {"type": "kinematic_state"},
+            "params": {"mu": 1.0},
+        },
+        render_mode="human",
+    )
 
     planner = PurePursuitPlanner(
-        conf, (0.17145 + 0.15875)
+        track=env.track, wb=0.17145 + 0.15875
     )  # FlippyPlanner(speed=0.2, flip_every=1, steer=10)
 
     def render_callback(env_renderer):
@@ -341,29 +338,9 @@ def main():
 
         planner.render_waypoints(env_renderer)
 
-    # old API
-    # env = gym.make('f110_gym:f110-v0', map=conf.map_path, map_ext=conf.map_ext,
-    #                num_agents=1, timestep=0.01, integrator=Integrator.RK4,
-    #                render_mode='human')
-
-    # new API
-    env = gym.make(
-        "f110_gym:f110-v0",
-        config={
-            "map": conf.map_path,
-            "map_ext": conf.map_ext,
-            "num_agents": 1,
-            "timestep": 0.01,
-            "integrator": "rk4",
-            "control_input": "speed",
-            "observation_config": {"type": "kinematic_state"},
-            "params": {"mu": 1.0},
-        },
-        render_mode="human",
-    )
     env.add_render_callback(render_callback)
 
-    poses = np.array([[conf.sx, conf.sy, conf.stheta]])
+    poses = np.array([[env.track.raceline.xs[0], env.track.raceline.ys[0], env.track.raceline.yaws[0]]])
     obs, info = env.reset(options={"poses": poses})
     done = False
     env.render()

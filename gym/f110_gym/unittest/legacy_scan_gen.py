@@ -57,7 +57,7 @@ test_poses = np.zeros((num_test, 3))
 test_poses[:, 2] = np.linspace(-1., 1., num=num_test)
 
 # map 1: vegas
-map_path = '../../../maps/vegas.yaml'
+map_path = '../../../maps/Vegas_map.yaml'
 map_ext = '.png'
 racecar_env = gym.make('f110_gym:f110-v0')
 racecar_env.init_map(map_path, map_ext, False, False)
@@ -71,7 +71,7 @@ for i in range(test_poses.shape[0]):
     vegas_scan[i,:] = obs['scans'][0]
 
 # map 2: berlin
-map_path = '../../../maps/berlin.yaml'
+map_path = '../../../maps/Berlin_map.yaml'
 map_ext = '.png'
 racecar_env = gym.make('f110_gym:f110-v0')
 racecar_env.init_map(map_path, map_ext, False, False)
@@ -85,7 +85,7 @@ for i in range(test_poses.shape[0]):
     berlin_scan[i,:] = obs['scans'][0]
 
 # map 3: skirk
-map_path = '../../../maps/skirk.yaml'
+map_path = '../../../maps/Skirk_map.yaml'
 map_ext = '.png'
 racecar_env = gym.make('f110_gym:f110-v0')
 racecar_env.init_map(map_path, map_ext, False, False)

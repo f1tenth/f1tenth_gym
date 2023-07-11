@@ -177,15 +177,14 @@ class RaceCar(object):
         """
         self.params = params
 
-    def set_map(self, map_path, map_ext):
+    def set_map(self, map_name: str):
         """
         Sets the map for scan simulator
 
         Args:
-            map_path (str): absolute path to the map yaml file
-            map_ext (str): extension of the map image file
+            map_name (str): name of the map
         """
-        RaceCar.scan_simulator.set_map(map_path, map_ext)
+        RaceCar.scan_simulator.set_map(map_name)
 
     def reset(self, pose):
         """
@@ -301,7 +300,9 @@ class RaceCar(object):
         accl, sv = self.action_type.act(
             action=(vel, steer), state=self.state, params=self.params
         )
+
         u_np = np.array([sv, accl])
+
 
         f_dynamics = self.model.f_dynamics
         self.state = self.integrator.integrate(
@@ -429,19 +430,18 @@ class Simulator(object):
         num_beams = self.agents[0].scan_simulator.num_beams
         self.agent_scans = np.empty((self.num_agents, num_beams))
 
-    def set_map(self, map_path, map_ext):
+    def set_map(self, map_name):
         """
         Sets the map of the environment and sets the map for scan simulator of each agent
 
         Args:
-            map_path (str): path to the map yaml file
-            map_ext (str): extension for the map image file
+            map_name (str): name of the map
 
         Returns:
             None
         """
         for agent in self.agents:
-            agent.set_map(map_path, map_ext)
+            agent.set_map(map_name)
 
     def update_params(self, params, agent_idx=-1):
         """

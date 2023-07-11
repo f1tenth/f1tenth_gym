@@ -36,6 +36,7 @@ import numpy as np
 from PIL import Image
 import yaml
 
+from f110_gym.envs.track import Track
 # helpers
 from f110_gym.envs.collision_models import get_vertices
 
@@ -108,7 +109,7 @@ class EnvRenderer(pyglet.window.Window):
 
         self.fps_display = pyglet.window.FPSDisplay(self)
 
-    def update_map(self, map_path, map_ext):
+    def update_map(self, track: Track):
         """
         Update the map being drawn by the renderer. Converts image to a list of 3D points representing each obstacle pixel in the map.
 
@@ -119,22 +120,15 @@ class EnvRenderer(pyglet.window.Window):
         Returns:
             None
         """
-
-        # load map metadata
-        with open(map_path + '.yaml', 'r') as yaml_stream:
-            try:
-                map_metadata = yaml.safe_load(yaml_stream)
-                map_resolution = map_metadata['resolution']
-                origin = map_metadata['origin']
-                origin_x = origin[0]
-                origin_y = origin[1]
-            except yaml.YAMLError as ex:
-                print(ex)
-
-        # load map image
-        map_img = np.array(Image.open(map_path + map_ext).transpose(Image.FLIP_TOP_BOTTOM)).astype(np.float64)
+        # occupancy map
+        map_img = track.occupancy_map
         map_height = map_img.shape[0]
         map_width = map_img.shape[1]
+
+        # map spec
+        map_resolution = track.spec.resolution
+        origin = track.spec.origin
+        origin_x, origin_y, _ = origin
 
         # convert map pixels to coordinates
         range_x = np.arange(map_width)

@@ -30,6 +30,8 @@ import gymnasium as gym
 from f110_gym.envs import IntegratorType
 from f110_gym.envs.action import CarActionEnum
 
+from f110_gym.envs.track import Track
+
 # base classes
 from f110_gym.envs.base_classes import Simulator, DynamicModel
 from f110_gym.envs.observation import observation_factory
@@ -64,10 +66,7 @@ class F110Env(gym.Env):
     Args:
         kwargs:
             seed (int, default=12345): seed for random state and reproducibility
-
-            map (str, default='vegas'): name of the map used for the environment. Currently, available environments include: 'berlin', 'vegas', 'skirk'. You could use a string of the absolute path to the yaml file of your custom map.
-
-            map_ext (str, default='png'): image extension of the map image file. For example 'png', 'pgm'
+            map (str, default='vegas'): name of the map used for the environment.
 
             params (dict, default={'mu': 1.0489, 'C_Sf':, 'C_Sr':, 'lf': 0.15875, 'lr': 0.17145, 'h': 0.074, 'm': 3.74, 'I': 0.04712, 's_min': -0.4189, 's_max': 0.4189, 'sv_min': -3.2, 'sv_max': 3.2, 'v_switch':7.319, 'a_max': 9.51, 'v_min':-5.0, 'v_max': 20.0, 'width': 0.31, 'length': 0.58}): dictionary of vehicle parameters.
             mu: surface friction coefficient
@@ -113,8 +112,6 @@ class F110Env(gym.Env):
 
         self.seed = self.config["seed"]
         self.map_name = self.config["map"]
-        self.map_path = self.map_name + ".yaml"
-        self.map_ext = self.config["map_ext"]
         self.params = self.config["params"]
         self.num_agents = self.config["num_agents"]
         self.timestep = self.config["timestep"]
@@ -164,7 +161,10 @@ class F110Env(gym.Env):
             model=self.model,
             action_type=self.action_type,
         )
-        self.sim.set_map(self.map_path, self.map_ext)
+        self.sim.set_map(self.map_name)
+        self.track = Track.from_track_name(
+            self.map_name
+        )  # load track in gym env for convenience
 
         # observations
         self.agent_ids = [f"agent_{i}" for i in range(self.num_agents)]
@@ -218,8 +218,7 @@ class F110Env(gym.Env):
         """
         return {
             "seed": 12345,
-            "map": os.path.dirname(os.path.abspath(__file__)) + "/maps/skirk",
-            "map_ext": ".png",
+            "map": "Vegas",
             "params": {
                 "mu": 1.0489,
                 "C_Sf": 4.718,
@@ -413,18 +412,18 @@ class F110Env(gym.Env):
 
         return obs, info
 
-    def update_map(self, map_path, map_ext):
+    def update_map(self, map_name: str):
         """
         Updates the map used by simulation
 
         Args:
-            map_path (str): absolute path to the map yaml file
-            map_ext (str): extension of the map image file
+            map_name (str): name of the map
 
         Returns:
             None
         """
-        self.sim.set_map(map_path, map_ext)
+        self.sim.set_map(map_name)
+        self.track = Track.from_track_name(map_name)
 
     def update_params(self, params, index=-1):
         """
@@ -494,7 +493,7 @@ class F110Env(gym.Env):
             from f110_gym.envs.rendering import EnvRenderer
 
             F110Env.renderer = EnvRenderer(WINDOW_W, WINDOW_H)
-            F110Env.renderer.update_map(self.map_name, self.map_ext)
+            F110Env.renderer.update_map(track=self.track)
 
         F110Env.renderer.update_obs(self.render_obs)
 
