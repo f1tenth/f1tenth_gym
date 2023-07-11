@@ -1,6 +1,5 @@
 import os
 import pathlib
-import shutil
 import tarfile
 from dataclasses import dataclass
 from typing import Tuple
@@ -13,26 +12,6 @@ from PIL import Image
 from PIL.Image import Transpose
 from yamldataclassconfig.config import YamlDataClassConfig
 
-if not os.path.exists(pathlib.Path(__file__).parent.parent / "maps/convert.py"):
-    print('--- Downloading Race Tracks ---')
-    tracks_url = "http://api.f1tenth.org/f1tenth_racetracks-v1.0.0.tar.gz"
-    tracks_r = requests.get(url=tracks_url, allow_redirects=True)
-    open("/tmp/tracks.tar.gz", 'wb').write(tracks_r.content)
-
-    # extract
-    print('--- Extracting Race Tracks ---')
-    tracks_file = tarfile.open("/tmp/tracks.tar.gz")
-    tracks_file.extractall("/tmp/tracks/")
-    tracks_file.close()
-
-    # move
-    map_dir = pathlib.Path(__file__).parent.parent / "maps"
-
-    for fn in os.listdir("/tmp/tracks/f1tenth_racetracks-1.0.0/"):
-        src = "/tmp/tracks/f1tenth_racetracks-1.0.0/" + fn
-        dst = map_dir / fn
-        if fn  not in ["README.md", "LICENSE", ".gitignore", ".git"]:
-            shutil.move(src, dst)
 
 class Raceline:
     n: int
@@ -150,6 +129,22 @@ def find_track_dir(track_name):
     # we assume there are no blank space in the track name. however, to take into account eventual blank spaces in
     # the map dirpath, we loop over all possible maps and check if there is a matching with the current track
     map_dir = pathlib.Path(__file__).parent.parent / "maps"
+
+    if not os.path.exists(map_dir / track_name):
+        print("Downloading Files for: " + track_name)
+        tracks_url = "http://api.f1tenth.org/" + track_name + ".tar.xz"
+        tracks_r = requests.get(url=tracks_url, allow_redirects=True)
+        if tracks_r.status_code == 404:
+            raise FileNotFoundError(f"No maps exists for {track_name}.")
+
+        open("/tmp/" + track_name + ".tar.xz", "wb").write(tracks_r.content)
+
+        # extract
+        print("Extracting Files for: " + track_name)
+        map_dir = pathlib.Path(__file__).parent.parent / "maps"
+        tracks_file = tarfile.open("/tmp/" + track_name + ".tar.xz")
+        tracks_file.extractall(map_dir)
+        tracks_file.close()
 
     for base_dir in [map_dir]:
         if not base_dir.exists():
