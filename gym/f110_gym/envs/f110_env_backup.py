@@ -79,7 +79,7 @@ class F110Env(gym.Env, utils.EzPickle):
         self.map_img = None
 
         # current_dir = os.path.dirname(os.path.abspath(__file__))
-        # map_path = current_dir + '/../../../maps/levine.yaml'
+        # map_path = current_dir + '/../../../maps/Levine_map.yaml'
 
         # default
         self.ego_idx = 0

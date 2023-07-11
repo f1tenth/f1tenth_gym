@@ -18,16 +18,8 @@ class TestObservationInterface(unittest.TestCase):
     def _make_env(config={}) -> F110Env:
         import f110_gym
 
-        example_dir = pathlib.Path(__file__).parent.parent.parent.parent / "examples"
-
-        with open(example_dir / "config_example_map.yaml") as file:
-            conf_dict = yaml.load(file, Loader=yaml.FullLoader)
-        conf = Namespace(**conf_dict)
-        conf.map_path = str(example_dir / conf.map_path)
-
         conf = {
-            "map": conf.map_path,
-            "map_ext": conf.map_ext,
+            "map": "Example",
             "num_agents": 1,
             "timestep": 0.01,
             "integrator": "rk4",

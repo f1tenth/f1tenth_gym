@@ -48,6 +48,7 @@ class AcclAction(CarAction):
         self.steering_low, self.steering_high = params["sv_min"], params["sv_max"]
         self.acc_low, self.acc_high = -params["a_max"], params["a_max"]
 
+
     def act(self, action: Tuple[float, float], state, params) -> Tuple[float, float]:
         return action
 
@@ -66,6 +67,7 @@ class SpeedAction(CarAction):
 
         self.steering_low, self.steering_high = params["s_min"], params["s_max"]
         self.velocity_low, self.velocity_high = params["v_min"], params["v_max"]
+
 
     def act(
         self, action: Tuple[float, float], state: np.ndarray, params: Dict

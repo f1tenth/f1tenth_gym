@@ -37,6 +37,9 @@ import yaml
 import unittest
 import timeit
 
+from f110_gym.envs.track import Track
+
+
 def get_dt(bitmap, resolution):
     """
     Distance transformation, returns the distance matrix from the input bitmap.
@@ -380,42 +383,27 @@ class ScanSimulator2D(object):
         self.sines = np.sin(theta_arr)
         self.cosines = np.cos(theta_arr)
     
-    def set_map(self, map_path, map_ext):
+    def set_map(self, map_name: str):
         """
         Set the bitmap of the scan simulator by path
 
             Args:
-                map_path (str): path to the map yaml file
-                map_ext (str): extension (image type) of the map image
+                map_name (str): name of the racetrack in the map dir, e.g. "Levine"
 
             Returns:
                 flag (bool): if image reading and loading is successful
         """
-        # TODO: do we open the option to flip the images, and turn rgb into grayscale? or specify the exact requirements in documentation.
-        # TODO: throw error if image specification isn't met
+        self.track = Track.from_track_name(map_name)
 
         # load map image
-        map_img_path = os.path.splitext(map_path)[0] + map_ext
-        self.map_img = np.array(Image.open(map_img_path).transpose(Image.FLIP_TOP_BOTTOM))
-        self.map_img = self.map_img.astype(np.float64)
-
-        # grayscale -> binary
-        self.map_img[self.map_img <= 128.] = 0.
-        self.map_img[self.map_img > 128.] = 255.
-
+        self.map_img = self.track.occupancy_map
         self.map_height = self.map_img.shape[0]
         self.map_width = self.map_img.shape[1]
 
-        # load map yaml
-        with open(map_path, 'r') as yaml_stream:
-            try:
-                map_metadata = yaml.safe_load(yaml_stream)
-                self.map_resolution = map_metadata['resolution']
-                self.origin = map_metadata['origin']
-            except yaml.YAMLError as ex:
-                print(ex)
+        # load map specification
+        self.map_resolution = self.track.spec.resolution
+        self.origin = self.track.spec.origin
 
-        # calculate map parameters
         self.orig_x = self.origin[0]
         self.orig_y = self.origin[1]
         self.orig_s = np.sin(self.origin[2])
@@ -486,7 +474,7 @@ class ScanTests(unittest.TestCase):
     #     scan_rng = np.random.default_rng(seed=12345)
     #     scan_sim = ScanSimulator2D(self.num_beams, self.fov)
     #     new_berlin = np.empty((self.num_test, self.num_beams))
-    #     map_path = '../../../maps/berlin.yaml'
+    #     map_path = '../../../maps/Berlin_map.yaml'
     #     map_ext = '.png'
     #     scan_sim.set_map(map_path, map_ext)
     #     # scan gen loop
@@ -510,7 +498,7 @@ class ScanTests(unittest.TestCase):
     #     scan_rng = np.random.default_rng(seed=12345)
     #     scan_sim = ScanSimulator2D(self.num_beams, self.fov)
     #     new_skirk = np.empty((self.num_test, self.num_beams))
-    #     map_path = '../../../maps/skirk.yaml'
+    #     map_path = '../../../maps/Skirk_map.yaml'
     #     map_ext = '.png'
     #     scan_sim.set_map(map_path, map_ext)
     #     print('map set')
@@ -536,7 +524,7 @@ class ScanTests(unittest.TestCase):
 
         scan_rng = np.random.default_rng(seed=12345)
         scan_sim = ScanSimulator2D(self.num_beams, self.fov)
-        map_path = '../envs/maps/berlin.yaml'
+        map_path = '../maps/Berlin/Berlin_map.yaml'
         map_ext = '.png'
         scan_sim.set_map(map_path, map_ext)
         
@@ -554,7 +542,7 @@ class ScanTests(unittest.TestCase):
     def test_rng(self):
         num_beams = 1080
         fov = 4.7
-        map_path = '../envs/maps/berlin.yaml'
+        map_path = '../maps/Berlin/Berlin_map.yaml'
         map_ext = '.png'
         it = 100
 
@@ -583,8 +571,8 @@ class ScanTests(unittest.TestCase):
 def main():
     num_beams = 1080
     fov = 4.7
-    # map_path = '../envs/maps/berlin.yaml'
-    map_path = '../../../examples/example_map.yaml'
+    # map_path = '../envs/maps/Berlin_map.yaml'
+    map_path = '../maps/Example/Example_map.yaml'
     map_ext = '.png'
     scan_rng = np.random.default_rng(seed=12345)
     scan_sim = ScanSimulator2D(num_beams, fov)
