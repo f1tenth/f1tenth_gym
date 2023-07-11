@@ -29,7 +29,7 @@ Author: Hongrui Zheng
 import numpy as np
 
 from f110_gym.envs import DynamicModel
-from f110_gym.envs.action import SpeedAction
+from f110_gym.envs.action import CarAction
 from f110_gym.envs.integrator import EulerIntegrator, IntegratorType
 from f110_gym.envs.laser_models import ScanSimulator2D, check_ttc_jit, ray_cast
 from f110_gym.envs.collision_models import get_vertices, collision_multiple
@@ -62,13 +62,13 @@ class RaceCar(object):
         self,
         params,
         seed,
+        action_type: CarAction,
+        integrator=EulerIntegrator(),
+        model=DynamicModel.ST,
         is_ego=False,
         time_step=0.01,
         num_beams=1080,
         fov=4.7,
-        integrator=EulerIntegrator(),
-        model=DynamicModel.ST,
-        action_type=SpeedAction(),
     ):
         """
         TODO rewrite it
@@ -380,11 +380,11 @@ class Simulator(object):
         params,
         num_agents,
         seed,
-        time_step=0.01,
-        ego_idx=0,
+        action_type: CarAction,
         integrator=IntegratorType.RK4,
         model=DynamicModel.ST,
-        action_type=SpeedAction(),
+        time_step=0.01,
+        ego_idx=0,
     ):
         """
         Init function
