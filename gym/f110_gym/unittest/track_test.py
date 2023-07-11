@@ -95,7 +95,7 @@ class TestTrack(unittest.TestCase):
             if file_centerline.exists():
                 # try to load raceline files
                 # it will raise an assertion error if the file format are not valid
-                centerline = Raceline.from_raceline_file(file_centerline)
+                centerline = Raceline.from_centerline_file(file_centerline)
 
     def test_download_racetrack(self):
         import shutil
