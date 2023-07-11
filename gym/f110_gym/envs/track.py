@@ -50,7 +50,7 @@ class Raceline:
 
         # approximate track length by linear-interpolation of x,y waypoints
         # note: we could use 'ss' but sometimes it is normalized to [0,1], so we recompute it here
-        self.length = np.sum(np.sqrt(np.diff(xs) ** 2 + np.diff(ys) ** 2))
+        self.length = float(np.sum(np.sqrt(np.diff(xs) ** 2 + np.diff(ys) ** 2)))
 
         # compute spline
         self.spline = spline if spline is not None else CubicSpline2D(xs, ys)
@@ -130,7 +130,7 @@ def find_track_dir(track_name):
     # the map dirpath, we loop over all possible maps and check if there is a matching with the current track
     map_dir = pathlib.Path(__file__).parent.parent / "maps"
 
-    if not os.path.exists(map_dir / track_name):
+    if not (map_dir / track_name).exists():
         print("Downloading Files for: " + track_name)
         tracks_url = "http://api.f1tenth.org/" + track_name + ".tar.xz"
         tracks_r = requests.get(url=tracks_url, allow_redirects=True)
@@ -141,7 +141,6 @@ def find_track_dir(track_name):
 
         # extract
         print("Extracting Files for: " + track_name)
-        map_dir = pathlib.Path(__file__).parent.parent / "maps"
         tracks_file = tarfile.open("/tmp/" + track_name + ".tar.xz")
         tracks_file.extractall(map_dir)
         tracks_file.close()
