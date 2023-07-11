@@ -1,4 +1,5 @@
 import pathlib
+import time
 import unittest
 
 import numpy as np
@@ -95,3 +96,44 @@ class TestTrack(unittest.TestCase):
                 # try to load raceline files
                 # it will raise an assertion error if the file format are not valid
                 centerline = Raceline.from_raceline_file(file_centerline)
+
+    def test_download_racetrack(self):
+        import shutil
+
+        track_name = "Spielberg"
+        track_backup = Track.from_track_name(track_name)
+
+        # rename the track dir
+        track_dir = find_track_dir(track_name)
+        tmp_dir = track_dir.parent / f"{track_name}_tmp{int(time.time())}"
+        track_dir.rename(tmp_dir)
+
+        # download the track
+        track = Track.from_track_name(track_name)
+
+        # check the two tracks' specs are the same
+        for spec_attr in ["name", "image", "resolution", "origin", "negate", "occupied_thresh", "free_thresh"]:
+            self.assertEqual(
+                getattr(track.spec, spec_attr), getattr(track_backup.spec, spec_attr)
+            )
+
+        # check the two tracks' racelines are the same
+        for raceline_attr in ["ss", "xs", "ys", "yaws", "ks", "vxs", "axs"]:
+            self.assertTrue(np.isclose(
+                getattr(track.raceline, raceline_attr), getattr(track_backup.raceline, raceline_attr)
+            ).all())
+
+        # check the two tracks' centerlines are the same
+        for centerline_attr in ["ss", "xs", "ys", "yaws", "ks", "vxs", "axs"]:
+            self.assertTrue(np.isclose(
+                getattr(track.centerline, centerline_attr), getattr(track_backup.centerline, centerline_attr)
+            ).all())
+
+        # remove the newly created track dir
+        track_dir = find_track_dir(track_name)
+        shutil.rmtree(track_dir, ignore_errors=True)
+
+        # rename the backup track dir to its original name
+        track_backup_dir = find_track_dir(tmp_dir.stem)
+        track_backup_dir.rename(track_dir)
+

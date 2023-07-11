@@ -137,7 +137,8 @@ def find_track_dir(track_name):
         if tracks_r.status_code == 404:
             raise FileNotFoundError(f"No maps exists for {track_name}.")
 
-        open("/tmp/" + track_name + ".tar.xz", "wb").write(tracks_r.content)
+        with open("/tmp/" + track_name + ".tar.xz", "wb") as f:
+            f.write(tracks_r.content)
 
         # extract
         print("Extracting Files for: " + track_name)
