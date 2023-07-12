@@ -97,3 +97,59 @@ class TestEnvInterface(unittest.TestCase):
 
         base_env.close()
         extended_env.close()
+
+    def test_configure_action_space(self):
+        """
+        Try to change the upper bound of the action space, and check that the
+        action space is correctly updated.
+        """
+        base_env = self._make_env()
+        action_space_low = base_env.action_space.low
+        action_space_high = base_env.action_space.high
+
+        params = base_env.sim.params.copy()
+        new_v_max = 5.0
+        params["v_max"] = new_v_max
+
+        base_env.configure(config={"params": params})
+        new_action_space_low = base_env.action_space.low
+        new_action_space_high = base_env.action_space.high
+
+        self.assertTrue(
+            (action_space_low == new_action_space_low).all(),
+            "Steering action space should be the same",
+        )
+        self.assertTrue(
+            action_space_high[0][0] == new_action_space_high[0][0],
+            "Steering action space should be the same",
+        )
+        self.assertTrue(
+            new_action_space_high[0][1] == new_v_max,
+            f"Speed action high should be {new_v_max}",
+        )
+
+    def test_acceleration_action_space(self):
+        """
+        Test that the acceleration action space is correctly configured.
+        """
+        base_env = self._make_env(config={"control_input": "accl"})
+        params = base_env.sim.params
+        action_space_low = base_env.action_space.low
+        action_space_high = base_env.action_space.high
+
+        self.assertTrue(
+            (action_space_low[0][0] - params["sv_min"]) < 1e-6,
+            "lower sv does not match min steering velocity",
+        )
+        self.assertTrue(
+            (action_space_high[0][0] - params["sv_max"]) < 1e-6,
+            "upper sv does not match max steering velocity",
+        )
+        self.assertTrue(
+            (action_space_low[0][1] + params["a_max"]) < 1e-6,
+            "lower acceleration bound does not match a_min",
+        )
+        self.assertTrue(
+            (action_space_high[0][1] - params["a_max"]) < 1e-6,
+            "upper acceleration bound does not match a_max",
+        )

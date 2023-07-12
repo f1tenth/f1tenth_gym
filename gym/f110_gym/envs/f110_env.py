@@ -28,7 +28,7 @@ Author: Hongrui Zheng
 import gymnasium as gym
 
 from f110_gym.envs import IntegratorType
-from f110_gym.envs.action import CarActionEnum
+from f110_gym.envs.action import CarActionEnum, from_single_to_multi_action_space
 
 from f110_gym.envs.track import Track
 
@@ -118,8 +118,9 @@ class F110Env(gym.Env):
         self.ego_idx = self.config["ego_idx"]
         self.integrator = IntegratorType.from_string(self.config["integrator"])
         self.model = DynamicModel.from_string(self.config["model"])
-        self.action_type = CarActionEnum.from_string(self.config["control_input"])
         self.observation_config = self.config["observation_config"]
+        action_type_fn = CarActionEnum.from_string(self.config["control_input"])
+        self.action_type = action_type_fn(params=self.params)
 
         # radius to consider done
         self.start_thresh = 0.5  # 10cm
@@ -129,8 +130,6 @@ class F110Env(gym.Env):
         self.poses_y = []
         self.poses_theta = []
         self.collisions = np.zeros((self.num_agents,))
-        # TODO: collision_idx not used yet
-        # self.collision_idx = -1 * np.ones((self.num_agents, ))
 
         # loop completion
         self.near_start = True
@@ -176,21 +175,8 @@ class F110Env(gym.Env):
         self.observation_space = self.observation_type.space()
 
         # action space
-        # NOTE: keep original structure of action space (box space), just define bounds
-        steering_low, steering_high = self.sim.params["s_min"], self.sim.params["s_max"]
-        velocity_low, velocity_high = self.sim.params["v_min"], self.sim.params["v_max"]
-        low = (
-            np.array([[steering_low, velocity_low]])
-            .repeat(self.num_agents, 0)
-            .astype(np.float32)
-        )
-        high = (
-            np.array([[steering_high, velocity_high]])
-            .repeat(self.num_agents, 0)
-            .astype(np.float32)
-        )
-        self.action_space = gym.spaces.Box(
-            low=low, high=high, shape=(self.num_agents, 2), dtype=np.float32
+        self.action_space = from_single_to_multi_action_space(
+            self.action_type.space, self.num_agents
         )
 
         # stateful observations for rendering
@@ -251,8 +237,18 @@ class F110Env(gym.Env):
     def configure(self, config: dict) -> None:
         if config:
             self.config = deep_update(self.config, config)
+            self.params = self.config["params"]
+
             if hasattr(self, "sim"):
                 self.sim.update_params(self.config["params"])
+
+            if hasattr(self, "action_space"):
+                # if some parameters changed, recompute action space
+                action_type_fn = CarActionEnum.from_string(self.config["control_input"])
+                self.action_type = action_type_fn(params=self.params)
+                self.action_space = from_single_to_multi_action_space(
+                    self.action_type.space, self.num_agents
+                )
 
     def _check_done(self):
         """
