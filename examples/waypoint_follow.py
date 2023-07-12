@@ -340,7 +340,15 @@ def main():
 
     env.add_render_callback(render_callback)
 
-    poses = np.array([[env.track.raceline.xs[0], env.track.raceline.ys[0], env.track.raceline.yaws[0]]])
+    poses = np.array(
+        [
+            [
+                env.track.raceline.xs[0],
+                env.track.raceline.ys[0],
+                env.track.raceline.yaws[0],
+            ]
+        ]
+    )
     obs, info = env.reset(options={"poses": poses})
     done = False
     env.render()

@@ -21,7 +21,6 @@
 # SOFTWARE.
 
 
-
 """
 Rendering engine for f1tenth gym env based on pyglet and OpenGL
 Author: Hongrui Zheng
@@ -37,21 +36,24 @@ from PIL import Image
 import yaml
 
 from f110_gym.envs.track import Track
+
 # helpers
 from f110_gym.envs.collision_models import get_vertices
 
 # zooming constants
 ZOOM_IN_FACTOR = 1.2
-ZOOM_OUT_FACTOR = 1/ZOOM_IN_FACTOR
+ZOOM_OUT_FACTOR = 1 / ZOOM_IN_FACTOR
 
 # vehicle shape constants
 CAR_LENGTH = 0.58
 CAR_WIDTH = 0.31
 
+
 class EnvRenderer(pyglet.window.Window):
     """
     A window class inherited from pyglet.window.Window, handles the camera/projection interaction, resizing window, and rendering the environment
     """
+
     def __init__(self, width, height, *args, **kwargs):
         """
         Class constructor
@@ -63,20 +65,19 @@ class EnvRenderer(pyglet.window.Window):
         Returns:
             None
         """
-        conf = Config(sample_buffers=1,
-                      samples=4,
-                      depth_size=16,
-                      double_buffer=True)
-        super().__init__(width, height, config=conf, resizable=True, vsync=False, *args, **kwargs)
+        conf = Config(sample_buffers=1, samples=4, depth_size=16, double_buffer=True)
+        super().__init__(
+            width, height, config=conf, resizable=True, vsync=False, *args, **kwargs
+        )
 
         # gl init
-        glClearColor(9/255, 32/255, 87/255, 1.)
+        glClearColor(9 / 255, 32 / 255, 87 / 255, 1.0)
 
         # initialize camera values
-        self.left = -width/2
-        self.right = width/2
-        self.bottom = -height/2
-        self.top = height/2
+        self.left = -width / 2
+        self.right = width / 2
+        self.bottom = -height / 2
+        self.top = height / 2
         self.zoom_level = 1.2
         self.zoomed_width = width
         self.zoomed_height = height
@@ -86,7 +87,7 @@ class EnvRenderer(pyglet.window.Window):
 
         # current env map
         self.map_points = None
-        
+
         # current env agent poses, (num_agents, 3), columns are (x, y, theta)
         self.poses = None
 
@@ -95,17 +96,19 @@ class EnvRenderer(pyglet.window.Window):
 
         # current score label
         self.score_label = pyglet.text.Label(
-                'Lap Time: {laptime:.2f}, Ego Lap Count: {count:.0f}'.format(
-                    laptime=0.0, count=0.0),
-                font_size=36,
-                x=0,
-                y=-800,
-                anchor_x='center',
-                anchor_y='center',
-                # width=0.01,
-                # height=0.01,
-                color=(255, 255, 255, 255),
-                batch=self.batch)
+            "Lap Time: {laptime:.2f}, Ego Lap Count: {count:.0f}".format(
+                laptime=0.0, count=0.0
+            ),
+            font_size=36,
+            x=0,
+            y=-800,
+            anchor_x="center",
+            anchor_y="center",
+            # width=0.01,
+            # height=0.01,
+            color=(255, 255, 255, 255),
+            batch=self.batch,
+        )
 
         self.fps_display = pyglet.window.FPSDisplay(self)
 
@@ -142,9 +145,15 @@ class EnvRenderer(pyglet.window.Window):
         # mask and only leave the obstacle points
         map_mask = map_img == 0.0
         map_mask_flat = map_mask.flatten()
-        map_points = 50. * map_coords[:, map_mask_flat].T
+        map_points = 50.0 * map_coords[:, map_mask_flat].T
         for i in range(map_points.shape[0]):
-            self.batch.add(1, GL_POINTS, None, ('v3f/stream', [map_points[i, 0], map_points[i, 1], map_points[i, 2]]), ('c3B/stream', [183, 193, 222]))
+            self.batch.add(
+                1,
+                GL_POINTS,
+                None,
+                ("v3f/stream", [map_points[i, 0], map_points[i, 1], map_points[i, 2]]),
+                ("c3B/stream", [183, 193, 222]),
+            )
         self.map_points = map_points
 
     def on_resize(self, width, height):
@@ -166,10 +175,10 @@ class EnvRenderer(pyglet.window.Window):
 
         # update camera value
         (width, height) = self.get_size()
-        self.left = -self.zoom_level * width/2
-        self.right = self.zoom_level * width/2
-        self.bottom = -self.zoom_level * height/2
-        self.top = self.zoom_level * height/2
+        self.left = -self.zoom_level * width / 2
+        self.right = self.zoom_level * width / 2
+        self.bottom = -self.zoom_level * height / 2
+        self.top = self.zoom_level * height / 2
         self.zoomed_width = self.zoom_level * width
         self.zoomed_height = self.zoom_level * height
 
@@ -213,17 +222,16 @@ class EnvRenderer(pyglet.window.Window):
         f = ZOOM_IN_FACTOR if dy > 0 else ZOOM_OUT_FACTOR if dy < 0 else 1
 
         # If zoom_level is in the proper range
-        if .01 < self.zoom_level * f < 10:
-
+        if 0.01 < self.zoom_level * f < 10:
             self.zoom_level *= f
 
             (width, height) = self.get_size()
 
-            mouse_x = x/width
-            mouse_y = y/height
+            mouse_x = x / width
+            mouse_y = y / height
 
-            mouse_x_in_world = self.left + mouse_x*self.zoomed_width
-            mouse_y_in_world = self.bottom + mouse_y*self.zoomed_height
+            mouse_x_in_world = self.left + mouse_x * self.zoomed_width
+            mouse_y_in_world = self.bottom + mouse_y * self.zoomed_height
 
             self.zoomed_width *= f
             self.zoomed_height *= f
@@ -248,12 +256,12 @@ class EnvRenderer(pyglet.window.Window):
         """
 
         super().on_close()
-        raise Exception('Rendering window was closed.')
+        raise Exception("Rendering window was closed.")
 
     def on_draw(self):
         """
         Function when the pyglet is drawing. The function draws the batch created that includes the map points, the agent polygons, and the information text, and the fps display.
-        
+
         Args:
             None
 
@@ -263,9 +271,9 @@ class EnvRenderer(pyglet.window.Window):
 
         # if map and poses doesn't exist, raise exception
         if self.map_points is None:
-            raise Exception('Map not set for renderer.')
+            raise Exception("Map not set for renderer.")
         if self.poses is None:
-            raise Exception('Agent poses not updated for renderer.')
+            raise Exception("Agent poses not updated for renderer.")
 
         # Initialize Projection matrix
         glMatrixMode(GL_PROJECTION)
@@ -300,31 +308,54 @@ class EnvRenderer(pyglet.window.Window):
             None
         """
 
-        self.ego_idx = obs['ego_idx']
-        poses_x = obs['poses_x']
-        poses_y = obs['poses_y']
-        poses_theta = obs['poses_theta']
+        self.ego_idx = obs["ego_idx"]
+        poses_x = obs["poses_x"]
+        poses_y = obs["poses_y"]
+        poses_theta = obs["poses_theta"]
 
         num_agents = len(poses_x)
         if self.poses is None:
             self.cars = []
             for i in range(num_agents):
                 if i == self.ego_idx:
-                    vertices_np = get_vertices(np.array([0., 0., 0.]), CAR_LENGTH, CAR_WIDTH)
+                    vertices_np = get_vertices(
+                        np.array([0.0, 0.0, 0.0]), CAR_LENGTH, CAR_WIDTH
+                    )
                     vertices = list(vertices_np.flatten())
-                    car = self.batch.add(4, GL_QUADS, None, ('v2f', vertices), ('c3B', [172, 97, 185, 172, 97, 185, 172, 97, 185, 172, 97, 185]))
+                    car = self.batch.add(
+                        4,
+                        GL_QUADS,
+                        None,
+                        ("v2f", vertices),
+                        (
+                            "c3B",
+                            [172, 97, 185, 172, 97, 185, 172, 97, 185, 172, 97, 185],
+                        ),
+                    )
                     self.cars.append(car)
                 else:
-                    vertices_np = get_vertices(np.array([0., 0., 0.]), CAR_LENGTH, CAR_WIDTH)
+                    vertices_np = get_vertices(
+                        np.array([0.0, 0.0, 0.0]), CAR_LENGTH, CAR_WIDTH
+                    )
                     vertices = list(vertices_np.flatten())
-                    car = self.batch.add(4, GL_QUADS, None, ('v2f', vertices), ('c3B', [99, 52, 94, 99, 52, 94, 99, 52, 94, 99, 52, 94]))
+                    car = self.batch.add(
+                        4,
+                        GL_QUADS,
+                        None,
+                        ("v2f", vertices),
+                        ("c3B", [99, 52, 94, 99, 52, 94, 99, 52, 94, 99, 52, 94]),
+                    )
                     self.cars.append(car)
 
         poses = np.stack((poses_x, poses_y, poses_theta)).T
         for j in range(poses.shape[0]):
-            vertices_np = 50. * get_vertices(poses[j, :], CAR_LENGTH, CAR_WIDTH)
+            vertices_np = 50.0 * get_vertices(poses[j, :], CAR_LENGTH, CAR_WIDTH)
             vertices = list(vertices_np.flatten())
             self.cars[j].vertices = vertices
         self.poses = poses
 
-        self.score_label.text = 'Lap Time: {laptime:.2f}, Ego Lap Count: {count:.0f}'.format(laptime=obs['lap_times'][0], count=obs['lap_counts'][obs['ego_idx']])
+        self.score_label.text = (
+            "Lap Time: {laptime:.2f}, Ego Lap Count: {count:.0f}".format(
+                laptime=obs["lap_times"][0], count=obs["lap_counts"][obs["ego_idx"]]
+            )
+        )

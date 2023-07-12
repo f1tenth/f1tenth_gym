@@ -21,12 +21,11 @@
 # SOFTWARE.
 
 
-
 """
 Utility functions to generate sample scan data from legacy C++ backend
 Author: Hongrui Zheng
 
-The script generates sample scan data for 3 different maps used in the unit tests.
+The script generates sample scan data for 3 different maps used in the unit test.
 
 Map 1: Levine
 
@@ -42,8 +41,8 @@ import matplotlib.pyplot as plt
 thetas = np.linspace(-2.35, 2.35, num=1080)
 
 # init
-executable_dir = '../../../build/'
-mass= 3.74
+executable_dir = "../../../build/"
+mass = 3.74
 l_r = 0.17145
 I_z = 0.04712
 mu = 0.523
@@ -54,49 +53,57 @@ cs_r = 5.4562
 # test poses
 num_test = 10
 test_poses = np.zeros((num_test, 3))
-test_poses[:, 2] = np.linspace(-1., 1., num=num_test)
+test_poses[:, 2] = np.linspace(-1.0, 1.0, num=num_test)
 
 # map 1: vegas
-map_path = '../../../maps/Vegas_map.yaml'
-map_ext = '.png'
-racecar_env = gym.make('f110_gym:f110-v0')
+map_path = "../../../maps/Vegas_map.yaml"
+map_ext = ".png"
+racecar_env = gym.make("f110_gym:f110-v0")
 racecar_env.init_map(map_path, map_ext, False, False)
-racecar_env.update_params(mu, h_cg, l_r, cs_f, cs_r, I_z, mass, executable_dir, double_finish=True)
+racecar_env.update_params(
+    mu, h_cg, l_r, cs_f, cs_r, I_z, mass, executable_dir, double_finish=True
+)
 vegas_scan = np.empty((num_test, 1080))
 for i in range(test_poses.shape[0]):
-    x = [test_poses[i, 0], 200.]
-    y = [test_poses[i, 1], 200.]
-    theta = [test_poses[i, 2], 0.]
-    obs,_,_,_ = racecar_env.reset({'x': x, 'y': y, 'theta': theta})
-    vegas_scan[i,:] = obs['scans'][0]
+    x = [test_poses[i, 0], 200.0]
+    y = [test_poses[i, 1], 200.0]
+    theta = [test_poses[i, 2], 0.0]
+    obs, _, _, _ = racecar_env.reset({"x": x, "y": y, "theta": theta})
+    vegas_scan[i, :] = obs["scans"][0]
 
 # map 2: berlin
-map_path = '../../../maps/Berlin_map.yaml'
-map_ext = '.png'
-racecar_env = gym.make('f110_gym:f110-v0')
+map_path = "../../../maps/Berlin_map.yaml"
+map_ext = ".png"
+racecar_env = gym.make("f110_gym:f110-v0")
 racecar_env.init_map(map_path, map_ext, False, False)
-racecar_env.update_params(mu, h_cg, l_r, cs_f, cs_r, I_z, mass, executable_dir, double_finish=True)
+racecar_env.update_params(
+    mu, h_cg, l_r, cs_f, cs_r, I_z, mass, executable_dir, double_finish=True
+)
 berlin_scan = np.empty((num_test, 1080))
 for i in range(test_poses.shape[0]):
-    x = [test_poses[i, 0], 200.]
-    y = [test_poses[i, 1], 200.]
-    theta = [test_poses[i, 2], 0.]
-    obs,_,_,_ = racecar_env.reset({'x': x, 'y': y, 'theta': theta})
-    berlin_scan[i,:] = obs['scans'][0]
+    x = [test_poses[i, 0], 200.0]
+    y = [test_poses[i, 1], 200.0]
+    theta = [test_poses[i, 2], 0.0]
+    obs, _, _, _ = racecar_env.reset({"x": x, "y": y, "theta": theta})
+    berlin_scan[i, :] = obs["scans"][0]
 
 # map 3: skirk
-map_path = '../../../maps/Skirk_map.yaml'
-map_ext = '.png'
-racecar_env = gym.make('f110_gym:f110-v0')
+map_path = "../../../maps/Skirk_map.yaml"
+map_ext = ".png"
+racecar_env = gym.make("f110_gym:f110-v0")
 racecar_env.init_map(map_path, map_ext, False, False)
-racecar_env.update_params(mu, h_cg, l_r, cs_f, cs_r, I_z, mass, executable_dir, double_finish=True)
+racecar_env.update_params(
+    mu, h_cg, l_r, cs_f, cs_r, I_z, mass, executable_dir, double_finish=True
+)
 skirk_scan = np.empty((num_test, 1080))
 for i in range(test_poses.shape[0]):
-    x = [test_poses[i, 0], 200.]
-    y = [test_poses[i, 1], 200.]
-    theta = [test_poses[i, 2], 0.]
-    obs,_,_,_ = racecar_env.reset({'x': x, 'y': y, 'theta': theta})
-    skirk_scan[i,:] = obs['scans'][0]
+    x = [test_poses[i, 0], 200.0]
+    y = [test_poses[i, 1], 200.0]
+    theta = [test_poses[i, 2], 0.0]
+    obs, _, _, _ = racecar_env.reset({"x": x, "y": y, "theta": theta})
+    skirk_scan[i, :] = obs["scans"][0]
 
 # package data
-np.savez_compressed('legacy_scan.npz', vegas=vegas_scan, berlin=berlin_scan, skirk=skirk_scan)
+np.savez_compressed(
+    "legacy_scan.npz", vegas=vegas_scan, berlin=berlin_scan, skirk=skirk_scan
+)
