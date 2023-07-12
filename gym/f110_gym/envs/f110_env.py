@@ -237,6 +237,8 @@ class F110Env(gym.Env):
     def configure(self, config: dict) -> None:
         if config:
             self.config = deep_update(self.config, config)
+            self.params = self.config["params"]
+
             if hasattr(self, "sim"):
                 self.sim.update_params(self.config["params"])
 

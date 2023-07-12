@@ -107,7 +107,7 @@ class TestEnvInterface(unittest.TestCase):
         action_space_low = base_env.action_space.low
         action_space_high = base_env.action_space.high
 
-        params = base_env.sim.params
+        params = base_env.sim.params.copy()
         new_v_max = 5.0
         params["v_max"] = new_v_max
 
