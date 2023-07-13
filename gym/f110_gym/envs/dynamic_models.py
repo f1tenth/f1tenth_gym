@@ -198,6 +198,69 @@ def vehicle_dynamics_ks(
 
 
 @njit(cache=True)
+def vehicle_dynamics_ks_cog(
+    x,
+    u_init,
+    mu,
+    C_Sf,
+    C_Sr,
+    lf,
+    lr,
+    h,
+    m,
+    I,
+    s_min,
+    s_max,
+    sv_min,
+    sv_max,
+    v_switch,
+    a_max,
+    v_min,
+    v_max,
+):
+    """
+    Single Track Kinematic Vehicle Dynamics at CoG.
+
+        Args:
+            x (numpy.ndarray (3, )): vehicle state vector (x1, x2, x3, x4, x5)
+                x1: x position in global coordinates
+                x2: y position in global coordinates
+                x3: steering angle of front wheels
+                x4: velocity in x direction
+                x5: yaw angle
+            u (numpy.ndarray (2, )): control input vector (u1, u2)
+                u1: steering angle velocity of front wheels
+                u2: longitudinal acceleration
+
+        Returns:
+            f (numpy.ndarray): right hand side of differential equations
+    """
+    # wheelbase
+    lwb = lf + lr
+
+    # constraints
+    u = np.array(
+        [
+            steering_constraint(x[2], u_init[0], s_min, s_max, sv_min, sv_max),
+            accl_constraints(x[3], u_init[1], v_switch, a_max, v_min, v_max),
+        ]
+    )
+
+    # system dynamics
+    beta = np.arctan(np.tan(x[2]) * lr / lwb)
+    f = np.array(
+        [
+            x[3] * np.cos(beta + x[4]),
+            x[3] * np.sin(beta + x[4]),
+            u[0],
+            u[1],
+            x[3] * np.cos(beta) * np.tan(x[2]) / lwb,
+        ]
+    )
+    return f
+
+
+@njit(cache=True)
 def vehicle_dynamics_st(
     x,
     u_init,
@@ -256,7 +319,7 @@ def vehicle_dynamics_st(
 
         # system dynamics
         x_ks = x[0:5]
-        f_ks = vehicle_dynamics_ks(
+        f_ks = vehicle_dynamics_ks_cog(
             x_ks,
             u,
             mu,
@@ -276,14 +339,25 @@ def vehicle_dynamics_st(
             v_min,
             v_max,
         )
+        d_beta = (lr * u[0]) / (
+            lwb * np.cos(x[2]) ** 2 * (1 + (np.tan(x[2]) ** 2 * lr / lwb) ** 2)
+        )
+        dd_psi = (
+            1
+            / lwb
+            * (
+                u[1] * np.cos(x[6]) * np.tan(x[2])
+                - x[3] * np.sin(x[6]) * d_beta * np.tan(x[2])
+                + x[3] * np.cos(x[6]) * u[0] / np.cos(x[2]) ** 2
+            )
+        )
         f = np.hstack(
             (
                 f_ks,
                 np.array(
                     [
-                        u[1] / lwb * np.tan(x[2])
-                        + x[3] / (lwb * np.cos(x[2]) ** 2) * u[0],
-                        0,
+                        dd_psi,
+                        d_beta,
                     ]
                 ),
             )
