@@ -112,22 +112,36 @@ class TestTrack(unittest.TestCase):
         track = Track.from_track_name(track_name)
 
         # check the two tracks' specs are the same
-        for spec_attr in ["name", "image", "resolution", "origin", "negate", "occupied_thresh", "free_thresh"]:
+        for spec_attr in [
+            "name",
+            "image",
+            "resolution",
+            "origin",
+            "negate",
+            "occupied_thresh",
+            "free_thresh",
+        ]:
             self.assertEqual(
                 getattr(track.spec, spec_attr), getattr(track_backup.spec, spec_attr)
             )
 
         # check the two tracks' racelines are the same
         for raceline_attr in ["ss", "xs", "ys", "yaws", "ks", "vxs", "axs"]:
-            self.assertTrue(np.isclose(
-                getattr(track.raceline, raceline_attr), getattr(track_backup.raceline, raceline_attr)
-            ).all())
+            self.assertTrue(
+                np.isclose(
+                    getattr(track.raceline, raceline_attr),
+                    getattr(track_backup.raceline, raceline_attr),
+                ).all()
+            )
 
         # check the two tracks' centerlines are the same
         for centerline_attr in ["ss", "xs", "ys", "yaws", "ks", "vxs", "axs"]:
-            self.assertTrue(np.isclose(
-                getattr(track.centerline, centerline_attr), getattr(track_backup.centerline, centerline_attr)
-            ).all())
+            self.assertTrue(
+                np.isclose(
+                    getattr(track.centerline, centerline_attr),
+                    getattr(track_backup.centerline, centerline_attr),
+                ).all()
+            )
 
         # remove the newly created track dir
         track_dir = find_track_dir(track_name)
@@ -136,4 +150,3 @@ class TestTrack(unittest.TestCase):
         # rename the backup track dir to its original name
         track_backup_dir = find_track_dir(tmp_dir.stem)
         track_backup_dir.rename(track_dir)
-

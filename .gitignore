@@ -4,8 +4,6 @@ __pycache__
 *.pyc
 .DS_Store
 .vscode/
-gym/f110_gym/unittest/maps/
-gym/f110_gym/unittest/centerline/
 docs/_build/
 *.mypy_cache/
 flycheck_*
@@ -173,3 +171,4 @@ cython_debug/
 *.zip
 
 /gym/f110_gym/maps/*
+/examples/maps

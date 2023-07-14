@@ -303,7 +303,6 @@ class RaceCar(object):
 
         u_np = np.array([sv, accl])
 
-
         f_dynamics = self.model.f_dynamics
         self.state = self.integrator.integrate(
             f=f_dynamics, x=self.state, u=u_np, dt=self.time_step, params=self.params
