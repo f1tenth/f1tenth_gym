@@ -35,6 +35,7 @@ import numpy as np
 from PIL import Image
 import yaml
 
+from f110_gym.envs.rendering import RenderSpec, EnvRenderer
 from f110_gym.envs.track import Track
 
 # helpers
@@ -49,12 +50,13 @@ CAR_LENGTH = 0.58
 CAR_WIDTH = 0.31
 
 
-class EnvRenderer(pyglet.window.Window):
+class PygletEnvRenderer(pyglet.window.Window, EnvRenderer):
     """
     A window class inherited from pyglet.window.Window, handles the camera/projection interaction, resizing window, and rendering the environment
     """
 
-    def __init__(self, width, height, *args, **kwargs):
+
+    def __init__(self, track: Track, render_spec: RenderSpec):
         """
         Class constructor
 
@@ -66,8 +68,9 @@ class EnvRenderer(pyglet.window.Window):
             None
         """
         conf = Config(sample_buffers=1, samples=4, depth_size=16, double_buffer=True)
+        width, height = render_spec.window_width, render_spec.window_height
         super().__init__(
-            width, height, config=conf, resizable=True, vsync=False, *args, **kwargs
+            width, height, config=conf, resizable=True, vsync=False
         )
 
         # gl init
@@ -87,6 +90,7 @@ class EnvRenderer(pyglet.window.Window):
 
         # current env map
         self.map_points = None
+        self.update_map(track=track)
 
         # current env agent poses, (num_agents, 3), columns are (x, y, theta)
         self.poses = None
@@ -297,21 +301,21 @@ class EnvRenderer(pyglet.window.Window):
         # Remove default modelview matrix
         glPopMatrix()
 
-    def update_obs(self, obs):
+    def update(self, state):
         """
         Updates the renderer with the latest observation from the gym environment, including the agent poses, and the information text.
 
         Args:
-            obs (dict): observation dict from the gym env
+            state (dict): observation dict from the gym env
 
         Returns:
             None
         """
 
-        self.ego_idx = obs["ego_idx"]
-        poses_x = obs["poses_x"]
-        poses_y = obs["poses_y"]
-        poses_theta = obs["poses_theta"]
+        self.ego_idx = state["ego_idx"]
+        poses_x = state["poses_x"]
+        poses_y = state["poses_y"]
+        poses_theta = state["poses_theta"]
 
         num_agents = len(poses_x)
         if self.poses is None:
@@ -356,6 +360,15 @@ class EnvRenderer(pyglet.window.Window):
 
         self.score_label.text = (
             "Lap Time: {laptime:.2f}, Ego Lap Count: {count:.0f}".format(
-                laptime=obs["lap_times"][0], count=obs["lap_counts"][obs["ego_idx"]]
+                laptime=state["lap_times"][0], count=state["lap_counts"][state["ego_idx"]]
             )
         )
+
+
+    def render_map(self):
+        pass
+
+    def render(self):
+        self.dispatch_events()
+        self.on_draw()
+        self.flip()
