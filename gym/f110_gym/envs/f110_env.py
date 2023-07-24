@@ -28,19 +28,25 @@ import time
 
 # gym imports
 import gymnasium as gym
+
+from f110_gym.envs import IntegratorType
+from f110_gym.envs.action import CarActionEnum, from_single_to_multi_action_space
+from f110_gym.envs.rendering import make_renderer, RenderSpec
+
+from f110_gym.envs.track import Track
+
+# base classes
+from f110_gym.envs.base_classes import Simulator, DynamicModel
+from f110_gym.envs.observation import observation_factory
+from f110_gym.envs.track import Track
+
+from f110_gym.envs.utils import deep_update
+
+
 # others
 import numpy as np
 # gl
 import pyglet
-from f110_gym.envs.integrator import IntegratorType
-from f110_gym.envs.action import (CarActionEnum,
-                                  from_single_to_multi_action_space)
-# base classes
-from f110_gym.envs.base_classes import DynamicModel, Simulator
-from f110_gym.envs.observation import observation_factory
-from f110_gym.envs.track import Track
-from f110_gym.envs.utils import deep_update
-
 pyglet.options["debug_gl"] = False
 
 # rendering
@@ -90,11 +96,6 @@ class F110Env(gym.Env):
 
     # NOTE: change matadata with default rendering-modes, add definition of render_fps
     metadata = {"render_modes": ["human", "human_fast", "rgb_array"], "render_fps": 100}
-
-    # rendering
-    renderer = None
-    current_obs = None
-    render_callbacks = []
 
     def __init__(self, config: dict = None, render_mode=None, **kwargs):
         super().__init__()
@@ -175,6 +176,8 @@ class F110Env(gym.Env):
         # stateful observations for rendering
         self.render_obs = None
         self.render_mode = render_mode
+        self.render_spec = RenderSpec(render_mode=self.render_mode)
+        self.renderer = make_renderer(track=self.track, render_spec=self.render_spec)
 
     @classmethod
     def default_config(cls) -> dict:
@@ -311,7 +314,6 @@ class F110Env(gym.Env):
         obs = self.observation_type.observe()
 
         # rendering observation
-        F110Env.current_obs = obs
         self.render_obs = {
             "ego_idx": self.sim.ego_idx,
             "poses_x": self.sim.agent_poses[:, 0],
@@ -319,6 +321,7 @@ class F110Env(gym.Env):
             "poses_theta": self.sim.agent_poses[:, 2],
             "lap_times": self.lap_times,
             "lap_counts": self.lap_counts,
+            "collisions": self.sim.collisions,
         }
 
         # times
@@ -429,7 +432,7 @@ class F110Env(gym.Env):
             callback_func (function (EnvRenderer) -> None): custom function to called during render()
         """
 
-        F110Env.render_callbacks.append(callback_func)
+        self.renderer.add_renderer_callback(callback_func)
 
     def render(self, mode="human"):
         """
@@ -471,21 +474,13 @@ class F110Env(gym.Env):
             raise NotImplementedError(f"mode {self.render_mode} not implemented")
 
     def render_frame(self, mode):
-        if F110Env.renderer is None:
-            # first call, initialize everything
-            from f110_gym.envs.rendering import EnvRenderer
+        self.renderer.update(state=self.render_obs)
 
-            F110Env.renderer = EnvRenderer(WINDOW_W, WINDOW_H)
-            F110Env.renderer.update_map(track=self.track)
+        for render_callback in self.renderer.render_callbacks:
+            render_callback(self.renderer)
 
-        F110Env.renderer.update_obs(self.render_obs)
+        self.renderer.render()
 
-        for render_callback in F110Env.render_callbacks:
-            render_callback(F110Env.renderer)
-
-        F110Env.renderer.dispatch_events()
-        F110Env.renderer.on_draw()
-        F110Env.renderer.flip()
         if mode == "human":
             time.sleep(0.005)
         elif mode == "human_fast":
