@@ -14,7 +14,7 @@ class TestEnvInterface(unittest.TestCase):
         import f110_gym
 
         conf = {
-            "map": "Example",
+            "map": "Spielberg",
             "num_agents": 1,
             "timestep": 0.01,
             "integrator": "rk4",

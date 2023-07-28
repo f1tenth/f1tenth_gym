@@ -170,5 +170,5 @@ cython_debug/
 #.idea/
 *.zip
 
-/gym/f110_gym/maps/*
+/maps/*
 /examples/maps

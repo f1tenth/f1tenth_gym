@@ -9,7 +9,7 @@ from f110_gym.envs.track import Track, find_track_dir, Raceline
 
 class TestTrack(unittest.TestCase):
     def test_loading_default_tracks(self):
-        track_names = ["Berlin", "Example", "Levine", "Skirk", "StataBasement", "Vegas"]
+        track_names = ["Berlin", "Skirk", "Spielberg"]
         for track_name in track_names:
             track = Track.from_track_name(track_name)
             self.assertEqual(track.spec.name, track_name)
@@ -19,7 +19,7 @@ class TestTrack(unittest.TestCase):
         self.assertRaises(FileNotFoundError, Track.from_track_name, wrong_track_name)
 
     def test_raceline(self):
-        track_name = "Example"  # Example is the only track with a raceline for now
+        track_name = "Spielberg"  # Example is the only track with a raceline for now
         track = Track.from_track_name(track_name)
 
         # check raceline is not None
@@ -41,7 +41,7 @@ class TestTrack(unittest.TestCase):
         self.assertTrue(np.isclose(track.raceline.axs, raceline[:, ax_idx]).all())
 
     def test_missing_raceline(self):
-        track = Track.from_track_name("Vegas")
+        track = Track.from_track_name("Berlin")
         self.assertEqual(track.raceline, None)
         self.assertEqual(track.centerline, None)
 
@@ -55,7 +55,7 @@ class TestTrack(unittest.TestCase):
                 - [Trackname_raceline.csv]      # raceline (optional)
                 - [Trackname_centerline.csv]    # centerline (optional)
         """
-        mapdir = pathlib.Path(__file__).parent.parent / "maps"
+        mapdir = find_track_dir("Spielberg").parent # maps/
         for trackdir in mapdir.iterdir():
             if trackdir.is_file():
                 continue
