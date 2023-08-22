@@ -20,7 +20,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-
 """
 Prototype of Utility functions and GJK algorithm for Collision checks between vehicles
 Originally from https://github.com/kroitor/gjk.c
@@ -203,6 +202,7 @@ def get_trmtx(pose):
     th = pose[2]
     cos = np.cos(th)
     sin = np.sin(th)
+
     H = np.array(
         [
             [cos, -sin, 0.0, x],
@@ -236,6 +236,7 @@ def get_vertices(pose, length, width):
     rr = rr / rr[3]
     fl = fl / fl[3]
     fr = fr / fr[3]
+
     vertices = np.asarray(
         [[rl[0], rl[1]], [rr[0], rr[1]], [fr[0], fr[1]], [fl[0], fl[1]]]
     )
