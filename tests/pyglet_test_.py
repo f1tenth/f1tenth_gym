@@ -1,12 +1,11 @@
-import numpy as np
-from PIL import Image
-import yaml
-
-from pyglet.gl import *
-import pyglet
-from pyglet import font, graphics, window
-
 import argparse
+
+import numpy as np
+import pyglet
+import yaml
+from PIL import Image
+from pyglet import graphics, window
+from pyglet.gl import *
 
 
 class Camera:
@@ -192,7 +191,6 @@ for i in range(map_points.shape[0]):
 
 def loop(dt):
     print(pyglet.clock.get_fps())
-    pass
 
 
 @window.event

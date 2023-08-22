@@ -25,17 +25,13 @@ Prototype of Utility functions and classes for simulating 2D LIDAR scans
 Author: Hongrui Zheng
 """
 
+import os
+import unittest
+
 import numpy as np
+from f110_gym.envs import ScanSimulator2D
 from numba import njit
 from scipy.ndimage import distance_transform_edt as edt
-from PIL import Image
-import os
-import yaml
-
-import unittest
-import timeit
-
-from f110_gym.envs import ScanSimulator2D
 
 
 def get_dt(bitmap, resolution):
@@ -254,10 +250,11 @@ Unit test for the 2D scan simulator class
 Author: Hongrui Zheng
 
 Test cases:
-    1, 2: Comparison between generated scan array of the new simulator and the legacy C++ simulator, 
+    1, 2: Comparison between generated scan array of the new simulator and the legacy C++ simulator,
     generated data used, MSE is used as the metric
     2. FPS test, should be greater than 500
 """
+
 
 class ScanTests(unittest.TestCase):
     def setUp(self):

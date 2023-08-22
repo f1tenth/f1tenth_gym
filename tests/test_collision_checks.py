@@ -270,6 +270,7 @@ class CollisionTests(unittest.TestCase):
         rect = np.vstack((vertices, vertices[0, :]))
         if debug:
             import matplotlib.pyplot as plt
+
             plt.scatter(test_pose[0], test_pose[1], c="red")
             plt.plot(rect[:, 0], rect[:, 1])
             plt.xlim([1, 4])

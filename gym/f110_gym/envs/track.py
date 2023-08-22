@@ -1,4 +1,3 @@
-import os
 import pathlib
 import tarfile
 from dataclasses import dataclass

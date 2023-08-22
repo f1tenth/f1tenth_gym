@@ -30,13 +30,13 @@ Note: additional requirements
     - shapely
     - opencv-python
 """
+import math
 import pathlib
 
 import cv2
-import math
+import matplotlib.pyplot as plt
 import numpy as np
 import shapely.geometry as shp
-import matplotlib.pyplot as plt
 
 
 def main(args):

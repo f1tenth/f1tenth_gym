@@ -26,17 +26,12 @@ Prototype of Utility functions and classes for simulating 2D LIDAR scans
 Author: Hongrui Zheng
 """
 
+import unittest
+
 import numpy as np
+from f110_gym.envs.track import Track
 from numba import njit
 from scipy.ndimage import distance_transform_edt as edt
-from PIL import Image
-import os
-import yaml
-
-import unittest
-import timeit
-
-from f110_gym.envs.track import Track
 
 
 def get_dt(bitmap, resolution):

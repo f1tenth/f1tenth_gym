@@ -3,8 +3,7 @@ import time
 import unittest
 
 import numpy as np
-
-from f110_gym.envs.track import Track, find_track_dir, Raceline
+from f110_gym.envs.track import Raceline, Track, find_track_dir
 
 
 class TestTrack(unittest.TestCase):

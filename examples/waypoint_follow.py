@@ -1,11 +1,8 @@
 import time
-import yaml
+
 import gymnasium as gym
 import numpy as np
-from argparse import Namespace
-
 from numba import njit
-
 from pyglet.gl import GL_POINTS
 
 """

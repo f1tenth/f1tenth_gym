@@ -19,11 +19,10 @@ Original implementation: https://gitlab.lrz.de/tum-cps/commonroad-vehicle-models
 Author: Hongrui Zheng
 """
 
-import numpy as np
-
-import unittest
 import time
+import unittest
 
+import numpy as np
 from f110_gym.envs import vehicle_dynamics_ks, vehicle_dynamics_st
 
 

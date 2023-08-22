@@ -109,8 +109,11 @@ def accl_constraints(vel, accl, v_switch, a_max, v_min, v_max):
 
     return accl
 
+
 @njit(cache=True)
-def steering_constraint(steering_angle, steering_velocity, s_min, s_max, sv_min, sv_max):
+def steering_constraint(
+    steering_angle, steering_velocity, s_min, s_max, sv_min, sv_max
+):
     """
     Steering constraints, adjusts the steering velocity based on constraints
 
@@ -140,7 +143,26 @@ def steering_constraint(steering_angle, steering_velocity, s_min, s_max, sv_min,
 
 
 @njit(cache=True)
-def vehicle_dynamics_ks(x, u_init, mu, C_Sf, C_Sr, lf, lr, h, m, I, s_min, s_max, sv_min, sv_max, v_switch, a_max, v_min, v_max):
+def vehicle_dynamics_ks(
+    x,
+    u_init,
+    mu,
+    C_Sf,
+    C_Sr,
+    lf,
+    lr,
+    h,
+    m,
+    I,
+    s_min,
+    s_max,
+    sv_min,
+    sv_max,
+    v_switch,
+    a_max,
+    v_min,
+    v_max,
+):
     """
     Single Track Kinematic Vehicle Dynamics.
 
@@ -244,8 +266,28 @@ def vehicle_dynamics_ks_cog(
     )
     return f
 
+
 @njit(cache=True)
-def vehicle_dynamics_st(x, u_init, mu, C_Sf, C_Sr, lf, lr, h, m, I, s_min, s_max, sv_min, sv_max, v_switch, a_max, v_min, v_max):
+def vehicle_dynamics_st(
+    x,
+    u_init,
+    mu,
+    C_Sf,
+    C_Sr,
+    lf,
+    lr,
+    h,
+    m,
+    I,
+    s_min,
+    s_max,
+    sv_min,
+    sv_max,
+    v_switch,
+    a_max,
+    v_min,
+    v_max,
+):
     """
     Single Track Dynamic Vehicle Dynamics.
 
@@ -371,6 +413,7 @@ def vehicle_dynamics_st(x, u_init, mu, C_Sf, C_Sr, lf, lr, h, m, I, s_min, s_max
 
     return f
 
+
 @njit(cache=True)
 def pid(speed, steer, current_speed, current_steer, max_sv, max_a, max_v, min_v):
     """
@@ -416,14 +459,94 @@ def pid(speed, steer, current_speed, current_steer, max_sv, max_a, max_v, min_v)
 
     return accl, sv
 
-def func_KS(x, t, u, mu, C_Sf, C_Sr, lf, lr, h, m, I, s_min, s_max, sv_min, sv_max, v_switch, a_max, v_min, v_max):
-    f = vehicle_dynamics_ks(x, u, mu, C_Sf, C_Sr, lf, lr, h, m, I, s_min, s_max, sv_min, sv_max, v_switch, a_max, v_min, v_max)
+
+def func_KS(
+    x,
+    t,
+    u,
+    mu,
+    C_Sf,
+    C_Sr,
+    lf,
+    lr,
+    h,
+    m,
+    I,
+    s_min,
+    s_max,
+    sv_min,
+    sv_max,
+    v_switch,
+    a_max,
+    v_min,
+    v_max,
+):
+    f = vehicle_dynamics_ks(
+        x,
+        u,
+        mu,
+        C_Sf,
+        C_Sr,
+        lf,
+        lr,
+        h,
+        m,
+        I,
+        s_min,
+        s_max,
+        sv_min,
+        sv_max,
+        v_switch,
+        a_max,
+        v_min,
+        v_max,
+    )
     return f
 
-def func_ST(x, t, u, mu, C_Sf, C_Sr, lf, lr, h, m, I, s_min, s_max, sv_min, sv_max, v_switch, a_max, v_min, v_max):
-    f = vehicle_dynamics_st(x, u, mu, C_Sf, C_Sr, lf, lr, h, m, I, s_min, s_max, sv_min, sv_max, v_switch, a_max, v_min, v_max)
+
+def func_ST(
+    x,
+    t,
+    u,
+    mu,
+    C_Sf,
+    C_Sr,
+    lf,
+    lr,
+    h,
+    m,
+    I,
+    s_min,
+    s_max,
+    sv_min,
+    sv_max,
+    v_switch,
+    a_max,
+    v_min,
+    v_max,
+):
+    f = vehicle_dynamics_st(
+        x,
+        u,
+        mu,
+        C_Sf,
+        C_Sr,
+        lf,
+        lr,
+        h,
+        m,
+        I,
+        s_min,
+        s_max,
+        sv_min,
+        sv_max,
+        v_switch,
+        a_max,
+        v_min,
+        v_max,
+    )
     return f
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()
