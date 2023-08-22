@@ -1,3 +1,29 @@
+<<<<<<< HEAD:tests/collision_checks_test.py
+=======
+# MIT License
+
+# Copyright (c) 2020 Joseph Auckley, Matthew O'Kelly, Aman Sinha, Hongrui Zheng
+
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+
+>>>>>>> origin/v1.0.0:gym/f110_gym/test/test_collision_checks.py
 """
 Prototype of Utility functions and GJK algorithm for Collision checks between vehicles
 Originally from https://github.com/kroitor/gjk.c
@@ -180,7 +206,18 @@ def get_trmtx(pose):
     th = pose[2]
     cos = np.cos(th)
     sin = np.sin(th)
+<<<<<<< HEAD:tests/collision_checks_test.py
     H = np.array([[cos, -sin, 0.0, x], [sin, cos, 0.0, y], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]])
+=======
+    H = np.array(
+        [
+            [cos, -sin, 0.0, x],
+            [sin, cos, 0.0, y],
+            [0.0, 0.0, 1.0, 0.0],
+            [0.0, 0.0, 0.0, 1.0],
+        ]
+    )
+>>>>>>> origin/v1.0.0:gym/f110_gym/test/test_collision_checks.py
     return H
 
 
@@ -206,12 +243,18 @@ def get_vertices(pose, length, width):
     rr = rr / rr[3]
     fl = fl / fl[3]
     fr = fr / fr[3]
+<<<<<<< HEAD:tests/collision_checks_test.py
     vertices = np.asarray([[rl[0], rl[1]], [rr[0], rr[1]], [fr[0], fr[1]], [fl[0], fl[1]]])
+=======
+    vertices = np.asarray(
+        [[rl[0], rl[1]], [rr[0], rr[1]], [fr[0], fr[1]], [fl[0], fl[1]]]
+    )
+>>>>>>> origin/v1.0.0:gym/f110_gym/test/test_collision_checks.py
     return vertices
 
 
 """
-Unit tests for GJK collision checks
+Unit test for GJK collision checks
 Author: Hongrui Zheng
 """
 
@@ -231,6 +274,7 @@ class CollisionTests(unittest.TestCase):
         self.length = 0.32
         self.width = 0.22
 
+<<<<<<< HEAD:tests/collision_checks_test.py
     def test_get_vert(self, debug=False):
         test_pose = np.array([2.3, 6.7, 0.8])
         vertices = get_vertices(test_pose, self.length, self.width)
@@ -244,6 +288,20 @@ class CollisionTests(unittest.TestCase):
             plt.ylim([5, 8])
             plt.axes().set_aspect("equal")
             plt.show()
+=======
+    def test_get_vert(self):
+        test_pose = np.array([2.3, 6.7, 0.8])
+        vertices = get_vertices(test_pose, self.length, self.width)
+        rect = np.vstack((vertices, vertices[0, :]))
+        import matplotlib.pyplot as plt
+
+        plt.scatter(test_pose[0], test_pose[1], c="red")
+        plt.plot(rect[:, 0], rect[:, 1])
+        plt.xlim([1, 4])
+        plt.ylim([5, 8])
+        plt.axes().set_aspect("equal")
+        plt.show()
+>>>>>>> origin/v1.0.0:gym/f110_gym/test/test_collision_checks.py
         self.assertTrue(vertices.shape == (4, 2))
 
     def test_get_vert_fps(self):
@@ -254,7 +312,11 @@ class CollisionTests(unittest.TestCase):
         elapsed = time.time() - start
         fps = 1000 / elapsed
         print("get vertices fps:", fps)
+<<<<<<< HEAD:tests/collision_checks_test.py
         self.assertTrue(fps > 120)
+=======
+        self.assertTrue(fps > 500)
+>>>>>>> origin/v1.0.0:gym/f110_gym/test/test_collision_checks.py
 
     def test_random_collision(self):
         # perturb the body by a small amount and make sure it all collides with the original body
@@ -273,7 +335,11 @@ class CollisionTests(unittest.TestCase):
         elapsed = time.time() - start
         fps = 1000 / elapsed
         print("gjk fps:", fps)
+<<<<<<< HEAD:tests/collision_checks_test.py
         self.assertTrue(fps > 120)
+=======
+        self.assertTrue(fps > 500)
+>>>>>>> origin/v1.0.0:gym/f110_gym/test/test_collision_checks.py
 
 
 if __name__ == "__main__":

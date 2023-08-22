@@ -1,3 +1,29 @@
+<<<<<<< HEAD:tests/scan_sim_test.py
+=======
+# MIT License
+
+# Copyright (c) 2020 Joseph Auckley, Matthew O'Kelly, Aman Sinha, Hongrui Zheng
+
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+
+>>>>>>> origin/v1.0.0:gym/f110_gym/test/test_scan_sim.py
 """
 Prototype of Utility functions and classes for simulating 2D LIDAR scans
 Author: Hongrui Zheng
@@ -13,6 +39,11 @@ import yaml
 import unittest
 import timeit
 
+<<<<<<< HEAD:tests/scan_sim_test.py
+=======
+from f110_gym.envs import ScanSimulator2D
+
+>>>>>>> origin/v1.0.0:gym/f110_gym/test/test_scan_sim.py
 
 def get_dt(bitmap, resolution):
     """
@@ -54,7 +85,12 @@ def xy_2_rc(x, y, orig_x, orig_y, orig_c, orig_s, height, width, resolution):
     y_rot = -x_trans * orig_s + y_trans * orig_c
 
     # clip the state to be a cell
-    if x_rot < 0 or x_rot >= width * resolution or y_rot < 0 or y_rot >= height * resolution:
+    if (
+        x_rot < 0
+        or x_rot >= width * resolution
+        or y_rot < 0
+        or y_rot >= height * resolution
+    ):
         c = -1
         r = -1
     else:
@@ -65,7 +101,9 @@ def xy_2_rc(x, y, orig_x, orig_y, orig_c, orig_s, height, width, resolution):
 
 
 @njit(cache=True)
-def distance_transform(x, y, orig_x, orig_y, orig_c, orig_s, height, width, resolution, dt):
+def distance_transform(
+    x, y, orig_x, orig_y, orig_c, orig_s, height, width, resolution, dt
+):
     """
     Look up corresponding distance in the distance matrix
 
@@ -85,7 +123,25 @@ def distance_transform(x, y, orig_x, orig_y, orig_c, orig_s, height, width, reso
 
 @njit(cache=True)
 def trace_ray(
+<<<<<<< HEAD:tests/scan_sim_test.py
     x, y, theta_index, sines, cosines, eps, orig_x, orig_y, orig_c, orig_s, height, width, resolution, dt, max_range
+=======
+    x,
+    y,
+    theta_index,
+    sines,
+    cosines,
+    eps,
+    orig_x,
+    orig_y,
+    orig_c,
+    orig_s,
+    height,
+    width,
+    resolution,
+    dt,
+    max_range,
+>>>>>>> origin/v1.0.0:gym/f110_gym/test/test_scan_sim.py
 ):
     """
     Find the length of a specific ray at a specific scan angle theta
@@ -108,7 +164,9 @@ def trace_ray(
     c = cosines[theta_index_]
 
     # distance to nearest initialization
-    dist_to_nearest = distance_transform(x, y, orig_x, orig_y, orig_c, orig_s, height, width, resolution, dt)
+    dist_to_nearest = distance_transform(
+        x, y, orig_x, orig_y, orig_c, orig_s, height, width, resolution, dt
+    )
     total_dist = dist_to_nearest
 
     # ray tracing iterations
@@ -119,7 +177,9 @@ def trace_ray(
 
         # update dist_to_nearest for current point on ray
         # also keeps track of total ray length
-        dist_to_nearest = distance_transform(x, y, orig_x, orig_y, orig_c, orig_s, height, width, resolution, dt)
+        dist_to_nearest = distance_transform(
+            x, y, orig_x, orig_y, orig_c, orig_s, height, width, resolution, dt
+        )
         total_dist += dist_to_nearest
 
     return total_dist
@@ -199,6 +259,7 @@ def get_scan(
 
     return scan
 
+<<<<<<< HEAD:tests/scan_sim_test.py
 
 class ScanSimulator2D(object):
     """
@@ -328,13 +389,16 @@ class ScanSimulator2D(object):
     def get_increment(self):
         return self.angle_increment
 
+=======
+>>>>>>> origin/v1.0.0:gym/f110_gym/test/test_scan_sim.py
 
 """
-Unit tests for the 2D scan simulator class
+Unit test for the 2D scan simulator class
 Author: Hongrui Zheng
 
 Test cases:
-    1, 2: Comparison between generated scan array of the new simulator and the legacy C++ simulator, generated data used, MSE is used as the metric
+    1, 2: Comparison between generated scan array of the new simulator and the legacy C++ simulator, 
+    generated data used, MSE is used as the metric
     2. FPS test, should be greater than 500
 """
 
@@ -350,6 +414,7 @@ class ScanTests(unittest.TestCase):
         self.test_poses[:, 2] = np.linspace(-1.0, 1.0, num=self.num_test)
 
         # legacy gym data
+<<<<<<< HEAD:tests/scan_sim_test.py
         sample_scan = np.load("tests/legacy_scan.npz")
         self.berlin_scan = sample_scan["berlin"]
         self.skirk_scan = sample_scan["skirk"]
@@ -364,10 +429,27 @@ class ScanTests(unittest.TestCase):
         for i in range(self.num_test):
             test_pose = self.test_poses[i]
             new_berlin[i, :] = scan_sim.scan(test_pose)
+=======
+        wdir = os.path.dirname(os.path.abspath(__file__))
+        sample_scan = np.load(f"{wdir}/legacy_scan.npz")
+        self.berlin_scan = sample_scan["berlin"]
+        self.skirk_scan = sample_scan["skirk"]
+
+    def test_map_berlin(self):
+        scan_rng = np.random.default_rng(seed=12345)
+        scan_sim = ScanSimulator2D(self.num_beams, self.fov)
+        new_berlin = np.empty((self.num_test, self.num_beams))
+        scan_sim.set_map(map_name="Berlin")
+        # scan gen loop
+        for i in range(self.num_test):
+            test_pose = self.test_poses[i]
+            new_berlin[i, :] = scan_sim.scan(pose=test_pose, rng=scan_rng)
+>>>>>>> origin/v1.0.0:gym/f110_gym/test/test_scan_sim.py
         diff = self.berlin_scan - new_berlin
         mse = np.mean(diff**2)
         # print('Levine distance test, norm: ' + str(norm))
 
+<<<<<<< HEAD:tests/scan_sim_test.py
         if debug:
             # plotting
             import matplotlib.pyplot as plt
@@ -385,10 +467,28 @@ class ScanTests(unittest.TestCase):
         map_path = "../../../maps/skirk.yaml"
         map_ext = ".png"
         scan_sim.set_map(map_path, map_ext)
+=======
+        # plotting
+        import matplotlib.pyplot as plt
+
+        theta = np.linspace(-self.fov / 2.0, self.fov / 2.0, num=self.num_beams)
+        plt.polar(theta, new_berlin[1, :], ".", lw=0)
+        plt.polar(theta, self.berlin_scan[1, :], ".", lw=0)
+        plt.show()
+
+        self.assertLess(mse, 2.0)
+
+    def test_map_skirk(self):
+        scan_rng = np.random.default_rng(seed=12345)
+        scan_sim = ScanSimulator2D(self.num_beams, self.fov)
+        new_skirk = np.empty((self.num_test, self.num_beams))
+        scan_sim.set_map(map_name="Skirk")
+>>>>>>> origin/v1.0.0:gym/f110_gym/test/test_scan_sim.py
         print("map set")
         # scan gen loop
         for i in range(self.num_test):
             test_pose = self.test_poses[i]
+<<<<<<< HEAD:tests/scan_sim_test.py
             new_skirk[i, :] = scan_sim.scan(test_pose)
         diff = self.skirk_scan - new_skirk
         mse = np.mean(diff**2)
@@ -402,37 +502,70 @@ class ScanTests(unittest.TestCase):
             plt.polar(theta, new_skirk[1, :], ".", lw=0)
             plt.polar(theta, self.skirk_scan[1, :], ".", lw=0)
             plt.show()
+=======
+            new_skirk[i, :] = scan_sim.scan(pose=test_pose, rng=scan_rng)
+        diff = self.skirk_scan - new_skirk
+        mse = np.mean(diff**2)
+        print("skirk distance test, mse: " + str(mse))
+
+        # plotting
+        import matplotlib.pyplot as plt
+
+        theta = np.linspace(-self.fov / 2.0, self.fov / 2.0, num=self.num_beams)
+        plt.polar(theta, new_skirk[1, :], ".", lw=0)
+        plt.polar(theta, self.skirk_scan[1, :], ".", lw=0)
+        plt.show()
+>>>>>>> origin/v1.0.0:gym/f110_gym/test/test_scan_sim.py
 
         self.assertLess(mse, 2.0)
 
     def test_fps(self):
         # scan fps should be greater than 500
+        scan_rng = np.random.default_rng(seed=12345)
         scan_sim = ScanSimulator2D(self.num_beams, self.fov)
+<<<<<<< HEAD:tests/scan_sim_test.py
         map_path = "../../../maps/skirk.yaml"
         map_ext = ".png"
         scan_sim.set_map(map_path, map_ext)
+=======
+        scan_sim.set_map(map_name="Skirk")
+>>>>>>> origin/v1.0.0:gym/f110_gym/test/test_scan_sim.py
 
         import time
 
         start = time.time()
         for i in range(10000):
             x_test = i / 10000
+<<<<<<< HEAD:tests/scan_sim_test.py
             scan = scan_sim.scan(np.array([x_test, 0.0, 0.0]))
         end = time.time()
         fps = 10000 / (end - start)
         # print('FPS test')
         # print('Elapsed time: ' + str(end-start) + ' , FPS: ' + str(1/fps))
+=======
+            scan = scan_sim.scan(pose=np.array([x_test, 0.0, 0.0]), rng=scan_rng)
+        end = time.time()
+        fps = 10000 / (end - start)
+
+>>>>>>> origin/v1.0.0:gym/f110_gym/test/test_scan_sim.py
         self.assertGreater(fps, 500.0)
 
 
 def main():
     num_beams = 1080
     fov = 4.7
+<<<<<<< HEAD:tests/scan_sim_test.py
     # map_path = '../envs/maps/berlin.yaml'
     map_path = "/home/f1tenth-eval/tunercar/es/maps/map0.yaml"
     map_ext = ".png"
     scan_sim = ScanSimulator2D(num_beams, fov)
     scan_sim.set_map(map_path, map_ext)
+=======
+    # map_path = '../envs/maps/Berlin_map.yaml'
+    scan_rng = np.random.default_rng(seed=12345)
+    scan_sim = ScanSimulator2D(num_beams, fov)
+    scan_sim.set_map(map_name="Example")
+>>>>>>> origin/v1.0.0:gym/f110_gym/test/test_scan_sim.py
     scan = scan_sim.scan(np.array([0.0, 0.0, 0.0]))
 
     # fps test
@@ -441,7 +574,11 @@ def main():
     start = time.time()
     for i in range(10000):
         x_test = i / 10000
+<<<<<<< HEAD:tests/scan_sim_test.py
         scan = scan_sim.scan(np.array([x_test, 0.0, 0.0]))
+=======
+        scan = scan_sim.scan(np.array([x_test, 0.0, 0.0]), rng=scan_rng)
+>>>>>>> origin/v1.0.0:gym/f110_gym/test/test_scan_sim.py
     end = time.time()
     fps = (end - start) / 10000
     print("FPS test")
@@ -472,5 +609,10 @@ def main():
 
 
 if __name__ == "__main__":
+<<<<<<< HEAD:tests/scan_sim_test.py
     unittest.main()
     # main()
+=======
+    # test.main()
+    main()
+>>>>>>> origin/v1.0.0:gym/f110_gym/test/test_scan_sim.py
