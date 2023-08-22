@@ -264,18 +264,18 @@ class CollisionTests(unittest.TestCase):
         self.length = 0.32
         self.width = 0.22
 
-    def test_get_vert(self):
+    def test_get_vert(self, debug=False):
         test_pose = np.array([2.3, 6.7, 0.8])
         vertices = get_vertices(test_pose, self.length, self.width)
         rect = np.vstack((vertices, vertices[0, :]))
-        import matplotlib.pyplot as plt
-
-        plt.scatter(test_pose[0], test_pose[1], c="red")
-        plt.plot(rect[:, 0], rect[:, 1])
-        plt.xlim([1, 4])
-        plt.ylim([5, 8])
-        plt.axes().set_aspect("equal")
-        plt.show()
+        if debug:
+            import matplotlib.pyplot as plt
+            plt.scatter(test_pose[0], test_pose[1], c="red")
+            plt.plot(rect[:, 0], rect[:, 1])
+            plt.xlim([1, 4])
+            plt.ylim([5, 8])
+            plt.axes().set_aspect("equal")
+            plt.show()
         self.assertTrue(vertices.shape == (4, 2))
 
     def test_get_vert_fps(self):
