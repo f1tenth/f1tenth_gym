@@ -16,6 +16,8 @@ requests = "*"
 pyopengl = "*"
 numba = "*"
 f110-gym = {file = "."}
+shapely = "*"
+opencv-python = "*"
 
 [dev-packages]
 flake8 = "*"
