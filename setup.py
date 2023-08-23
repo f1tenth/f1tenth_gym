@@ -18,5 +18,18 @@ setup(
         "pyopengl",
         "yamldataclassconfig",
         "requests",
+        "shapely",
+        "opencv-python",
     ],
+    extras_require={
+        'dev': [
+            'pytest',
+            'flake8',
+            'black',
+            'ipykernel',
+            'isort',
+            'autoflake',
+            'matplotlib'
+        ]
+    }
 )

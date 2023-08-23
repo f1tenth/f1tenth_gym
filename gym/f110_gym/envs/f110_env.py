@@ -32,7 +32,7 @@ import gymnasium as gym
 import numpy as np
 # gl
 import pyglet
-from f110_gym.envs import IntegratorType
+from f110_gym.envs.integrator import IntegratorType
 from f110_gym.envs.action import (CarActionEnum,
                                   from_single_to_multi_action_space)
 # base classes

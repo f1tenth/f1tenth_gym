@@ -27,7 +27,7 @@ Replacement of the old RaceCar, Simulator classes in C++
 Author: Hongrui Zheng
 """
 import numpy as np
-from f110_gym.envs import DynamicModel
+from f110_gym.envs.dynamic_models import DynamicModel
 from f110_gym.envs.action import CarAction
 from f110_gym.envs.collision_models import collision_multiple, get_vertices
 from f110_gym.envs.integrator import EulerIntegrator, IntegratorType

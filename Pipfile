@@ -11,13 +11,12 @@ scipy = ">=1.7.3"
 pyglet = "<1.5"
 pyyaml = ">=5.3.1"
 yamldataclassconfig = "*"
-matplotlib = "*"
 requests = "*"
 pyopengl = "*"
 numba = "*"
-f110-gym = {file = "."}
 shapely = "*"
 opencv-python = "*"
+f110-gym = {file = "."}
 
 [dev-packages]
 flake8 = "*"
@@ -26,6 +25,7 @@ ipykernel = "*"
 pytest = "*"
 isort = "*"
 autoflake = "*"
+matplotlib = "*"
 
 [requires]
 python_version = "3.10"
