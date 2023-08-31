@@ -13,6 +13,20 @@ from f110_gym.envs.track import Track
 from f110_gym.envs.rendering.renderer import EnvRenderer, RenderSpec
 
 
+class FPS():
+    def __init__(self):
+        self.clock = pygame.time.Clock()
+        self.font = pygame.font.SysFont("Arial", 18)
+
+        self.text = self.font.render("", True, (125, 125, 125))
+
+    def render(self, display):
+        txt = f"FPS: {self.clock.get_fps():.2f}"
+        self.text = self.font.render(txt, True, (125, 125, 125))
+        center = display.get_rect().center
+        display.blit(self.text, center)
+
+
 class PygameEnvRenderer(EnvRenderer):
     def __init__(self, track: Track, render_spec: RenderSpec, render_mode: str):
         super().__init__()
@@ -35,8 +49,10 @@ class PygameEnvRenderer(EnvRenderer):
             pygame.display.init()
             pygame.event.set_allowed([])
             self.window = pygame.display.set_mode((width, height))
-            self.window.fill((255, 255, 255)) # white background
+            self.window.fill((255, 255, 255))  # white background
             self.clock = pygame.time.Clock()
+
+            self.fps = FPS()
 
         self.poses = None
         self.colors = None
@@ -57,10 +73,13 @@ class PygameEnvRenderer(EnvRenderer):
         original_img = np.array(
             Image.open(original_img).transpose(Image.FLIP_TOP_BOTTOM)
         ).astype(np.float64)
+
+        dwidth = int(width * self.zoom_level)
+        dheight = int(height * self.zoom_level)
         self.map_img = cv2.resize(
-            original_img, dsize=(width, height), interpolation=cv2.INTER_AREA
+            original_img, dsize=(dwidth, dheight), interpolation=cv2.INTER_AREA
         )
-        self.ppu = original_img.shape[0] / self.map_img.shape[0] # pixels per unit
+        self.ppu = original_img.shape[0] / self.map_img.shape[0]  # pixels per unit
 
         self.render_map()
 
@@ -123,14 +142,8 @@ class PygameEnvRenderer(EnvRenderer):
             end_point = center + arrow_length * np.array([np.cos(steering_angle), np.sin(steering_angle)])
             pygame.draw.line(self.canvas, color, center.astype(int), end_point.astype(int), 1)
 
-
-
         # follow the first car
-        surface_mod = self.canvas.copy()
-
-        #scale = 1
-        #surface_mod = pygame.transform.rotozoom(surface_mod, 0, scale)
-        surface_mod_rect = surface_mod.get_rect()
+        surface_mod_rect = self.canvas.get_rect()
         screen_rect = self.window.get_rect()
 
         # agent to follow
@@ -140,19 +153,20 @@ class PygameEnvRenderer(EnvRenderer):
 
         surface_mod_rect.x = (screen_rect.centerx - ego_x)
         surface_mod_rect.y = (screen_rect.centery - ego_y)
-        self.canvas = surface_mod
 
-
+        # fps
+        if self.window is not None:
+            self.fps.render(self.canvas)
 
         if self.render_mode == "human":
             # The following line copies our drawings from `canvas` to the visible window
-            self.window.blit(surface_mod, surface_mod_rect)
+            self.window.blit(self.canvas, surface_mod_rect)
             pygame.event.pump()
             pygame.display.update()
 
             # We need to ensure that human-rendering occurs at the predefined framerate.
             # The following line will automatically add a delay to keep the framerate stable.
-            self.clock.tick()
+            self.fps.clock.tick()
         else:  # rgb_array
             return np.transpose(
                 np.array(pygame.surfarray.pixels3d(self.canvas)), axes=(1, 0, 2)
