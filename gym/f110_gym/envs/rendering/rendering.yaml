@@ -1,5 +1,5 @@
-window_size: 1500
-zoom_in_factor: 1.0
+window_size: 1000
+zoom_in_factor: 2.0
 render_fps: 30
 car_length: 0.58
 car_width: 0.31
