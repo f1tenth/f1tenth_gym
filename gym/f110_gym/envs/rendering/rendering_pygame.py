@@ -1,6 +1,7 @@
 import pathlib
 import warnings
 
+import cv2
 import numpy as np
 import pygame
 import yaml
@@ -13,10 +14,15 @@ from f110_gym.envs.rendering.renderer import EnvRenderer, RenderSpec
 
 
 class CarSprite(pygame.sprite.Sprite):
-    def __init__(self, car_length, car_width, color):
+    def __init__(self, color, height, width):
         super().__init__()
-        self.image = pygame.Surface([car_length, car_width])
-        self.image.fill(color)
+
+        self.image = pygame.Surface([width, height])
+        self.image.fill((0, 0, 0))
+        self.image.set_colorkey(color)
+
+        pygame.draw.rect(self.image, color, pygame.Rect(0, 0, width, height))
+
         self.rect = self.image.get_rect()
 
 
@@ -34,11 +40,11 @@ class PygameEnvRenderer(EnvRenderer):
             1600,
             1600,
         )  # render_spec.window_width, render_spec.window_height
-        self.zoom_level = render_spec.zoom_in_factor
+        # self.zoom_level = render_spec.zoom_in_factor
 
         self.car_length = render_spec.car_length
         self.car_width = render_spec.car_width
-        self.cars = pygame.sprite.Group()
+        self.cars = None
 
         if self.render_mode == "human":
             pygame.init()
@@ -63,10 +69,14 @@ class PygameEnvRenderer(EnvRenderer):
                 print(ex)
 
         # load map image
-        map_img = map_filepath.parent / self.map_metadata["image"]
-        self.map_img = np.array(
-            Image.open(map_img).transpose(Image.FLIP_TOP_BOTTOM)
+        original_img = map_filepath.parent / self.map_metadata["image"]
+        original_img = np.array(
+            Image.open(original_img).transpose(Image.FLIP_TOP_BOTTOM)
         ).astype(np.float64)
+        self.map_img = cv2.resize(
+            original_img, dsize=(width, height), interpolation=cv2.INTER_AREA
+        )
+        self.ppu = original_img.shape[0] / self.map_img.shape[0]  # pixels per unit
 
         self.render_map()
 
@@ -94,18 +104,32 @@ class PygameEnvRenderer(EnvRenderer):
         self.canvas = pygame.surfarray.make_surface(self.track_map)
 
     def render(self):
+        origin = self.map_metadata["origin"]
+        resolution = self.map_metadata["resolution"] * self.ppu
+        car_length = self.car_length / self.ppu
+        car_width = self.car_width / self.ppu
+
+        if self.cars is None and len(self.poses) > 0:
+            self.cars = pygame.sprite.Group()
+
+            for i in range(len(self.poses)):
+                color, pose = self.colors[i], self.poses[i]
+                car = CarSprite(color, car_width, car_length)
+                car.rect.x = (pose[0] - origin[0]) / resolution
+                car.rect.y = (pose[1] - origin[1]) / resolution
+                self.cars.add(car)
+
+        self.cars.update()
         self.canvas.fill((0, 0, 0))  # fill canvas with black
         self.render_map()
+        self.cars.draw(self.window)
 
-        origin = self.map_metadata["origin"]
-        resolution = self.map_metadata["resolution"]
         for i in range(len(self.poses)):
             color, pose = self.colors[i], self.poses[i]
 
-            vertices = get_vertices(pose, self.car_length, self.car_width)
-            vertices[:, 0] = (vertices[:, 0] - origin[0]) / resolution
-            vertices[:, 1] = (vertices[:, 1] - origin[1]) / resolution
-
+            vertices = get_vertices(pose, car_length, car_width)
+            vertices[:, 0] = ((vertices[:, 0] - origin[0]) / resolution)
+            vertices[:, 1] = ((vertices[:, 1] - origin[1]) / resolution)
             pygame.draw.lines(self.canvas, color, True, vertices, 1)
 
         if self.render_mode == "human":
