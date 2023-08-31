@@ -178,8 +178,7 @@ class F110Env(gym.Env):
         # stateful observations for rendering
         self.render_obs = None
         self.render_mode = render_mode
-        self.render_spec = RenderSpec(render_mode=self.render_mode)
-        self.renderer = make_renderer(track=self.track, render_spec=self.render_spec)
+        self.renderer = make_renderer(track=self.track, render_mode=render_mode)
 
     def __del__(self):
         """
@@ -327,6 +326,7 @@ class F110Env(gym.Env):
             "poses_x": self.sim.agent_poses[:, 0],
             "poses_y": self.sim.agent_poses[:, 1],
             "poses_theta": self.sim.agent_poses[:, 2],
+            "steering_angles": self.sim.agent_steerings,
             "lap_times": self.lap_times,
             "lap_counts": self.lap_counts,
             "collisions": self.sim.collisions,

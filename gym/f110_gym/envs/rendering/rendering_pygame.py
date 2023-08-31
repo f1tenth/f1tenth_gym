@@ -13,34 +13,18 @@ from f110_gym.envs.track import Track
 from f110_gym.envs.rendering.renderer import EnvRenderer, RenderSpec
 
 
-class CarSprite(pygame.sprite.Sprite):
-    def __init__(self, color, height, width):
-        super().__init__()
-
-        self.image = pygame.Surface([width, height])
-        self.image.fill((0, 0, 0))
-        self.image.set_colorkey(color)
-
-        pygame.draw.rect(self.image, color, pygame.Rect(0, 0, width, height))
-
-        self.rect = self.image.get_rect()
-
-
 class PygameEnvRenderer(EnvRenderer):
-    def __init__(self, track: Track, render_spec: RenderSpec):
+    def __init__(self, track: Track, render_spec: RenderSpec, render_mode: str):
         super().__init__()
 
         self.window = None
         self.canvas = None
         self.clock = None
         self.render_fps = render_spec.render_fps
-        self.render_mode = render_spec.render_mode
+        self.render_mode = render_mode
 
-        width, height = (
-            1600,
-            1600,
-        )  # render_spec.window_width, render_spec.window_height
-        # self.zoom_level = render_spec.zoom_in_factor
+        width, height = render_spec.window_size, render_spec.window_size
+        self.zoom_level = render_spec.zoom_in_factor
 
         self.car_length = render_spec.car_length
         self.car_width = render_spec.car_width
@@ -50,8 +34,8 @@ class PygameEnvRenderer(EnvRenderer):
             pygame.init()
             pygame.display.init()
             pygame.event.set_allowed([])
-            flags = DOUBLEBUF
-            self.window = pygame.display.set_mode((width, height), flags, 16)
+            self.window = pygame.display.set_mode((width, height))
+            self.window.fill((255, 255, 255)) # white background
             self.clock = pygame.time.Clock()
 
         self.poses = None
@@ -76,7 +60,7 @@ class PygameEnvRenderer(EnvRenderer):
         self.map_img = cv2.resize(
             original_img, dsize=(width, height), interpolation=cv2.INTER_AREA
         )
-        self.ppu = original_img.shape[0] / self.map_img.shape[0]  # pixels per unit
+        self.ppu = original_img.shape[0] / self.map_img.shape[0] # pixels per unit
 
         self.render_map()
 
@@ -88,6 +72,7 @@ class PygameEnvRenderer(EnvRenderer):
         self.poses = np.stack(
             (state["poses_x"], state["poses_y"], state["poses_theta"])
         ).T
+        self.steering_angles = state["steering_angles"]
 
     def add_renderer_callback(self, callback_fn: callable):
         warnings.warn("add_render_callback is not implemented for PygameEnvRenderer")
@@ -106,35 +91,62 @@ class PygameEnvRenderer(EnvRenderer):
     def render(self):
         origin = self.map_metadata["origin"]
         resolution = self.map_metadata["resolution"] * self.ppu
-        car_length = self.car_length / self.ppu
-        car_width = self.car_width / self.ppu
+        car_length = self.car_length
+        car_width = self.car_width
 
-        if self.cars is None and len(self.poses) > 0:
-            self.cars = pygame.sprite.Group()
+        print("ppu: ", self.ppu)
+        print("res: ", resolution)
+        print("car_length: ", car_length)
+        print("car_width: ", car_width)
+        print()
 
-            for i in range(len(self.poses)):
-                color, pose = self.colors[i], self.poses[i]
-                car = CarSprite(color, car_width, car_length)
-                car.rect.x = (pose[0] - origin[0]) / resolution
-                car.rect.y = (pose[1] - origin[1]) / resolution
-                self.cars.add(car)
-
-        self.cars.update()
-        self.canvas.fill((0, 0, 0))  # fill canvas with black
+        self.canvas.fill((0, 0, 0)) # black background
         self.render_map()
-        self.cars.draw(self.window)
 
+        # draw cars
         for i in range(len(self.poses)):
             color, pose = self.colors[i], self.poses[i]
 
             vertices = get_vertices(pose, car_length, car_width)
-            vertices[:, 0] = ((vertices[:, 0] - origin[0]) / resolution)
-            vertices[:, 1] = ((vertices[:, 1] - origin[1]) / resolution)
+            vertices[:, 0] = (vertices[:, 0] - origin[0]) / resolution
+            vertices[:, 1] = (vertices[:, 1] - origin[1]) / resolution
             pygame.draw.lines(self.canvas, color, True, vertices, 1)
+
+            # draw car steering angle
+            arrow_length = 0.5 / resolution
+
+            center = np.array([pose[0], pose[1]])
+            center[0] = (center[0] - origin[0]) / resolution
+            center[1] = (center[1] - origin[1]) / resolution
+
+            steering_angle = pose[2] + self.steering_angles[i]
+            end_point = center + arrow_length * np.array([np.cos(steering_angle), np.sin(steering_angle)])
+            pygame.draw.line(self.canvas, color, center.astype(int), end_point.astype(int), 1)
+
+
+
+        # follow the first car
+        surface_mod = self.canvas.copy()
+
+        #scale = 1
+        #surface_mod = pygame.transform.rotozoom(surface_mod, 0, scale)
+        surface_mod_rect = surface_mod.get_rect()
+        screen_rect = self.window.get_rect()
+
+        # agent to follow
+        ego_x, ego_y = self.poses[0, 0], self.poses[0, 1]
+        ego_x = (ego_x - origin[0]) / resolution
+        ego_y = (ego_y - origin[1]) / resolution
+
+        surface_mod_rect.x = (screen_rect.centerx - ego_x)
+        surface_mod_rect.y = (screen_rect.centery - ego_y)
+        self.canvas = surface_mod
+
+
 
         if self.render_mode == "human":
             # The following line copies our drawings from `canvas` to the visible window
-            self.window.blit(self.canvas, self.canvas.get_rect())
+            self.window.blit(surface_mod, surface_mod_rect)
             pygame.event.pump()
             pygame.display.update()
 

@@ -1,6 +1,7 @@
 import pathlib
 from abc import abstractmethod
 from dataclasses import dataclass
+from typing import Union
 
 import numpy as np
 import yaml
@@ -18,23 +19,26 @@ class RenderSpec:
     car_length = float
     car_width = float
 
-    def __init__(self, window_width=1000, window_height=800, zoom_in_factor=1.2, render_fps=30,
-                 car_length=0.58, car_width=0.31, render_mode="human"):
-        self.window_width = window_width
-        self.window_height = window_height
+    def __init__(self, window_size=1000, zoom_in_factor=1.2, render_fps=30, car_length=0.58, car_width=0.31):
+        self.window_size = window_size
         self.zoom_in_factor = zoom_in_factor
         self.render_fps = render_fps
 
         self.car_length = car_length
         self.car_width = car_width
 
-        self.render_mode = render_mode
+    @staticmethod
+    def from_yaml(yaml_file: Union[str, pathlib.Path]):
+        with open(yaml_file, "r") as yaml_stream:
+            try:
+                config = yaml.safe_load(yaml_stream)
+            except yaml.YAMLError as ex:
+                print(ex)
+        return RenderSpec(**config)
 
 
 class EnvRenderer:
     render_callbacks = []
-
-
 
     @abstractmethod
     def update(self, state):
