@@ -1,6 +1,6 @@
 window_size: 1000 # px
 focus_on: agent_0  # agent id
-zoom_in_factor: 3.0 # 1.0 is no zoom, 2.0 is 2x zoom, etc.
+zoom_in_factor: 2.0 # 1.0 is no zoom, 2.0 is 2x zoom, etc.
 render_fps: 100 # Hz
 car_length: 0.58  # m
 car_width: 0.31 # m
