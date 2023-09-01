@@ -31,17 +31,31 @@ class FPS:
 
         display.blit(self.text, bottom_left)
 
+class Timer:
+    def __init__(self):
+        self.font = pygame.font.SysFont("Arial", 32)
+        self.text = self.font.render("", True, (125, 125, 125))
+
+    def render(self, time: float, display: pygame.Surface):
+        txt = f"Time: {time:.2f}"
+        self.text = self.font.render(txt, True, (125, 125, 125))
+
+        # find bottom right corner of display
+        display_width, display_height = display.get_width(), display.get_height()
+        text_width, text_height = self.text.get_width(), self.text.get_height()
+        bottom_right = (display_width - text_width, display_height - text_height)
+
+        display.blit(self.text, bottom_right)
+
 
 class Map:
-    def __init__(self, map_img: np.ndarray, render_spec: RenderSpec, render_mode: str):
+    def __init__(self, map_img: np.ndarray, render_spec: RenderSpec):
         width, height = map_img.shape
-
-        if render_mode == "human":
-            dwidth = int(width * render_spec.zoom_in_factor)
-            dheight = int(height * render_spec.zoom_in_factor)
-            map_img = cv2.resize(
-                map_img, dsize=(dwidth, dheight), interpolation=cv2.INTER_AREA
-            )
+        dwidth = int(width * render_spec.zoom_in_factor)
+        dheight = int(height * render_spec.zoom_in_factor)
+        map_img = cv2.resize(
+            map_img, dsize=(dwidth, dheight), interpolation=cv2.INTER_AREA
+        )
 
         # from shape (W, H) to (W, H, 3)
         track_map = np.stack([map_img, map_img, map_img], axis=-1)
@@ -107,35 +121,32 @@ class PygameEnvRenderer(EnvRenderer):
 
         self.window = None
         self.canvas = None
+        self.map_canvas = None
 
-        self.clock = None
+        self.time_renderer = None
+
         self.render_spec = render_spec
         self.render_fps = render_spec.render_fps
         self.render_mode = render_mode
-
-        width, height = render_spec.window_size, render_spec.window_size
         self.zoom_level = render_spec.zoom_in_factor
 
         self.car_length = render_spec.car_length
         self.car_width = render_spec.car_width
         self.car_tickness = render_spec.car_tickness
+        self.poses = None
+        self.colors = None
         self.cars = None
 
+        width, height = render_spec.window_size, render_spec.window_size
+
+        pygame.init()
         if self.render_mode == "human":
-            pygame.init()
             pygame.display.init()
             pygame.event.set_allowed([])
             self.window = pygame.display.set_mode((width, height))
             self.window.fill((255, 255, 255))  # white background
-            self.clock = pygame.time.Clock()
 
-            self.fps = FPS()
-
-        self.poses = None
-        self.colors = None
-        self.cars = None
-        self.track_map = None
-        self.track = track
+        self.canvas = pygame.Surface((width, height))
 
         # load map metadata
         map_filepath = pathlib.Path(track.filepath)
@@ -152,15 +163,17 @@ class PygameEnvRenderer(EnvRenderer):
             Image.open(original_img).transpose(Image.FLIP_TOP_BOTTOM)
         ).astype(np.float64)
 
-        self.map_renderer = Map(
-            map_img=original_img, render_spec=render_spec, render_mode=render_mode
-        )
+        self.map_renderer = Map(map_img=original_img, render_spec=render_spec)
         mapwidth, mapheight, _ = self.map_renderer.track_map.shape
         self.ppu = (
             original_img.shape[0] / self.map_renderer.track_map.shape[0]
         )  # pixels per unit
 
-        self.canvas = pygame.Surface((mapwidth, mapheight))
+        self.map_canvas = pygame.Surface((mapwidth, mapheight))
+
+        # fps and time renderer
+        self.fps = FPS()
+        self.time_renderer = Timer()
 
     def update(self, state):
         if self.cars is None:
@@ -182,6 +195,7 @@ class PygameEnvRenderer(EnvRenderer):
             (state["poses_x"], state["poses_y"], state["poses_theta"])
         ).T
         self.steering_angles = state["steering_angles"]
+        self.sim_time = state["sim_time"]
 
     def add_renderer_callback(self, callback_fn: callable):
         warnings.warn("add_render_callback is not implemented for PygameEnvRenderer")
@@ -194,7 +208,8 @@ class PygameEnvRenderer(EnvRenderer):
         car_tickness = self.car_tickness
 
         self.canvas.fill((255, 255, 255))  # white background
-        self.map_renderer.render(self.canvas)
+        self.map_canvas.fill((255, 255, 255))  # white background
+        self.map_renderer.render(self.map_canvas)
 
         # draw cars
         for i in range(len(self.poses)):
@@ -205,26 +220,28 @@ class PygameEnvRenderer(EnvRenderer):
             )
             car = self.cars[i]
 
-            car.render(pose, steering, color, self.canvas)  # directly give state
+            car.render(pose, steering, color, self.map_canvas)  # directly give state
 
         # follow the first car
-        if self.window is not None:
-            surface_mod_rect = self.canvas.get_rect()
-            screen_rect = self.window.get_rect()
+        surface_mod_rect = self.map_canvas.get_rect()
+        screen_rect = self.canvas.get_rect()
 
-            # agent to follow
-            ego_x, ego_y = self.poses[0, 0], self.poses[0, 1]
-            ego_x = (ego_x - origin[0]) / resolution
-            ego_y = (ego_y - origin[1]) / resolution
+        # agent to follow
+        ego_x, ego_y = self.poses[0, 0], self.poses[0, 1]
+        ego_x = (ego_x - origin[0]) / resolution
+        ego_y = (ego_y - origin[1]) / resolution
 
-            surface_mod_rect.x = screen_rect.centerx - ego_x
-            surface_mod_rect.y = screen_rect.centery - ego_y
+        surface_mod_rect.x = screen_rect.centerx - ego_x
+        surface_mod_rect.y = screen_rect.centery - ego_y
+        self.canvas.blit(self.map_canvas, surface_mod_rect)
+
+        self.time_renderer.render(time=self.sim_time, display=self.canvas)
 
         if self.render_mode == "human":
             assert self.window is not None
-            self.window.fill((255, 255, 255))  # white background
-            self.window.blit(self.canvas, surface_mod_rect)
-            self.fps.render(self.window)
+            self.fps.render(self.canvas)
+
+            self.window.blit(self.canvas, self.canvas.get_rect())
 
             pygame.event.pump()
             pygame.display.update()

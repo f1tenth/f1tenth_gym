@@ -321,6 +321,13 @@ class F110Env(gym.Env):
         # observation
         obs = self.observation_type.observe()
 
+        # times
+        reward = self.timestep
+        self.current_time = self.current_time + self.timestep
+
+        # update data member
+        self._update_state()
+
         # rendering observation
         self.render_obs = {
             "ego_idx": self.sim.ego_idx,
@@ -331,14 +338,8 @@ class F110Env(gym.Env):
             "lap_times": self.lap_times,
             "lap_counts": self.lap_counts,
             "collisions": self.sim.collisions,
+            "sim_time": self.current_time,
         }
-
-        # times
-        reward = self.timestep
-        self.current_time = self.current_time + self.timestep
-
-        # update data member
-        self._update_state()
 
         # check done
         done, toggle_list = self._check_done()
