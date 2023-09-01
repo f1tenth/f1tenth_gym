@@ -168,7 +168,7 @@ def get_actuation(pose_theta, lookahead_point, position, lookahead_distance, whe
     speed = lookahead_point[2]
     if np.abs(waypoint_y) < 1e-6:
         return speed, 0.0
-    radius = 1 / (2.0 * waypoint_y / lookahead_distance**2)
+    radius = 1 / (2.0 * waypoint_y / lookahead_distance ** 2)
     steering_angle = np.arctan(wheelbase / radius)
     return speed, steering_angle
 
@@ -321,6 +321,10 @@ def main():
             work["tlad"],
             work["vgain"],
         )
+
+        if laptime > 5.0:
+            steer = -0.41
+
         obs, step_reward, done, truncated, info = env.step(np.array([[steer, speed]]))
         laptime += step_reward
         env.render()
