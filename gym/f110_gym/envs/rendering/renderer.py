@@ -18,14 +18,17 @@ class RenderSpec:
 
     car_length = float
     car_width = float
+    car_tickness = int
 
-    def __init__(self, window_size=1000, zoom_in_factor=1.2, render_fps=30, car_length=0.58, car_width=0.31):
+    def __init__(self, window_size=1000, zoom_in_factor=1.2, render_fps=30,
+                 car_length=0.58, car_width=0.31, car_tickness=1):
         self.window_size = window_size
         self.zoom_in_factor = zoom_in_factor
         self.render_fps = render_fps
 
         self.car_length = car_length
         self.car_width = car_width
+        self.car_tickness = car_tickness
 
     @staticmethod
     def from_yaml(yaml_file: Union[str, pathlib.Path]):
