@@ -32,6 +32,7 @@ class FPS:
 
         display.blit(self.text, bottom_left)
 
+
 class Timer:
     def __init__(self):
         self.font = pygame.font.SysFont("Arial", 32)
@@ -97,14 +98,23 @@ class Car:
         self.origin = map_origin
         self.resolution = resolution * ppu
 
-        self.color = None
+        self.color = (0, 0, 255)
         self.pose = None
 
-    def render(self, pose, steering, color, display):
-        vertices = get_vertices(pose, self.car_length, self.car_width)
+    def update(self, state, idx: int):
+        self.pose = (
+            state["poses_x"][idx],
+            state["poses_y"][idx],
+            state["poses_theta"][idx],
+        )
+        self.color = (255, 0, 0) if state["collisions"][idx] > 0 else self.color
+        self.steering_angle = self.pose[2] + state["steering_angles"][idx]
+
+    def render(self, display):
+        vertices = get_vertices(self.pose, self.car_length, self.car_width)
         vertices[:, 0] = (vertices[:, 0] - self.origin[0]) / self.resolution
         vertices[:, 1] = (vertices[:, 1] - self.origin[1]) / self.resolution
-        pygame.draw.lines(display, color, True, vertices, self.car_tickness)
+        pygame.draw.lines(display, self.color, True, vertices, self.car_tickness)
 
         # draw two lines in proximity of the front wheels
         # to indicate the steering angle
@@ -114,13 +124,12 @@ class Car:
         front_right = (vertices[1] * lam + vertices[2] * (1 - lam)).astype(int)
         arrow_length = self.steering_arrow_len / self.resolution
 
-        steering_angle = pose[2] + steering
         for mid_point in [front_left, front_right]:
             end_point = mid_point + 0.5 * arrow_length * np.array(
-                [np.cos(steering_angle), np.sin(steering_angle)]
+                [np.cos(self.steering_angle), np.sin(self.steering_angle)]
             )
             base_point = mid_point - 0.5 * arrow_length * np.array(
-                [np.cos(steering_angle), np.sin(steering_angle)]
+                [np.cos(self.steering_angle), np.sin(self.steering_angle)]
             )
 
             pygame.draw.line(
@@ -133,7 +142,13 @@ class Car:
 
 
 class PygameEnvRenderer(EnvRenderer):
-    def __init__(self, track: Track, agent_ids: List[str], render_spec: RenderSpec, render_mode: str):
+    def __init__(
+        self,
+        track: Track,
+        agent_ids: List[str],
+        render_spec: RenderSpec,
+        render_mode: str,
+    ):
         super().__init__()
 
         self.window = None
@@ -147,11 +162,6 @@ class PygameEnvRenderer(EnvRenderer):
         self.render_mode = render_mode
         self.zoom_level = render_spec.zoom_in_factor
 
-        self.car_length = render_spec.car_length
-        self.car_width = render_spec.car_width
-        self.car_tickness = render_spec.car_tickness
-        self.poses = None
-        self.colors = None
         self.cars = None
         self.agent_ids = agent_ids
 
@@ -206,14 +216,9 @@ class PygameEnvRenderer(EnvRenderer):
                 for _ in range(len(self.agent_ids))
             ]
 
-        self.colors = [
-            (255, 0, 0) if state["collisions"][i] else (0, 125, 0)
-            for i in range(len(state["poses_x"]))
-        ]
-        self.poses = np.stack(
-            (state["poses_x"], state["poses_y"], state["poses_theta"])
-        ).T
-        self.steering_angles = state["steering_angles"]
+        for i in range(len(self.agent_ids)):
+            self.cars[i].update(state, i)
+
         self.sim_time = state["sim_time"]
 
     def add_renderer_callback(self, callback_fn: callable):
@@ -228,15 +233,8 @@ class PygameEnvRenderer(EnvRenderer):
         self.map_renderer.render(self.map_canvas)
 
         # draw cars
-        for i in range(len(self.poses)):
-            color, pose, steering = (
-                self.colors[i],
-                self.poses[i],
-                self.steering_angles[i],
-            )
-            car = self.cars[i]
-
-            car.render(pose, steering, color, self.map_canvas)  # directly give state
+        for i in range(len(self.agent_ids)):
+            self.cars[i].render(self.map_canvas)
 
         # follow the first car
         agent_to_follow = self.render_spec.focus_on
@@ -244,7 +242,7 @@ class PygameEnvRenderer(EnvRenderer):
         surface_mod_rect = self.map_canvas.get_rect()
         screen_rect = self.canvas.get_rect()
 
-        ego_x, ego_y = self.poses[id_to_follow, 0], self.poses[id_to_follow, 1]
+        ego_x, ego_y = self.cars[id_to_follow].pose[:2]
         ego_x = (ego_x - origin[0]) / resolution
         ego_y = (ego_y - origin[1]) / resolution
 
@@ -253,7 +251,9 @@ class PygameEnvRenderer(EnvRenderer):
         self.canvas.blit(self.map_canvas, surface_mod_rect)
 
         self.time_renderer.render(time=self.sim_time, display=self.canvas)
-        self.info_renderer.render(txt=f"Focus on: {agent_to_follow}", display=self.canvas)
+        self.info_renderer.render(
+            txt=f"Focus on: {agent_to_follow}", display=self.canvas
+        )
 
         if self.render_mode == "human":
             assert self.window is not None
