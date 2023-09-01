@@ -46,7 +46,7 @@ def main():
     start = time.time()
 
     frames = [env.render()]
-    while not done and laptime < 2.0:
+    while not done and laptime < 20.0:
         agent_id = env.agent_ids[0]
         speed, steer = planner.plan(
             obs[agent_id]["pose_x"],
