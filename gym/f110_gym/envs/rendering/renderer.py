@@ -20,9 +20,18 @@ class RenderSpec:
     car_width = float
     car_tickness = int
 
-    def __init__(self, window_size=1000, zoom_in_factor=1.2, render_fps=30,
-                 car_length=0.58, car_width=0.31, car_tickness=1):
+    def __init__(
+        self,
+        window_size: int = 1000,
+        focus_on: str = "agent_0",
+        zoom_in_factor: float = 1.2,
+        render_fps: int = 30,
+        car_length: float = 0.58,
+        car_width: float = 0.31,
+        car_tickness: int = 1,
+    ):
         self.window_size = window_size
+        self.focus_on = focus_on
         self.zoom_in_factor = zoom_in_factor
         self.render_fps = render_fps
 
@@ -71,6 +80,3 @@ class EnvRenderer:
         Render the current state in a frame.
         """
         raise NotImplementedError()
-
-
-
