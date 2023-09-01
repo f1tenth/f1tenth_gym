@@ -13,10 +13,10 @@ from f110_gym.envs.track import Track
 from f110_gym.envs.rendering.renderer import EnvRenderer, RenderSpec
 
 
-class FPS():
+class FPS:
     def __init__(self):
         self.clock = pygame.time.Clock()
-        self.font = pygame.font.SysFont("Arial", 18)
+        self.font = pygame.font.SysFont("Arial", 32)
 
         self.text = self.font.render("", True, (125, 125, 125))
 
@@ -31,6 +31,7 @@ class FPS():
 
         display.blit(self.text, bottom_left)
 
+
 class Map:
     def __init__(self, map_img: np.ndarray, render_spec: RenderSpec, render_mode: str):
         width, height = map_img.shape
@@ -43,9 +44,7 @@ class Map:
             )
 
         # from shape (W, H) to (W, H, 3)
-        track_map = np.stack(
-            [map_img, map_img, map_img], axis=-1
-        )
+        track_map = np.stack([map_img, map_img, map_img], axis=-1)
 
         track_map = np.rot90(track_map, k=1)  # rotate clockwise
         track_map = np.flip(track_map, axis=0)  # flip vertically
@@ -57,6 +56,51 @@ class Map:
         display.blit(self.map_surface, (0, 0))
 
 
+class Car:
+    def __init__(self, render_spec, map_origin, resolution, ppu):
+        self.car_length = render_spec.car_length
+        self.car_width = render_spec.car_width
+        self.steering_arrow_len = 0.2
+        self.car_tickness = render_spec.car_tickness
+
+        self.origin = map_origin
+        self.resolution = resolution * ppu
+
+        self.color = None
+        self.pose = None
+
+    def render(self, pose, steering, color, display):
+        vertices = get_vertices(pose, self.car_length, self.car_width)
+        vertices[:, 0] = (vertices[:, 0] - self.origin[0]) / self.resolution
+        vertices[:, 1] = (vertices[:, 1] - self.origin[1]) / self.resolution
+        pygame.draw.lines(display, color, True, vertices, self.car_tickness)
+
+        # draw two lines in proximity of the front wheels
+        # to indicate the steering angle
+        lam = 0.15
+        # find point at perc between front and back vertices
+        front_left = (vertices[0] * lam + vertices[3] * (1 - lam)).astype(int)
+        front_right = (vertices[1] * lam + vertices[2] * (1 - lam)).astype(int)
+        arrow_length = self.steering_arrow_len / self.resolution
+
+        steering_angle = pose[2] + steering
+        for mid_point in [front_left, front_right]:
+            end_point = mid_point + 0.5 * arrow_length * np.array(
+                [np.cos(steering_angle), np.sin(steering_angle)]
+            )
+            base_point = mid_point - 0.5 * arrow_length * np.array(
+                [np.cos(steering_angle), np.sin(steering_angle)]
+            )
+
+            pygame.draw.line(
+                display,
+                (0, 0, 0),
+                base_point.astype(int),
+                end_point.astype(int),
+                self.car_tickness + 1,
+            )
+
+
 class PygameEnvRenderer(EnvRenderer):
     def __init__(self, track: Track, render_spec: RenderSpec, render_mode: str):
         super().__init__()
@@ -65,6 +109,7 @@ class PygameEnvRenderer(EnvRenderer):
         self.canvas = None
 
         self.clock = None
+        self.render_spec = render_spec
         self.render_fps = render_spec.render_fps
         self.render_mode = render_mode
 
@@ -88,6 +133,7 @@ class PygameEnvRenderer(EnvRenderer):
 
         self.poses = None
         self.colors = None
+        self.cars = None
         self.track_map = None
         self.track = track
 
@@ -106,13 +152,28 @@ class PygameEnvRenderer(EnvRenderer):
             Image.open(original_img).transpose(Image.FLIP_TOP_BOTTOM)
         ).astype(np.float64)
 
-        self.map_renderer = Map(map_img=original_img, render_spec=render_spec, render_mode=render_mode)
+        self.map_renderer = Map(
+            map_img=original_img, render_spec=render_spec, render_mode=render_mode
+        )
         mapwidth, mapheight, _ = self.map_renderer.track_map.shape
-        self.ppu = original_img.shape[0] / self.map_renderer.track_map.shape[0]  # pixels per unit
+        self.ppu = (
+            original_img.shape[0] / self.map_renderer.track_map.shape[0]
+        )  # pixels per unit
 
         self.canvas = pygame.Surface((mapwidth, mapheight))
 
     def update(self, state):
+        if self.cars is None:
+            self.cars = [
+                Car(
+                    render_spec=self.render_spec,
+                    map_origin=self.map_metadata["origin"],
+                    resolution=self.map_metadata["resolution"],
+                    ppu=self.ppu,
+                )
+                for _ in range(len(state["poses_x"]))
+            ]
+
         self.colors = [
             (255, 0, 0) if state["collisions"][i] else (0, 125, 0)
             for i in range(len(state["poses_x"]))
@@ -124,9 +185,6 @@ class PygameEnvRenderer(EnvRenderer):
 
     def add_renderer_callback(self, callback_fn: callable):
         warnings.warn("add_render_callback is not implemented for PygameEnvRenderer")
-
-    def render_map(self):
-        self.map_renderer.render(self.canvas)
 
     def render(self):
         origin = self.map_metadata["origin"]
@@ -140,19 +198,14 @@ class PygameEnvRenderer(EnvRenderer):
 
         # draw cars
         for i in range(len(self.poses)):
-            color, pose = self.colors[i], self.poses[i]
+            color, pose, steering = (
+                self.colors[i],
+                self.poses[i],
+                self.steering_angles[i],
+            )
+            car = self.cars[i]
 
-            vertices = get_vertices(pose, car_length, car_width)
-            vertices[:, 0] = (vertices[:, 0] - origin[0]) / resolution
-            vertices[:, 1] = (vertices[:, 1] - origin[1]) / resolution
-            pygame.draw.lines(self.canvas, color, True, vertices, car_tickness)
-
-            # draw car steering angle from front center
-            arrow_length = 0.2 / resolution
-            front_center = (vertices[2] + vertices[3]) / 2
-            steering_angle = pose[2] + self.steering_angles[i]
-            end_point = front_center + arrow_length * np.array([np.cos(steering_angle), np.sin(steering_angle)])
-            pygame.draw.line(self.canvas, color, front_center.astype(int), end_point.astype(int), car_tickness)
+            car.render(pose, steering, color, self.canvas)  # directly give state
 
         # follow the first car
         if self.window is not None:
@@ -164,8 +217,8 @@ class PygameEnvRenderer(EnvRenderer):
             ego_x = (ego_x - origin[0]) / resolution
             ego_y = (ego_y - origin[1]) / resolution
 
-            surface_mod_rect.x = (screen_rect.centerx - ego_x)
-            surface_mod_rect.y = (screen_rect.centery - ego_y)
+            surface_mod_rect.x = screen_rect.centerx - ego_x
+            surface_mod_rect.y = screen_rect.centery - ego_y
 
         if self.render_mode == "human":
             assert self.window is not None
