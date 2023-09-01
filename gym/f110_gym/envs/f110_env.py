@@ -178,7 +178,8 @@ class F110Env(gym.Env):
         # stateful observations for rendering
         self.render_obs = None
         self.render_mode = render_mode
-        self.renderer = make_renderer(track=self.track, render_mode=render_mode)
+        self.renderer, self.render_spec = make_renderer(track=self.track, render_mode=render_mode)
+        self.metadata["render_fps"] = self.render_spec.render_fps
 
     def __del__(self):
         """
@@ -458,38 +459,6 @@ class F110Env(gym.Env):
 
         if self.render_mode not in self.metadata["render_modes"]:
             return
-        if self.render_mode in ["human", "human_fast"]:
-            self.render_frame(mode=self.render_mode)
-        elif self.render_mode == "rgb_array":
-            # NOTE: this is extremely slow and should be changed to use pygame
-            import PIL
-            from PIL.Image import Transpose
 
-            self.render_frame(mode="human_fast")
-            image_data = (
-                pyglet.image.get_buffer_manager().get_color_buffer().get_image_data()
-            )
-            fmt = "RGB"
-            pitch = image_data.width * len(fmt)
-            pil_image = PIL.Image.frombytes(
-                fmt,
-                (image_data.width, image_data.height),
-                image_data.get_data(fmt, pitch),
-            )
-            pil_image = pil_image.transpose(Transpose.FLIP_TOP_BOTTOM)
-            return np.array(pil_image)
-        else:
-            raise NotImplementedError(f"mode {self.render_mode} not implemented")
-
-    def render_frame(self, mode):
         self.renderer.update(state=self.render_obs)
-
-        for render_callback in self.renderer.render_callbacks:
-            render_callback(self.renderer)
-
-        self.renderer.render()
-
-        if mode == "human":
-            time.sleep(0.005)
-        elif mode == "human_fast":
-            pass
+        return self.renderer.render()

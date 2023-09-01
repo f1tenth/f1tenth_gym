@@ -267,28 +267,6 @@ class PurePursuitPlanner:
         return speed, steering_angle
 
 
-class FlippyPlanner:
-    """
-    Planner designed to exploit integration methods and dynamics.
-    For testing only. To observe this error, use single track dynamics for all velocities >0.1
-    """
-
-    def __init__(self, speed=1, flip_every=1, steer=2):
-        self.speed = speed
-        self.flip_every = flip_every
-        self.counter = 0
-        self.steer = steer
-
-    def render_waypoints(self, *args, **kwargs):
-        pass
-
-    def plan(self, *args, **kwargs):
-        if self.counter % self.flip_every == 0:
-            self.counter = 0
-            self.steer *= -1
-        return self.speed, self.steer
-
-
 def main():
     """
     main entry point
@@ -316,29 +294,7 @@ def main():
         render_mode="human",
     )
 
-    planner = PurePursuitPlanner(
-        track=env.track, wb=0.17145 + 0.15875
-    )  # FlippyPlanner(speed=0.2, flip_every=1, steer=10)
-
-    def render_callback(env_renderer):
-        # custom extra drawing function
-
-        e = env_renderer
-
-        # update camera to follow car
-        x = e.cars[0].vertices[::2]
-        y = e.cars[0].vertices[1::2]
-        top, bottom, left, right = max(y), min(y), min(x), max(x)
-        e.score_label.x = left
-        e.score_label.y = top - 700
-        e.left = left - 800
-        e.right = right + 800
-        e.top = top + 800
-        e.bottom = bottom - 800
-
-        planner.render_waypoints(env_renderer)
-
-    env.add_render_callback(render_callback)
+    planner = PurePursuitPlanner(track=env.track, wb=0.17145 + 0.15875)
 
     poses = np.array(
         [

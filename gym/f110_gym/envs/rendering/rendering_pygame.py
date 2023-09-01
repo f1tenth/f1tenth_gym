@@ -32,7 +32,16 @@ class FPS():
         display.blit(self.text, bottom_left)
 
 class Map:
-    def __init__(self, map_img: np.ndarray):
+    def __init__(self, map_img: np.ndarray, render_spec: RenderSpec, render_mode: str):
+        width, height = map_img.shape
+
+        if render_mode == "human":
+            dwidth = int(width * render_spec.zoom_in_factor)
+            dheight = int(height * render_spec.zoom_in_factor)
+            map_img = cv2.resize(
+                map_img, dsize=(dwidth, dheight), interpolation=cv2.INTER_AREA
+            )
+
         # from shape (W, H) to (W, H, 3)
         track_map = np.stack(
             [map_img, map_img, map_img], axis=-1
@@ -97,15 +106,11 @@ class PygameEnvRenderer(EnvRenderer):
             Image.open(original_img).transpose(Image.FLIP_TOP_BOTTOM)
         ).astype(np.float64)
 
-        dwidth = int(width * self.zoom_level)
-        dheight = int(height * self.zoom_level)
-        self.map_img = cv2.resize(
-            original_img, dsize=(dwidth, dheight), interpolation=cv2.INTER_AREA
-        )
-        self.ppu = original_img.shape[0] / self.map_img.shape[0]  # pixels per unit
+        self.map_renderer = Map(map_img=original_img, render_spec=render_spec, render_mode=render_mode)
+        mapwidth, mapheight, _ = self.map_renderer.track_map.shape
+        self.ppu = original_img.shape[0] / self.map_renderer.track_map.shape[0]  # pixels per unit
 
-        self.canvas = pygame.Surface((dwidth, dheight))
-        self.map_renderer = Map(self.map_img)
+        self.canvas = pygame.Surface((mapwidth, mapheight))
 
     def update(self, state):
         self.colors = [
@@ -121,17 +126,6 @@ class PygameEnvRenderer(EnvRenderer):
         warnings.warn("add_render_callback is not implemented for PygameEnvRenderer")
 
     def render_map(self):
-        """
-        if self.track_map is None:
-            track_map = self.map_img  # shape (W, H)
-            track_map = np.stack(
-                [track_map, track_map, track_map], axis=-1
-            )  # shape (W, H, 3)
-            track_map = np.rot90(track_map, k=1)  # rotate clockwise
-            track_map = np.flip(track_map, axis=0)  # flip vertically
-            self.track_map = track_map
-        self.canvas = pygame.surfarray.make_surface(self.track_map)
-        """
         self.map_renderer.render(self.canvas)
 
     def render(self):
@@ -141,13 +135,6 @@ class PygameEnvRenderer(EnvRenderer):
         car_width = self.car_width
         car_tickness = self.car_tickness
 
-        print("ppu: ", self.ppu)
-        print("res: ", resolution)
-        print("car_length: ", car_length)
-        print("car_width: ", car_width)
-        print()
-
-        self.window.fill((255, 255, 255))  # white background
         self.canvas.fill((255, 255, 255))  # white background
         self.map_renderer.render(self.canvas)
 
@@ -158,40 +145,33 @@ class PygameEnvRenderer(EnvRenderer):
             vertices = get_vertices(pose, car_length, car_width)
             vertices[:, 0] = (vertices[:, 0] - origin[0]) / resolution
             vertices[:, 1] = (vertices[:, 1] - origin[1]) / resolution
-            pygame.draw.lines(self.canvas, color, True, vertices, 3)
+            pygame.draw.lines(self.canvas, color, True, vertices, car_tickness)
 
             # draw car steering angle from front center
             arrow_length = 0.2 / resolution
-
-            #center = np.array([pose[0], pose[1]])
-            #center[0] = (center[0] - origin[0]) / resolution
-            #center[1] = (center[1] - origin[1]) / resolution
-
             front_center = (vertices[2] + vertices[3]) / 2
-
             steering_angle = pose[2] + self.steering_angles[i]
             end_point = front_center + arrow_length * np.array([np.cos(steering_angle), np.sin(steering_angle)])
-            pygame.draw.line(self.canvas, color, front_center.astype(int), end_point.astype(int), 3)
+            pygame.draw.line(self.canvas, color, front_center.astype(int), end_point.astype(int), car_tickness)
 
         # follow the first car
-        surface_mod_rect = self.canvas.get_rect()
-        screen_rect = self.window.get_rect()
+        if self.window is not None:
+            surface_mod_rect = self.canvas.get_rect()
+            screen_rect = self.window.get_rect()
 
-        # agent to follow
-        ego_x, ego_y = self.poses[0, 0], self.poses[0, 1]
-        ego_x = (ego_x - origin[0]) / resolution
-        ego_y = (ego_y - origin[1]) / resolution
+            # agent to follow
+            ego_x, ego_y = self.poses[0, 0], self.poses[0, 1]
+            ego_x = (ego_x - origin[0]) / resolution
+            ego_y = (ego_y - origin[1]) / resolution
 
-        surface_mod_rect.x = (screen_rect.centerx - ego_x)
-        surface_mod_rect.y = (screen_rect.centery - ego_y)
+            surface_mod_rect.x = (screen_rect.centerx - ego_x)
+            surface_mod_rect.y = (screen_rect.centery - ego_y)
 
         if self.render_mode == "human":
-            # The following line copies our drawings from `canvas` to the visible window
+            assert self.window is not None
+            self.window.fill((255, 255, 255))  # white background
             self.window.blit(self.canvas, surface_mod_rect)
-
-            # fps
-            if self.window is not None:
-                self.fps.render(self.window)
+            self.fps.render(self.window)
 
             pygame.event.pump()
             pygame.display.update()
@@ -200,6 +180,11 @@ class PygameEnvRenderer(EnvRenderer):
             # The following line will automatically add a delay to keep the framerate stable.
             self.fps.clock.tick(self.render_fps)
         else:  # rgb_array
-            return np.transpose(
+            frame = np.transpose(
                 np.array(pygame.surfarray.pixels3d(self.canvas)), axes=(1, 0, 2)
             )
+            if frame.shape[0] > 2000:
+                frame = cv2.resize(
+                    frame, dsize=(2000, 2000), interpolation=cv2.INTER_AREA
+                )
+            return frame

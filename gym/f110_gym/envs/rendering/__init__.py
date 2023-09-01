@@ -16,4 +16,4 @@ def make_renderer(track: Track, render_mode: str = None) -> EnvRenderer:
         renderer = PygameEnvRenderer(track=track, render_spec=render_spec, render_mode=render_mode)
     else:
         renderer = None
-    return renderer
+    return renderer, render_spec
