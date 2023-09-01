@@ -1,5 +1,6 @@
 import pathlib
 import warnings
+from typing import List
 
 import cv2
 import numpy as np
@@ -46,6 +47,22 @@ class Timer:
         bottom_right = (display_width - text_width, display_height - text_height)
 
         display.blit(self.text, bottom_right)
+
+
+class Info:
+    def __init__(self):
+        self.font = pygame.font.SysFont("Arial", 32)
+        self.text = self.font.render("", True, (125, 125, 125))
+
+    def render(self, txt: str, display: pygame.Surface):
+        self.text = self.font.render(txt, True, (125, 125, 125))
+
+        # find bottom right corner of display
+        display_width, display_height = display.get_width(), display.get_height()
+        text_width, text_height = self.text.get_width(), self.text.get_height()
+        bottom_center = ((display_width - text_width) / 2, display_height - text_height)
+
+        display.blit(self.text, bottom_center)
 
 
 class Map:
@@ -116,7 +133,7 @@ class Car:
 
 
 class PygameEnvRenderer(EnvRenderer):
-    def __init__(self, track: Track, render_spec: RenderSpec, render_mode: str):
+    def __init__(self, track: Track, agent_ids: List[str], render_spec: RenderSpec, render_mode: str):
         super().__init__()
 
         self.window = None
@@ -136,6 +153,7 @@ class PygameEnvRenderer(EnvRenderer):
         self.poses = None
         self.colors = None
         self.cars = None
+        self.agent_ids = agent_ids
 
         width, height = render_spec.window_size, render_spec.window_size
 
@@ -172,8 +190,9 @@ class PygameEnvRenderer(EnvRenderer):
         self.map_canvas = pygame.Surface((mapwidth, mapheight))
 
         # fps and time renderer
-        self.fps = FPS()
+        self.fps_renderer = FPS()
         self.time_renderer = Timer()
+        self.info_renderer = Info()
 
     def update(self, state):
         if self.cars is None:
@@ -184,7 +203,7 @@ class PygameEnvRenderer(EnvRenderer):
                     resolution=self.map_metadata["resolution"],
                     ppu=self.ppu,
                 )
-                for _ in range(len(state["poses_x"]))
+                for _ in range(len(self.agent_ids))
             ]
 
         self.colors = [
@@ -203,9 +222,6 @@ class PygameEnvRenderer(EnvRenderer):
     def render(self):
         origin = self.map_metadata["origin"]
         resolution = self.map_metadata["resolution"] * self.ppu
-        car_length = self.car_length
-        car_width = self.car_width
-        car_tickness = self.car_tickness
 
         self.canvas.fill((255, 255, 255))  # white background
         self.map_canvas.fill((255, 255, 255))  # white background
@@ -223,11 +239,12 @@ class PygameEnvRenderer(EnvRenderer):
             car.render(pose, steering, color, self.map_canvas)  # directly give state
 
         # follow the first car
+        agent_to_follow = self.render_spec.focus_on
+        id_to_follow = self.agent_ids.index(agent_to_follow)
         surface_mod_rect = self.map_canvas.get_rect()
         screen_rect = self.canvas.get_rect()
 
-        # agent to follow
-        ego_x, ego_y = self.poses[0, 0], self.poses[0, 1]
+        ego_x, ego_y = self.poses[id_to_follow, 0], self.poses[id_to_follow, 1]
         ego_x = (ego_x - origin[0]) / resolution
         ego_y = (ego_y - origin[1]) / resolution
 
@@ -236,10 +253,11 @@ class PygameEnvRenderer(EnvRenderer):
         self.canvas.blit(self.map_canvas, surface_mod_rect)
 
         self.time_renderer.render(time=self.sim_time, display=self.canvas)
+        self.info_renderer.render(txt=f"Focus on: {agent_to_follow}", display=self.canvas)
 
         if self.render_mode == "human":
             assert self.window is not None
-            self.fps.render(self.canvas)
+            self.fps_renderer.render(self.canvas)
 
             self.window.blit(self.canvas, self.canvas.get_rect())
 
@@ -248,7 +266,7 @@ class PygameEnvRenderer(EnvRenderer):
 
             # We need to ensure that human-rendering occurs at the predefined framerate.
             # The following line will automatically add a delay to keep the framerate stable.
-            self.fps.clock.tick(self.render_fps)
+            self.fps_renderer.clock.tick(self.render_fps)
         else:  # rgb_array
             frame = np.transpose(
                 np.array(pygame.surfarray.pixels3d(self.canvas)), axes=(1, 0, 2)
