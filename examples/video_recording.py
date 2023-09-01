@@ -1,5 +1,6 @@
 import time
 import gymnasium as gym
+import gymnasium.wrappers
 import numpy as np
 
 from examples.waypoint_follow import PurePursuitPlanner
@@ -27,6 +28,8 @@ def main():
         },
         render_mode="rgb_array",
     )
+    env = gymnasium.wrappers.RecordVideo(env, f"video_{time.time()}")
+
     planner = PurePursuitPlanner(track=env.track, wb=0.17145 + 0.15875)
 
     poses = np.array(
@@ -46,7 +49,7 @@ def main():
     start = time.time()
 
     frames = [env.render()]
-    while not done and laptime < 20.0:
+    while not done and laptime < 15.0:
         agent_id = env.agent_ids[0]
         speed, steer = planner.plan(
             obs[agent_id]["pose_x"],
@@ -65,16 +68,6 @@ def main():
         print(laptime)
 
     print("Sim elapsed time:", laptime, "Real elapsed time:", time.time() - start)
-
-    # Save frames as a video
-    try:
-        from moviepy.video.io.ImageSequenceClip import ImageSequenceClip
-        clip = ImageSequenceClip(frames, fps=env.metadata["render_fps"])
-        clip.write_videofile("video.mp4")
-    except ImportError:
-        raise ImportError("Please install moviepy to generate video, ´pip install moviepy´")
-
-    print(f"Video saved to video.avi in {time.time() - start} seconds")
 
 
 if __name__ == "__main__":

@@ -319,9 +319,6 @@ def main():
             work["vgain"],
         )
 
-        if laptime > 5.0:
-            steer = -0.41
-
         obs, step_reward, done, truncated, info = env.step(np.array([[steer, speed]]))
         laptime += step_reward
         env.render()
