@@ -176,7 +176,9 @@ class F110Env(gym.Env):
         # stateful observations for rendering
         self.render_obs = None
         self.render_mode = render_mode
-        self.renderer, self.render_spec = make_renderer(track=self.track, agent_ids=self.agent_ids, render_mode=render_mode)
+        self.renderer, self.render_spec = make_renderer(
+            track=self.track, agent_ids=self.agent_ids, render_mode=render_mode
+        )
         self.metadata["render_fps"] = self.render_spec.render_fps
 
     @classmethod

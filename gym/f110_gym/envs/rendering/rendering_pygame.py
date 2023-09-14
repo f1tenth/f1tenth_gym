@@ -54,7 +54,7 @@ class Timer:
 
 
 class Info:
-    def __init__(self, window_shape=(1000,1000)):
+    def __init__(self, window_shape=(1000, 1000)):
         font_size = int(32 * window_shape[0] / 1000)
         self.font = pygame.font.SysFont("Arial", font_size)
         self.text = self.font.render("", True, (125, 125, 125))
@@ -129,7 +129,6 @@ class Car:
             front_left = (vertices[0] * lam + vertices[3] * (1 - lam)).astype(int)
             front_right = (vertices[1] * lam + vertices[2] * (1 - lam)).astype(int)
             arrow_length = self.steering_arrow_len / self.resolution
-
 
             for mid_point in [front_left, front_right]:
                 end_point = mid_point + 0.5 * arrow_length * np.array(
@@ -319,10 +318,10 @@ class PygameEnvRenderer(EnvRenderer):
             pygame.draw.circle(self.map_canvas, color, point, size)
 
     def render_lines(
-            self,
-            points: Union[List, np.ndarray],
-            color: Tuple[int, int, int] = (0, 0, 255),
-            size: int = 1,
+        self,
+        points: Union[List, np.ndarray],
+        color: Tuple[int, int, int] = (0, 0, 255),
+        size: int = 1,
     ):
         """
         Render a sequence of lines segments.
@@ -337,7 +336,9 @@ class PygameEnvRenderer(EnvRenderer):
         points = ((points - origin[:2]) / resolution).astype(int)
         size = math.ceil(size / self.ppu)
 
-        pygame.draw.lines(self.map_canvas, color, closed=False, points=points, width=size)
+        pygame.draw.lines(
+            self.map_canvas, color, closed=False, points=points, width=size
+        )
 
     def render_closed_lines(
         self,
@@ -358,7 +359,9 @@ class PygameEnvRenderer(EnvRenderer):
         points = ((points - origin[:2]) / resolution).astype(int)
         size = math.ceil(size / self.ppu)
 
-        pygame.draw.lines(self.map_canvas, color, closed=True, points=points, width=size)
+        pygame.draw.lines(
+            self.map_canvas, color, closed=True, points=points, width=size
+        )
 
     def close(self):
         if self.render_mode == "human" or self.render_mode == "human_fast":

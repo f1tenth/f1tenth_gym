@@ -56,7 +56,6 @@ class PygletEnvRenderer(pyglet.window.Window, EnvRenderer):
     A window class inherited from pyglet.window.Window, handles the camera/projection interaction, resizing window, and rendering the environment
     """
 
-
     def __init__(self, track: Track, render_spec: RenderSpec):
         """
         Class constructor
@@ -70,9 +69,7 @@ class PygletEnvRenderer(pyglet.window.Window, EnvRenderer):
         """
         conf = Config(sample_buffers=1, samples=4, depth_size=16, double_buffer=True)
         width, height = render_spec.window_size, render_spec.window_size
-        super().__init__(
-            width, height, config=conf, resizable=True, vsync=False
-        )
+        super().__init__(width, height, config=conf, resizable=True, vsync=False)
 
         # gl init
         glClearColor(9 / 255, 32 / 255, 87 / 255, 1.0)
@@ -361,10 +358,10 @@ class PygletEnvRenderer(pyglet.window.Window, EnvRenderer):
 
         self.score_label.text = (
             "Lap Time: {laptime:.2f}, Ego Lap Count: {count:.0f}".format(
-                laptime=state["lap_times"][0], count=state["lap_counts"][state["ego_idx"]]
+                laptime=state["lap_times"][0],
+                count=state["lap_counts"][state["ego_idx"]],
             )
         )
-
 
     def render_map(self):
         pass
