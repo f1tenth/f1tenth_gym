@@ -1,6 +1,7 @@
+import math
 import pathlib
 import warnings
-from typing import List
+from typing import Union, List, Tuple
 
 import cv2
 import numpy as np
@@ -15,9 +16,10 @@ from f110_gym.envs.rendering.renderer import EnvRenderer, RenderSpec
 
 
 class FPS:
-    def __init__(self):
+    def __init__(self, window_shape=(1000, 1000)):
         self.clock = pygame.time.Clock()
-        self.font = pygame.font.SysFont("Arial", 32)
+        font_size = int(32 * window_shape[0] / 1000)
+        self.font = pygame.font.SysFont("Arial", font_size)
 
         self.text = self.font.render("", True, (125, 125, 125))
 
@@ -34,9 +36,10 @@ class FPS:
 
 
 class Timer:
-    def __init__(self):
+    def __init__(self, window_shape=(1000, 1000)):
         self.font = pygame.font.SysFont("Arial", 32)
-        self.text = self.font.render("", True, (125, 125, 125))
+        font_size = int(32 * window_shape[0] / 1000)
+        self.font = pygame.font.SysFont("Arial", font_size)
 
     def render(self, time: float, display: pygame.Surface):
         txt = f"Time: {time:.2f}"
@@ -51,8 +54,9 @@ class Timer:
 
 
 class Info:
-    def __init__(self):
-        self.font = pygame.font.SysFont("Arial", 32)
+    def __init__(self, window_shape=(1000,1000)):
+        font_size = int(32 * window_shape[0] / 1000)
+        self.font = pygame.font.SysFont("Arial", font_size)
         self.text = self.font.render("", True, (125, 125, 125))
 
     def render(self, txt: str, display: pygame.Surface):
@@ -94,6 +98,7 @@ class Car:
         self.car_width = render_spec.car_width
         self.steering_arrow_len = 0.2
         self.car_tickness = render_spec.car_tickness
+        self.show_wheels = render_spec.show_wheels
 
         self.origin = map_origin
         self.resolution = resolution * ppu
@@ -118,27 +123,29 @@ class Car:
 
         # draw two lines in proximity of the front wheels
         # to indicate the steering angle
-        lam = 0.15
-        # find point at perc between front and back vertices
-        front_left = (vertices[0] * lam + vertices[3] * (1 - lam)).astype(int)
-        front_right = (vertices[1] * lam + vertices[2] * (1 - lam)).astype(int)
-        arrow_length = self.steering_arrow_len / self.resolution
+        if self.show_wheels:
+            lam = 0.15
+            # find point at perc between front and back vertices
+            front_left = (vertices[0] * lam + vertices[3] * (1 - lam)).astype(int)
+            front_right = (vertices[1] * lam + vertices[2] * (1 - lam)).astype(int)
+            arrow_length = self.steering_arrow_len / self.resolution
 
-        for mid_point in [front_left, front_right]:
-            end_point = mid_point + 0.5 * arrow_length * np.array(
-                [np.cos(self.steering_angle), np.sin(self.steering_angle)]
-            )
-            base_point = mid_point - 0.5 * arrow_length * np.array(
-                [np.cos(self.steering_angle), np.sin(self.steering_angle)]
-            )
 
-            pygame.draw.line(
-                display,
-                (0, 0, 0),
-                base_point.astype(int),
-                end_point.astype(int),
-                self.car_tickness + 1,
-            )
+            for mid_point in [front_left, front_right]:
+                end_point = mid_point + 0.5 * arrow_length * np.array(
+                    [np.cos(self.steering_angle), np.sin(self.steering_angle)]
+                )
+                base_point = mid_point - 0.5 * arrow_length * np.array(
+                    [np.cos(self.steering_angle), np.sin(self.steering_angle)]
+                )
+
+                pygame.draw.line(
+                    display,
+                    (0, 0, 0),
+                    base_point.astype(int),
+                    end_point.astype(int),
+                    self.car_tickness + 1,
+                )
 
 
 class PygameEnvRenderer(EnvRenderer):
@@ -151,6 +158,7 @@ class PygameEnvRenderer(EnvRenderer):
     ):
         super().__init__()
 
+        self.callbacks = []
         self.window = None
         self.canvas = None
         self.map_canvas = None
@@ -168,7 +176,7 @@ class PygameEnvRenderer(EnvRenderer):
         width, height = render_spec.window_size, render_spec.window_size
 
         pygame.init()
-        if self.render_mode == "human":
+        if self.render_mode in ["human", "human_fast"]:
             pygame.display.init()
             pygame.event.set_allowed([])
             self.window = pygame.display.set_mode((width, height))
@@ -200,9 +208,9 @@ class PygameEnvRenderer(EnvRenderer):
         self.map_canvas = pygame.Surface((mapwidth, mapheight))
 
         # fps and time renderer
-        self.fps_renderer = FPS()
-        self.time_renderer = Timer()
-        self.info_renderer = Info()
+        self.fps_renderer = FPS(window_shape=(width, height))
+        self.time_renderer = Timer(window_shape=(width, height))
+        self.info_renderer = Info(window_shape=(width, height))
 
     def update(self, state):
         if self.cars is None:
@@ -222,7 +230,7 @@ class PygameEnvRenderer(EnvRenderer):
         self.sim_time = state["sim_time"]
 
     def add_renderer_callback(self, callback_fn: callable):
-        warnings.warn("add_render_callback is not implemented for PygameEnvRenderer")
+        self.callbacks.append(callback_fn)
 
     def render(self):
         origin = self.map_metadata["origin"]
@@ -236,18 +244,29 @@ class PygameEnvRenderer(EnvRenderer):
         for i in range(len(self.agent_ids)):
             self.cars[i].render(self.map_canvas)
 
+        # call callbacks
+        for callback_fn in self.callbacks:
+            callback_fn(self)
+
         # follow the first car
         agent_to_follow = self.render_spec.focus_on
-        id_to_follow = self.agent_ids.index(agent_to_follow)
         surface_mod_rect = self.map_canvas.get_rect()
         screen_rect = self.canvas.get_rect()
 
-        ego_x, ego_y = self.cars[id_to_follow].pose[:2]
-        ego_x = (ego_x - origin[0]) / resolution
-        ego_y = (ego_y - origin[1]) / resolution
+        if agent_to_follow is not None:
+            id_to_follow = self.agent_ids.index(agent_to_follow)
 
-        surface_mod_rect.x = screen_rect.centerx - ego_x
-        surface_mod_rect.y = screen_rect.centery - ego_y
+            ego_x, ego_y = self.cars[id_to_follow].pose[:2]
+            ego_x = (ego_x - origin[0]) / resolution
+            ego_y = (ego_y - origin[1]) / resolution
+
+            surface_mod_rect.x = screen_rect.centerx - ego_x
+            surface_mod_rect.y = screen_rect.centery - ego_y
+        else:
+            # center the map
+            surface_mod_rect.x = screen_rect.centerx - self.map_canvas.get_width() / 2
+            surface_mod_rect.y = screen_rect.centery - self.map_canvas.get_height() / 2
+
         self.canvas.blit(self.map_canvas, surface_mod_rect)
 
         self.time_renderer.render(time=self.sim_time, display=self.canvas)
@@ -255,7 +274,7 @@ class PygameEnvRenderer(EnvRenderer):
             txt=f"Focus on: {agent_to_follow}", display=self.canvas
         )
 
-        if self.render_mode == "human":
+        if self.render_mode in ["human", "human_fast"]:
             assert self.window is not None
             self.fps_renderer.render(self.canvas)
 
@@ -276,3 +295,71 @@ class PygameEnvRenderer(EnvRenderer):
                     frame, dsize=(2000, 2000), interpolation=cv2.INTER_AREA
                 )
             return frame
+
+    def render_points(
+        self,
+        points: Union[List, np.ndarray],
+        color: Tuple[int, int, int] = (0, 0, 255),
+        size: int = 1,
+    ):
+        """
+        Render a sequence of xy points on screen.
+
+        Args:
+            points: sequence of xy points (N, 2)
+            color: rgb color of the points
+            size: size of the points in pixels
+        """
+        origin = self.map_metadata["origin"]
+        resolution = self.map_metadata["resolution"] * self.ppu
+        points = ((points - origin[:2]) / resolution).astype(int)
+        size = math.ceil(size / self.ppu)
+
+        for point in points:
+            pygame.draw.circle(self.map_canvas, color, point, size)
+
+    def render_lines(
+            self,
+            points: Union[List, np.ndarray],
+            color: Tuple[int, int, int] = (0, 0, 255),
+            size: int = 1,
+    ):
+        """
+        Render a sequence of lines segments.
+
+        Args:
+            points: sequence of xy points (N, 2)
+            color: rgb color of the points
+            size: size of the points in pixels
+        """
+        origin = self.map_metadata["origin"]
+        resolution = self.map_metadata["resolution"] * self.ppu
+        points = ((points - origin[:2]) / resolution).astype(int)
+        size = math.ceil(size / self.ppu)
+
+        pygame.draw.lines(self.map_canvas, color, closed=False, points=points, width=size)
+
+    def render_closed_lines(
+        self,
+        points: Union[List, np.ndarray],
+        color: Tuple[int, int, int] = (0, 0, 255),
+        size: int = 1,
+    ):
+        """
+        Render a sequence of lines segments.
+
+        Args:
+            points: sequence of xy points (N, 2)
+            color: rgb color of the points
+            size: size of the points in pixels
+        """
+        origin = self.map_metadata["origin"]
+        resolution = self.map_metadata["resolution"] * self.ppu
+        points = ((points - origin[:2]) / resolution).astype(int)
+        size = math.ceil(size / self.ppu)
+
+        pygame.draw.lines(self.map_canvas, color, closed=True, points=points, width=size)
+
+    def close(self):
+        if self.render_mode == "human" or self.render_mode == "human_fast":
+            pygame.quit()

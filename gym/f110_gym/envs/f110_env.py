@@ -455,3 +455,11 @@ class F110Env(gym.Env):
 
         self.renderer.update(state=self.render_obs)
         return self.renderer.render()
+
+    def close(self):
+        """
+        Ensure renderer is closed upon deletion
+        """
+        if self.renderer is not None:
+            self.renderer.close()
+        super().close()
