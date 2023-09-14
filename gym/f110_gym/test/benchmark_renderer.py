@@ -36,8 +36,8 @@ def pretty_print(dict: dict, col_width=15):
         print("|" + "-" * col_width, end="")
     print("|")
 
-class BenchmarkRenderer:
 
+class BenchmarkRenderer:
     @staticmethod
     def _make_env(config={}, render_mode=None) -> F110Env:
         import gymnasium as gym
@@ -95,7 +95,6 @@ class BenchmarkRenderer:
 
         pretty_print(results)
 
-
     def benchmark_n_agents_human_rendering(self):
         """
         This is meant to benchmark the human rendering mode, for increasing nr of agents.
@@ -134,7 +133,6 @@ class BenchmarkRenderer:
             }
 
         pretty_print(results)
-
 
     def benchmark_callbacks_human_rendering(self):
         import time
@@ -216,7 +214,7 @@ class BenchmarkRenderer:
         pretty_print(results)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     benchmark = BenchmarkRenderer()
 
     benchmark.benchmark_single_agent_rendering()
