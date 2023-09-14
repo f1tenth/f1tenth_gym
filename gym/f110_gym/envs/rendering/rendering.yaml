@@ -5,3 +5,4 @@ render_fps: 100 # Hz
 car_length: 0.58  # m
 car_width: 0.31 # m
 car_tickness: 1 # px
+show_wheels: True # bool, if true show vehicle wheels

@@ -16,9 +16,13 @@ class RenderSpec:
     render_mode: str
     render_fps: int
 
-    car_length = float
-    car_width = float
-    car_tickness = int
+    focus_on: str
+
+    car_length: float
+    car_width: float
+    car_tickness: int
+
+    show_wheels: bool
 
     def __init__(
         self,
@@ -29,6 +33,7 @@ class RenderSpec:
         car_length: float = 0.58,
         car_width: float = 0.31,
         car_tickness: int = 1,
+        show_wheels: bool = True,
     ):
         self.window_size = window_size
         self.focus_on = focus_on
@@ -38,6 +43,8 @@ class RenderSpec:
         self.car_length = car_length
         self.car_width = car_width
         self.car_tickness = car_tickness
+
+        self.show_wheels = show_wheels
 
     @staticmethod
     def from_yaml(yaml_file: Union[str, pathlib.Path]):
@@ -78,5 +85,12 @@ class EnvRenderer:
     def render(self):
         """
         Render the current state in a frame.
+        """
+        raise NotImplementedError()
+
+    @abstractmethod
+    def close(self):
+        """
+        Close the rendering window.
         """
         raise NotImplementedError()
