@@ -287,7 +287,7 @@ class ScanTests(unittest.TestCase):
             test_pose = self.test_poses[i]
             new_berlin[i, :] = scan_sim.scan(pose=test_pose, rng=scan_rng)
         diff = self.berlin_scan - new_berlin
-        mse = np.mean(diff**2)
+        mse = np.mean(diff ** 2)
         # print('Levine distance test, norm: ' + str(norm))
 
         # plotting
@@ -311,7 +311,7 @@ class ScanTests(unittest.TestCase):
             test_pose = self.test_poses[i]
             new_skirk[i, :] = scan_sim.scan(pose=test_pose, rng=scan_rng)
         diff = self.skirk_scan - new_skirk
-        mse = np.mean(diff**2)
+        mse = np.mean(diff ** 2)
         print("skirk distance test, mse: " + str(mse))
 
         # plotting

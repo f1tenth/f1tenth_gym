@@ -351,17 +351,7 @@ def vehicle_dynamics_st(
                 + x[3] * np.cos(x[6]) * u[0] / np.cos(x[2]) ** 2
             )
         )
-        f = np.hstack(
-            (
-                f_ks,
-                np.array(
-                    [
-                        dd_psi,
-                        d_beta,
-                    ]
-                ),
-            )
-        )
+        f = np.hstack((f_ks, np.array([dd_psi, d_beta,]),))
 
     else:
         # system dynamics
@@ -376,8 +366,8 @@ def vehicle_dynamics_st(
                 * m
                 / (x[3] * I * (lr + lf))
                 * (
-                    lf**2 * C_Sf * (g * lr - u[1] * h)
-                    + lr**2 * C_Sr * (g * lf + u[1] * h)
+                    lf ** 2 * C_Sf * (g * lr - u[1] * h)
+                    + lr ** 2 * C_Sr * (g * lf + u[1] * h)
                 )
                 * x[5]
                 + mu

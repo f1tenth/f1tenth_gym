@@ -42,20 +42,6 @@ from f110_gym.envs.utils import deep_update
 
 # others
 import numpy as np
-import os
-import time
-
-# gl
-import pyglet
-
-pyglet.options["debug_gl"] = False
-from pyglet import gl
-
-# rendering
-VIDEO_W = 600
-VIDEO_H = 400
-WINDOW_W = 1000
-WINDOW_H = 800
 
 
 class F110Env(gym.Env):
@@ -176,6 +162,7 @@ class F110Env(gym.Env):
         )
 
         # stateful observations for rendering
+        # add choice of colors (same, random, ...)
         self.render_obs = None
         self.render_mode = render_mode
         self.renderer, self.render_spec = make_renderer(
@@ -277,7 +264,7 @@ class F110Env(gym.Env):
         temp_y[idx2] = -right_t - temp_y[idx2]
         temp_y[np.invert(np.logical_or(idx1, idx2))] = 0
 
-        dist2 = delta_pt[0, :] ** 2 + temp_y**2
+        dist2 = delta_pt[0, :] ** 2 + temp_y ** 2
         closes = dist2 <= 0.1
         for i in range(self.num_agents):
             if closes[i] and not self.near_starts[i]:
