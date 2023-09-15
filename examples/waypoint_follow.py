@@ -219,7 +219,7 @@ class PurePursuitPlanner:
         update waypoints being drawn by EnvRenderer
         """
         if self.current_index is not None:
-            points = self.waypoints[self.current_index: self.current_index + 10, :2]
+            points = self.waypoints[self.current_index : self.current_index + 10, :2]
             e.render_lines(points, color=(0, 128, 0), size=1)
 
     def _get_current_waypoint(
@@ -330,7 +330,6 @@ def main():
     env.add_render_callback(planner.render_waypoints)
     env.add_render_callback(planner.render_local_plan)
     env.add_render_callback(planner.render_lookahead_point)
-
 
     obs, info = env.reset(options={"poses": poses})
     done = False
