@@ -137,7 +137,7 @@ def find_track_dir(track_name):
         if tracks_r.status_code == 404:
             raise FileNotFoundError(f"No maps exists for {track_name}.")
 
-        tempdir = tempfile.gettempdir()
+        tempdir = tempfile.gettempdir() + "/"
 
         with open(tempdir + track_name + ".tar.xz", "wb") as f:
             f.write(tracks_r.content)
