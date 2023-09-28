@@ -26,6 +26,8 @@ Originally from https://github.com/kroitor/gjk.c
 Author: Hongrui Zheng
 """
 
+import unittest
+import time
 import numpy as np
 from numba import njit
 
@@ -247,9 +249,6 @@ def get_vertices(pose, length, width):
 Unit test for GJK collision checks
 Author: Hongrui Zheng
 """
-
-import time
-import unittest
 
 
 class CollisionTests(unittest.TestCase):

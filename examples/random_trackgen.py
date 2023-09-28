@@ -162,7 +162,7 @@ def create_track():
     assert i1 != -1
     assert i2 != -1
 
-    track = track[i1 : i2 - 1]
+    track = track[i1: i2 - 1]
     first_beta = track[0][1]
     first_perp_x = math.cos(first_beta)
     first_perp_y = math.sin(first_beta)

@@ -136,7 +136,7 @@ def find_track_dir(track_name):
         tracks_r = requests.get(url=tracks_url, allow_redirects=True)
         if tracks_r.status_code == 404:
             raise FileNotFoundError(f"No maps exists for {track_name}.")
-        
+
         tempdir = tempfile.gettempdir()
 
         with open(tempdir + track_name + ".tar.xz", "wb") as f:
