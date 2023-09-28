@@ -239,6 +239,7 @@ class Track:
                 raceline=raceline,
             )
         except Exception as ex:
+            print(ex)
             raise FileNotFoundError(f"could not load track {track}") from ex
 
 
