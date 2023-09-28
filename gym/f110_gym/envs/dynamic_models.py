@@ -77,6 +77,7 @@ class DynamicModel(Enum):
             raise ValueError(f"Unknown model type {self}")
 
 
+@njit(cache=True)
 def accl_constraints(vel, accl, v_switch, a_max, v_min, v_max):
     """
     Acceleration constraints, adjusts the acceleration based on constraints
