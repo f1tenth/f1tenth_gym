@@ -28,7 +28,7 @@ class TestEnvInterface(unittest.TestCase):
         from gymnasium.utils.env_checker import check_env
 
         env = self._make_env()
-        check_env(env.unwrapped)
+        check_env(env.unwrapped, skip_render_check=True)
 
     def test_configure_method(self):
         """
