@@ -282,7 +282,7 @@ class CollisionTests(unittest.TestCase):
         test_pose = np.array([2.3, 6.7, 0.8])
         start = time.time()
         for _ in range(1000):
-            vertices = get_vertices(test_pose, self.length, self.width)
+            get_vertices(test_pose, self.length, self.width)
         elapsed = time.time() - start
         fps = 1000 / elapsed
         print("get vertices fps:", fps)

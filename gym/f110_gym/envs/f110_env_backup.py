@@ -150,7 +150,7 @@ class F110Env(gym.Env, utils.EzPickle):
                 # self.socket.connect('tcp://localhost:6666')
                 self.port = min_port + tries
                 break
-            except:
+            except Exception as _:  # noqa: F841
                 tries = tries + 1
                 # print('Gym env - retrying for ' + str(tries) + ' times')
 

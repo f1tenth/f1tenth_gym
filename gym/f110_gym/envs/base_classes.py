@@ -495,8 +495,6 @@ class Simulator(object):
             observations (dict): dictionary for observations: poses of agents, current laser scan of each agent, collision indicators, etc.
         """
 
-        agent_scans = []
-
         # looping over agents
         for i, agent in enumerate(self.agents):
             # update each agent's pose

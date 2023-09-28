@@ -12,7 +12,7 @@
 
 
 """
-Prototype of vehicle dynamics functions and classes for simulating 2D Single 
+Prototype of vehicle dynamics functions and classes for simulating 2D Single
 Track dynamic model
 Following the implementation of commanroad's Single Track Dynamics model
 Original implementation: https://gitlab.lrz.de/tum-cps/commonroad-vehicle-models/
@@ -124,7 +124,7 @@ class DynamicsTest(unittest.TestCase):
         self.lr = 0.3048 * 4.667707
         self.h = 0.3048 * 2.01355
         self.m = 4.4482216152605 / 0.3048 * 74.91452
-        self.I = 4.4482216152605 * 0.3048 * 1321.416
+        self.I = 4.4482216152605 * 0.3048 * 1321.416  # noqa: E741
 
         # steering constraints
         self.s_min = -1.066  # minimum steering angle [rad]
@@ -257,7 +257,7 @@ class DynamicsTest(unittest.TestCase):
         from scipy.integrate import odeint
 
         # testing for zero initial state, zero input singularities
-        g = 9.81
+        # g = 9.81
         t_start = 0.0
         t_final = 1.0
         delta0 = 0.0
@@ -530,7 +530,7 @@ class DynamicsTest(unittest.TestCase):
         from scipy.integrate import odeint
 
         # testing for zero initial state, rolling and steering left input singularities
-        g = 9.81
+        # g = 9.81
         t_start = 0.0
         t_final = 1.0
         delta0 = 0.0
@@ -634,7 +634,7 @@ class DynamicsTest2(unittest.TestCase):
         self.lr = 0.3048 * 4.667707
         self.h = 0.3048 * 2.01355
         self.m = 4.4482216152605 / 0.3048 * 74.91452
-        self.I = 4.4482216152605 * 0.3048 * 1321.416
+        self.I = 4.4482216152605 * 0.3048 * 1321.416  # noqa: E741
 
         # steering constraints
         self.s_min = -1.066  # minimum steering angle [rad]
@@ -767,7 +767,7 @@ class DynamicsTest2(unittest.TestCase):
         from scipy.integrate import odeint
 
         # testing for zero initial state, zero input singularities
-        g = 9.81
+        # g = 9.81
         t_start = 0.0
         t_final = 1.0
         delta0 = 0.0
@@ -1040,7 +1040,7 @@ class DynamicsTest2(unittest.TestCase):
         from scipy.integrate import odeint
 
         # testing for zero initial state, rolling and steering left input singularities
-        g = 9.81
+        # g = 9.81
         t_start = 0.0
         t_final = 1.0
         delta0 = 0.0

@@ -123,7 +123,7 @@ class TestObservationInterface(unittest.TestCase):
         """
         env = self._make_env()
         with self.assertRaises(ValueError):
-            obs = observation_factory(env, vehicle_id=0, type="unexisting_obs_type")
+            observation_factory(env, vehicle_id=0, type="unexisting_obs_type")
 
     def test_kinematic_obs_space(self):
         """

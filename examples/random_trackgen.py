@@ -54,7 +54,7 @@ def main(args):
             track, track_int, track_ext = create_track()
             convert_track(track, track_int, track_ext, i, outdir)
             print(f"[info] saved track {i} in {outdir}/")
-        except:
+        except Exception as _:  # noqa: F841
             print("[error] failed to create track. Retrying...")
             continue
         print()

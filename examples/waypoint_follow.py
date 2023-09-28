@@ -230,7 +230,7 @@ class PurePursuitPlanner:
             lookahead_point, i2, t2 = first_point_on_trajectory_intersecting_circle(
                 position, lookahead_distance, wpts, t1, wrap=True
             )
-            if i2 == None:
+            if i2 is None:
                 return None
             current_waypoint = np.empty((3,), dtype=np.float32)
             # x, y

@@ -1,3 +1,4 @@
+# flake8: noqa
 import os
 
 import sphinx_rtd_theme
@@ -7,7 +8,7 @@ source_encoding = "utf-8-sig"
 
 # -- Language ----------------------------------------------------------------
 env_tags = os.getenv("SPHINX_TAGS")
-if env_tags != None:
+if env_tags is not None:
     for tag in env_tags.split(","):
         print("Adding Sphinx tag: %s" % tag.strip())
         tags.add(tag.strip())

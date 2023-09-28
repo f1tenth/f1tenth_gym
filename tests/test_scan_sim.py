@@ -332,7 +332,7 @@ class ScanTests(unittest.TestCase):
         start = time.time()
         for i in range(10000):
             x_test = i / 10000
-            scan = scan_sim.scan(pose=np.array([x_test, 0.0, 0.0]), rng=scan_rng)
+            scan_sim.scan(pose=np.array([x_test, 0.0, 0.0]), rng=scan_rng)
         end = time.time()
         fps = 10000 / (end - start)
 
@@ -346,7 +346,7 @@ def main():
     scan_rng = np.random.default_rng(seed=12345)
     scan_sim = ScanSimulator2D(num_beams, fov)
     scan_sim.set_map(map_name="Example")
-    scan = scan_sim.scan(np.array([0.0, 0.0, 0.0]))
+    scan_sim.scan(np.array([0.0, 0.0, 0.0]))
 
     # fps test
     import time
@@ -354,7 +354,7 @@ def main():
     start = time.time()
     for i in range(10000):
         x_test = i / 10000
-        scan = scan_sim.scan(np.array([x_test, 0.0, 0.0]), rng=scan_rng)
+        scan_sim.scan(np.array([x_test, 0.0, 0.0]), rng=scan_rng)
     end = time.time()
     fps = (end - start) / 10000
     print("FPS test")
@@ -380,7 +380,7 @@ def main():
         line.set_data(theta, current_scan)
         return (line,)
 
-    ani = FuncAnimation(fig, update, frames=num_iter, blit=True)
+    FuncAnimation(fig, update, frames=num_iter, blit=True)
     plt.show()
 
 

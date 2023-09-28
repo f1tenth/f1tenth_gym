@@ -41,7 +41,7 @@ class DynamicModel(Enum):
     def from_string(model: str):
         if model == "ks":
             warnings.warn(
-                f"Chosen model is KS. This is different from previous versions of the gym."
+                "Chosen model is KS. This is different from previous versions of the gym."
             )
             return DynamicModel.KS
         elif model == "st":
@@ -547,7 +547,3 @@ def func_ST(
         v_max,
     )
     return f
-
-
-if __name__ == "__main__":
-    unittest.main()
