@@ -356,9 +356,9 @@ def main():
     while not done:
         agent_id = env.agent_ids[0]
         speed, steer = planner.plan(
-            obs[agent_id]["pose_x"],
-            obs[agent_id]["pose_y"],
-            obs[agent_id]["pose_theta"],
+            obs[agent_id].pose_x,
+            obs[agent_id].pose_y,
+            obs[agent_id].pose_theta,
             work["tlad"],
             work["vgain"],
         )
