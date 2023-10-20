@@ -2,9 +2,10 @@
 Code from Cubic spline planner
 Author: Atsushi Sakai(@Atsushi_twi)
 """
-import math
-import numpy as np
 import bisect
+import math
+
+import numpy as np
 
 
 class CubicSpline1D:

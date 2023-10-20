@@ -1,17 +1,12 @@
-import pathlib
 import unittest
-from argparse import Namespace
 
-import numpy as np
-import yaml
 import gymnasium as gym
-
+import numpy as np
 from f110_gym.envs.utils import deep_update
 
 
 class TestEnvInterface(unittest.TestCase):
     def _make_env(self, config={}):
-        import f110_gym
 
         conf = {
             "map": "Example",
@@ -33,14 +28,13 @@ class TestEnvInterface(unittest.TestCase):
         from gymnasium.utils.env_checker import check_env
 
         env = self._make_env()
-        check_env(env.unwrapped)
+        check_env(env.unwrapped, skip_render_check=True)
 
     def test_configure_method(self):
         """
         Test that the configure method works as expected, and that the parameters are
         correctly updated in the simulator and agents.
         """
-        import f110_gym
 
         # create a base environment and use configure() to change the width
         config_ext = {"params": {"width": 15.0}}

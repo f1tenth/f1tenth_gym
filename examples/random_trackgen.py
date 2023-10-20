@@ -30,13 +30,13 @@ Note: additional requirements
     - shapely
     - opencv-python
 """
+import math
 import pathlib
 
 import cv2
-import math
+import matplotlib.pyplot as plt
 import numpy as np
 import shapely.geometry as shp
-import matplotlib.pyplot as plt
 
 
 def main(args):
@@ -54,7 +54,7 @@ def main(args):
             track, track_int, track_ext = create_track()
             convert_track(track, track_int, track_ext, i, outdir)
             print(f"[info] saved track {i} in {outdir}/")
-        except:
+        except Exception as _:  # noqa: F841
             print("[error] failed to create track. Retrying...")
             continue
         print()
@@ -162,7 +162,7 @@ def create_track():
     assert i1 != -1
     assert i2 != -1
 
-    track = track[i1 : i2 - 1]
+    track = track[i1: i2 - 1]
     first_beta = track[0][1]
     first_perp_x = math.cos(first_beta)
     first_perp_y = math.sin(first_beta)

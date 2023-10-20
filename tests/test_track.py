@@ -3,8 +3,7 @@ import time
 import unittest
 
 import numpy as np
-
-from f110_gym.envs.track import Track, find_track_dir, Raceline
+from f110_gym.envs.track import Raceline, Track, find_track_dir
 
 
 class TestTrack(unittest.TestCase):
@@ -55,7 +54,7 @@ class TestTrack(unittest.TestCase):
                 - [Trackname_raceline.csv]      # raceline (optional)
                 - [Trackname_centerline.csv]    # centerline (optional)
         """
-        mapdir = pathlib.Path(__file__).parent.parent / "maps"
+        mapdir = pathlib.Path(__file__).parent.parent / "gym" / "f110_gym" / "maps"
         for trackdir in mapdir.iterdir():
             if trackdir.is_file():
                 continue
@@ -90,12 +89,12 @@ class TestTrack(unittest.TestCase):
             if file_raceline.exists():
                 # try to load raceline files
                 # it will raise an assertion error if the file format are not valid
-                raceline = Raceline.from_raceline_file(file_raceline)
+                Raceline.from_raceline_file(file_raceline)
 
             if file_centerline.exists():
                 # try to load raceline files
                 # it will raise an assertion error if the file format are not valid
-                centerline = Raceline.from_centerline_file(file_centerline)
+                Raceline.from_centerline_file(file_centerline)
 
     def test_download_racetrack(self):
         import shutil

@@ -7,7 +7,6 @@ class TestUtilities(unittest.TestCase):
         Test that the deep_update function works as expected with nested dictionaries,
         by comparing two environments with different mu values.
         """
-        import f110_gym
         import gymnasium as gym
 
         default_env = gym.make("f110_gym:f110-v0")

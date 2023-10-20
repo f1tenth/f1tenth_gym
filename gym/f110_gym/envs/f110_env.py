@@ -24,31 +24,24 @@
 Author: Hongrui Zheng
 """
 
-# gym imports
-import gymnasium as gym
-
-from f110_gym.envs import IntegratorType
-from f110_gym.envs.action import CarActionEnum, from_single_to_multi_action_space
-
-from f110_gym.envs.track import Track
-
-# base classes
-from f110_gym.envs.base_classes import Simulator, DynamicModel
-from f110_gym.envs.observation import observation_factory
-
-from f110_gym.envs.utils import deep_update
-
-
-# others
-import numpy as np
-import os
 import time
 
+# gym imports
+import gymnasium as gym
+# others
+import numpy as np
 # gl
 import pyglet
+from f110_gym.envs.integrator import IntegratorType
+from f110_gym.envs.action import (CarActionEnum,
+                                  from_single_to_multi_action_space)
+# base classes
+from f110_gym.envs.base_classes import DynamicModel, Simulator
+from f110_gym.envs.observation import observation_factory
+from f110_gym.envs.track import Track
+from f110_gym.envs.utils import deep_update
 
 pyglet.options["debug_gl"] = False
-from pyglet import gl
 
 # rendering
 VIDEO_W = 600
@@ -182,12 +175,6 @@ class F110Env(gym.Env):
         # stateful observations for rendering
         self.render_obs = None
         self.render_mode = render_mode
-
-    def __del__(self):
-        """
-        Finalizer, does cleanup
-        """
-        pass
 
     @classmethod
     def default_config(cls) -> dict:

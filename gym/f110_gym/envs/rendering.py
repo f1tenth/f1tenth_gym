@@ -20,25 +20,21 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+# flake8: noqa
 
 """
 Rendering engine for f1tenth gym env based on pyglet and OpenGL
 Author: Hongrui Zheng
 """
 
-# opengl stuff
-import pyglet
-from pyglet.gl import *
-
 # other
 import numpy as np
-from PIL import Image
-import yaml
-
-from f110_gym.envs.track import Track
-
+# opengl stuff
+import pyglet
 # helpers
 from f110_gym.envs.collision_models import get_vertices
+from f110_gym.envs.track import Track
+from pyglet.gl import *
 
 # zooming constants
 ZOOM_IN_FACTOR = 1.2
