@@ -176,11 +176,6 @@ class F110Env(gym.Env):
         self.render_obs = None
         self.render_mode = render_mode
 
-    def __del__(self):
-        """
-        Finalizer, does cleanup
-        """
-
     @classmethod
     def default_config(cls) -> dict:
         """
