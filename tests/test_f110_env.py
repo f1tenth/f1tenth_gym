@@ -253,7 +253,6 @@ class TestEnvInterface(unittest.TestCase):
         while not all(all_dones_twice) and max_steps > 0:
             actions = vec_env.action_space.sample()
             obss, rewards, dones, truncations, infos = vec_env.step(actions)
-            print(dones, all_dones_once, all_dones_twice)
 
             all_dones_once = [all_dones_once[i] or dones[i] for i in range(num_envs)]
             all_dones_twice = [all_dones_twice[i] or all_dones_once[i] for i in range(num_envs)]
