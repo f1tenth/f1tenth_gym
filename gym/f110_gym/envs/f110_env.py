@@ -38,6 +38,7 @@ from f110_gym.envs.action import (CarActionEnum,
 # base classes
 from f110_gym.envs.base_classes import DynamicModel, Simulator
 from f110_gym.envs.observation import observation_factory
+from f110_gym.envs.reset import make_reset_fn
 from f110_gym.envs.track import Track
 from f110_gym.envs.utils import deep_update
 
@@ -172,6 +173,9 @@ class F110Env(gym.Env):
             self.action_type.space, self.num_agents
         )
 
+        # reset modes
+        self.reset_fn = make_reset_fn(**self.config["reset_config"], track=self.track, num_agents=self.num_agents)
+
         # stateful observations for rendering
         self.render_obs = None
         self.render_mode = render_mode
@@ -219,6 +223,7 @@ class F110Env(gym.Env):
             "model": "st",
             "control_input": "speed",
             "observation_config": {"type": "original"},
+            "reset_config": {"type": "grid_static"},
         }
 
     def configure(self, config: dict) -> None:
@@ -362,14 +367,16 @@ class F110Env(gym.Env):
         self.toggle_list = np.zeros((self.num_agents,))
 
         # states after reset
-        if options is None or "poses" not in options:
-            options = {"poses": np.zeros((self.num_agents, 3))}
-        assert "poses" in options, "Must provide initial poses for reset"
-        assert isinstance(options["poses"], np.ndarray) and options["poses"].shape == (
+        if options is not None and "poses" in options:
+            poses = options["poses"]
+        else:
+            poses = self.reset_fn.sample()
+
+        assert isinstance(poses, np.ndarray) and poses.shape == (
             self.num_agents,
             3,
         ), "Initial poses must be a numpy array of shape (num_agents, 3)"
-        poses = options["poses"]
+
         self.start_xs = poses[:, 0]
         self.start_ys = poses[:, 1]
         self.start_thetas = poses[:, 2]
