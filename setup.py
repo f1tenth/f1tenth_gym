@@ -9,7 +9,7 @@ setup(
     package_dir={"": "gym"},
     install_requires=[
         "gymnasium",
-        "numpy<=1.22.0,>=1.18.0",
+        "numpy<=1.25.0,>=1.18.0",
         "Pillow>=9.0.1",
         "scipy>=1.7.3",
         "numba>=0.55.2",
@@ -18,5 +18,18 @@ setup(
         "pyopengl",
         "yamldataclassconfig",
         "requests",
+        "shapely",
+        "opencv-python",
     ],
+    extras_require={
+        'dev': [
+            'pytest',
+            'flake8',
+            'black',
+            'ipykernel',
+            'isort',
+            'autoflake',
+            'matplotlib'
+        ]
+    }
 )

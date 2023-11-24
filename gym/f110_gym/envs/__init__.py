@@ -1,6 +1,1 @@
-from f110_gym.envs.integrator import *
-from f110_gym.envs.dynamic_models import *
-from f110_gym.envs.f110_env import F110Env
-from f110_gym.envs.laser_models import *
-from f110_gym.envs.base_classes import *
-from f110_gym.envs.collision_models import *
+from .f110_env import F110Env  # noqa: F401 This is needed to make easy imports work
