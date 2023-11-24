@@ -18,6 +18,7 @@ from f110_gym.envs.rendering.renderer import EnvRenderer, RenderSpec
 
 INSTRUCTION_TEXT = "Mouse click (L/M/R): Change POV - 'S' key: On/Off"
 
+
 class PygameEnvRenderer(EnvRenderer):
     def __init__(
         self,
@@ -183,9 +184,7 @@ class PygameEnvRenderer(EnvRenderer):
             )
 
         if self.render_spec.show_info:
-            self.top_info_renderer.render(
-                txt=INSTRUCTION_TEXT, display=self.canvas
-            )
+            self.top_info_renderer.render(txt=INSTRUCTION_TEXT, display=self.canvas)
         self.time_renderer.render(time=self.sim_time, display=self.canvas)
 
         if self.render_mode in ["human", "human_fast"]:

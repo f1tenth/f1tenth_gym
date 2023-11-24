@@ -59,6 +59,7 @@ class BottomInfo:
 
         display.blit(self.text, bottom_center)
 
+
 class TopInfo:
     def __init__(self, window_shape=(1000, 1000)):
         font_size = int(32 * window_shape[0] / 1000)
