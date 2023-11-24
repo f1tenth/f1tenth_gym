@@ -510,7 +510,7 @@ class Simulator(object):
         for i, agent in enumerate(self.agents):
             # update agent's information on other agents
             opp_poses = np.concatenate(
-                (self.agent_poses[0:i, :], self.agent_poses[i + 1:, :]), axis=0
+                (self.agent_poses[0:i, :], self.agent_poses[i + 1 :, :]), axis=0
             )
             agent.update_opp_poses(opp_poses)
 

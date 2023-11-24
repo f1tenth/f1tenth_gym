@@ -28,13 +28,15 @@ import time
 
 # gym imports
 import gymnasium as gym
+
 # others
 import numpy as np
+
 # gl
 import pyglet
 from f110_gym.envs.integrator import IntegratorType
-from f110_gym.envs.action import (CarActionEnum,
-                                  from_single_to_multi_action_space)
+from f110_gym.envs.action import CarActionEnum, from_single_to_multi_action_space
+
 # base classes
 from f110_gym.envs.base_classes import DynamicModel, Simulator
 from f110_gym.envs.observation import observation_factory
@@ -174,7 +176,9 @@ class F110Env(gym.Env):
         )
 
         # reset modes
-        self.reset_fn = make_reset_fn(**self.config["reset_config"], track=self.track, num_agents=self.num_agents)
+        self.reset_fn = make_reset_fn(
+            **self.config["reset_config"], track=self.track, num_agents=self.num_agents
+        )
 
         # stateful observations for rendering
         self.render_obs = None
@@ -269,7 +273,7 @@ class F110Env(gym.Env):
         temp_y[idx2] = -right_t - temp_y[idx2]
         temp_y[np.invert(np.logical_or(idx1, idx2))] = 0
 
-        dist2 = delta_pt[0, :] ** 2 + temp_y**2
+        dist2 = delta_pt[0, :] ** 2 + temp_y ** 2
         closes = dist2 <= 0.1
         for i in range(self.num_agents):
             if closes[i] and not self.near_starts[i]:

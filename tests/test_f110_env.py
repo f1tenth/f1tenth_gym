@@ -255,9 +255,13 @@ class TestEnvInterface(unittest.TestCase):
             obss, rewards, dones, truncations, infos = vec_env.step(actions)
 
             all_dones_once = [all_dones_once[i] or dones[i] for i in range(num_envs)]
-            all_dones_twice = [all_dones_twice[i] or all_dones_once[i] for i in range(num_envs)]
+            all_dones_twice = [
+                all_dones_twice[i] or all_dones_once[i] for i in range(num_envs)
+            ]
             max_steps -= 1
 
         vec_env.close()
-        self.assertTrue(all(all_dones_twice), f"All envs should be done twice, got {all_dones_twice}")
-
+        self.assertTrue(
+            all(all_dones_twice),
+            f"All envs should be done twice, got {all_dones_twice}",
+        )

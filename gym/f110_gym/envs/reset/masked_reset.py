@@ -62,15 +62,13 @@ class GridResetFn(MaskedResetFn):
             max_dist=max_dist,
         )
 
-
-
     def get_mask(self) -> np.ndarray:
         # approximate the nr waypoints in the starting line
         step_size = self.track.centerline.length / self.track.centerline.n
         n_wps = int(self.start_width / step_size)
 
         mask = np.zeros(self.track.centerline.n)
-        mask[: n_wps] = 1
+        mask[:n_wps] = 1
         return mask.astype(bool)
 
     def sample(self) -> np.ndarray:
