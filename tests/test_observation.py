@@ -13,7 +13,7 @@ class TestObservationInterface(unittest.TestCase):
     def _make_env(config={}) -> F110Env:
 
         conf = {
-            "map": "Example",
+            "map": "Spielberg",
             "num_agents": 1,
             "timestep": 0.01,
             "integrator": "rk4",
@@ -115,7 +115,7 @@ class TestObservationInterface(unittest.TestCase):
             for ground_truth, observation in zip(
                 [pose_x, pose_y, pose_theta], [obs_x, obs_y, obs_theta]
             ):
-                self.assertAlmostEqual(ground_truth, observation)
+                self.assertTrue(np.allclose(ground_truth, observation))
 
     def test_unexisting_obs_space(self):
         """
@@ -155,7 +155,7 @@ class TestObservationInterface(unittest.TestCase):
             for ground_truth, observed in zip(
                 [pose_x, pose_y, pose_theta, velx], [obs_x, obs_y, obs_theta, obs_velx]
             ):
-                self.assertAlmostEqual(ground_truth, observed)
+                self.assertTrue(np.allclose(ground_truth, observed))
 
     def test_dynamic_obs_space(self):
         """
@@ -202,7 +202,7 @@ class TestObservationInterface(unittest.TestCase):
                 [pose_x, pose_y, pose_theta, velx, delta, beta],
                 [obs_x, obs_y, obs_theta, obs_velx, obs_delta, obs_beta],
             ):
-                self.assertAlmostEqual(ground_truth, observed)
+                self.assertTrue(np.allclose(ground_truth, observed))
 
     def test_consistency_observe_space(self):
         obs_type_ids = ["kinematic_state", "dynamic_state", "original"]
