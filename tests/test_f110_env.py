@@ -9,7 +9,7 @@ class TestEnvInterface(unittest.TestCase):
     def _make_env(self, config={}):
 
         conf = {
-            "map": "Example",
+            "map": "Spielberg",
             "num_agents": 1,
             "timestep": 0.01,
             "integrator": "rk4",
@@ -145,7 +145,7 @@ class TestEnvInterface(unittest.TestCase):
             "upper acceleration bound does not match a_max",
         )
 
-    def test_reset_options_in_synch_vec_env(self):
+    def test_manual_reset_options_in_synch_vec_env(self):
         """
         Test that the environment can be used in a vectorized environment.
         """
@@ -176,7 +176,7 @@ class TestEnvInterface(unittest.TestCase):
                     f"pose of agent {agent_id} in env {ie} should be {rnd_poses[i]}, got {agent_pose}",
                 )
 
-    def test_reset_options_in_asynch_vec_env(self):
+    def test_manual_reset_options_in_asynch_vec_env(self):
         """
         Test that the environment can be used in a vectorized environment.
         """
@@ -206,3 +206,59 @@ class TestEnvInterface(unittest.TestCase):
                     np.allclose(agent_pose, rnd_poses[i]),
                     f"pose of agent {agent_id} in env {ie} should be {rnd_poses[i]}, got {agent_pose}",
                 )
+
+    def test_auto_reset_options_in_synch_vec_env(self):
+        """
+        Test that the environment can be used in a vectorized environment without explicit poses.
+        """
+        num_envs, num_agents = 3, 2
+        config = {
+            "num_agents": num_agents,
+            "observation_config": {"type": "kinematic_state"},
+            "reset_config": {"type": "random_random"},
+        }
+        vec_env = gym.vector.make(
+            "f110_gym:f110-v0", asynchronous=False, config=config, num_envs=num_envs
+        )
+
+        obss, infos = vec_env.reset()
+
+        for i, agent_id in enumerate(obss):
+            agent_pose0 = np.array(
+                [
+                    obss[agent_id]["pose_x"][0],
+                    obss[agent_id]["pose_y"][0],
+                    obss[agent_id]["pose_theta"][0],
+                ]
+            )
+            for ie in range(1, num_envs):
+                agent_obs = obss[agent_id]
+                agent_pose = np.array(
+                    [
+                        agent_obs["pose_x"][ie],
+                        agent_obs["pose_y"][ie],
+                        agent_obs["pose_theta"][ie],
+                    ]
+                )
+                self.assertFalse(
+                    np.allclose(agent_pose, agent_pose0),
+                    f"pose of agent {agent_id} in env {ie} should be random, got same {agent_pose} == {agent_pose0}",
+                )
+
+        # test auto reset
+        all_dones_once = [False] * num_envs
+        all_dones_twice = [False] * num_envs
+
+        max_steps = 1000
+        while not all(all_dones_twice) and max_steps > 0:
+            actions = vec_env.action_space.sample()
+            obss, rewards, dones, truncations, infos = vec_env.step(actions)
+            print(dones, all_dones_once, all_dones_twice)
+
+            all_dones_once = [all_dones_once[i] or dones[i] for i in range(num_envs)]
+            all_dones_twice = [all_dones_twice[i] or all_dones_once[i] for i in range(num_envs)]
+            max_steps -= 1
+
+        vec_env.close()
+        self.assertTrue(all(all_dones_twice), f"All envs should be done twice, got {all_dones_twice}")
+

@@ -36,7 +36,7 @@ class OriginalObservation(Observation):
     def space(self):
         num_agents = self.env.num_agents
         scan_size = self.env.sim.agents[0].scan_simulator.num_beams
-        scan_range = self.env.sim.agents[0].scan_simulator.max_range
+        scan_range = self.env.sim.agents[0].scan_simulator.max_range + 0.5  # add 1.0 to avoid small errors
         large_num = 1e30  # large number to avoid unbounded obs space (ie., low=-inf or high=inf)
 
         obs_space = gym.spaces.Dict(

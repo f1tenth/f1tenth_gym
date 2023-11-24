@@ -51,6 +51,9 @@ class GridResetFn(MaskedResetFn):
         min_dist: float = 1.5,
         max_dist: float = 2.5,
     ):
+        self.start_width = start_width
+        self.shuffle = shuffle
+
         super().__init__(
             track=track,
             num_agents=num_agents,
@@ -59,16 +62,15 @@ class GridResetFn(MaskedResetFn):
             max_dist=max_dist,
         )
 
-        self.start_width = start_width
-        self.shuffle = shuffle
 
-        # approximate the nr waypoints in the starting line
-        step_size = self.track.centerline.length / self.track.centerline.n
-        self.n_wps = int(self.start_width / step_size)
 
     def get_mask(self) -> np.ndarray:
+        # approximate the nr waypoints in the starting line
+        step_size = self.track.centerline.length / self.track.centerline.n
+        n_wps = int(self.start_width / step_size)
+
         mask = np.zeros(self.track.centerline.n)
-        mask[: self.n_wps] = 1
+        mask[: n_wps] = 1
         return mask.astype(bool)
 
     def sample(self) -> np.ndarray:
