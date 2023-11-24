@@ -1,176 +1,58 @@
+from __future__ import annotations
+
+import logging
 import math
 import pathlib
-import warnings
-from typing import Union, List, Tuple
+from typing import Union, List, Tuple, Any
 
 import cv2
+import matplotlib
 import numpy as np
 import pygame
 import yaml
 from PIL import Image
-from pygame.locals import *
 
-from f110_gym.envs import get_vertices
+from f110_gym.envs.rendering.objects import FPS, Timer, BottomInfo, Map, Car, TopInfo
 from f110_gym.envs.track import Track
 from f110_gym.envs.rendering.renderer import EnvRenderer, RenderSpec
 
-
-class FPS:
-    def __init__(self, window_shape=(1000, 1000)):
-        self.clock = pygame.time.Clock()
-        font_size = int(32 * window_shape[0] / 1000)
-        self.font = pygame.font.SysFont("Arial", font_size)
-
-        self.text = self.font.render("", True, (125, 125, 125))
-
-    def render(self, display):
-        txt = f"FPS: {self.clock.get_fps():.2f}"
-        self.text = self.font.render(txt, True, (125, 125, 125))
-
-        # find bottom left corner of display
-        display_height = display.get_height()
-        text_height = self.text.get_height()
-        bottom_left = (0, display_height - text_height)
-
-        display.blit(self.text, bottom_left)
-
-
-class Timer:
-    def __init__(self, window_shape=(1000, 1000)):
-        self.font = pygame.font.SysFont("Arial", 32)
-        font_size = int(32 * window_shape[0] / 1000)
-        self.font = pygame.font.SysFont("Arial", font_size)
-
-    def render(self, time: float, display: pygame.Surface):
-        txt = f"Time: {time:.2f}"
-        self.text = self.font.render(txt, True, (125, 125, 125))
-
-        # find bottom right corner of display
-        display_width, display_height = display.get_width(), display.get_height()
-        text_width, text_height = self.text.get_width(), self.text.get_height()
-        bottom_right = (display_width - text_width, display_height - text_height)
-
-        display.blit(self.text, bottom_right)
-
-
-class Info:
-    def __init__(self, window_shape=(1000, 1000)):
-        font_size = int(32 * window_shape[0] / 1000)
-        self.font = pygame.font.SysFont("Arial", font_size)
-        self.text = self.font.render("", True, (125, 125, 125))
-
-    def render(self, txt: str, display: pygame.Surface):
-        self.text = self.font.render(txt, True, (125, 125, 125))
-
-        # find bottom right corner of display
-        display_width, display_height = display.get_width(), display.get_height()
-        text_width, text_height = self.text.get_width(), self.text.get_height()
-        bottom_center = ((display_width - text_width) / 2, display_height - text_height)
-
-        display.blit(self.text, bottom_center)
-
-
-class Map:
-    def __init__(self, map_img: np.ndarray, render_spec: RenderSpec):
-        width, height = map_img.shape
-        dwidth = int(width * render_spec.zoom_in_factor)
-        dheight = int(height * render_spec.zoom_in_factor)
-        map_img = cv2.resize(
-            map_img, dsize=(dwidth, dheight), interpolation=cv2.INTER_AREA
-        )
-
-        # from shape (W, H) to (W, H, 3)
-        track_map = np.stack([map_img, map_img, map_img], axis=-1)
-
-        track_map = np.rot90(track_map, k=1)  # rotate clockwise
-        track_map = np.flip(track_map, axis=0)  # flip vertically
-
-        self.track_map = track_map
-        self.map_surface = pygame.surfarray.make_surface(self.track_map)
-
-    def render(self, display):
-        display.blit(self.map_surface, (0, 0))
-
-
-class Car:
-    def __init__(self, render_spec, map_origin, resolution, ppu):
-        self.car_length = render_spec.car_length
-        self.car_width = render_spec.car_width
-        self.steering_arrow_len = 0.2
-        self.car_tickness = render_spec.car_tickness
-        self.show_wheels = render_spec.show_wheels
-
-        self.origin = map_origin
-        self.resolution = resolution * ppu
-
-        self.color = (0, 0, 255)
-        self.pose = None
-
-    def update(self, state, idx: int):
-        self.pose = (
-            state["poses_x"][idx],
-            state["poses_y"][idx],
-            state["poses_theta"][idx],
-        )
-        self.color = (255, 0, 0) if state["collisions"][idx] > 0 else self.color
-        self.steering_angle = self.pose[2] + state["steering_angles"][idx]
-
-    def render(self, display):
-        vertices = get_vertices(self.pose, self.car_length, self.car_width)
-        vertices[:, 0] = (vertices[:, 0] - self.origin[0]) / self.resolution
-        vertices[:, 1] = (vertices[:, 1] - self.origin[1]) / self.resolution
-        pygame.draw.lines(display, self.color, True, vertices, self.car_tickness)
-
-        # draw two lines in proximity of the front wheels
-        # to indicate the steering angle
-        if self.show_wheels:
-            lam = 0.15
-            # find point at perc between front and back vertices
-            front_left = (vertices[0] * lam + vertices[3] * (1 - lam)).astype(int)
-            front_right = (vertices[1] * lam + vertices[2] * (1 - lam)).astype(int)
-            arrow_length = self.steering_arrow_len / self.resolution
-
-            for mid_point in [front_left, front_right]:
-                end_point = mid_point + 0.5 * arrow_length * np.array(
-                    [np.cos(self.steering_angle), np.sin(self.steering_angle)]
-                )
-                base_point = mid_point - 0.5 * arrow_length * np.array(
-                    [np.cos(self.steering_angle), np.sin(self.steering_angle)]
-                )
-
-                pygame.draw.line(
-                    display,
-                    (0, 0, 0),
-                    base_point.astype(int),
-                    end_point.astype(int),
-                    self.car_tickness + 1,
-                )
-
+INSTRUCTION_TEXT = "Mouse click (L/M/R): Change POV - 'S' key: On/Off"
 
 class PygameEnvRenderer(EnvRenderer):
     def __init__(
         self,
+        params: dict[str, Any],
         track: Track,
-        agent_ids: List[str],
+        agent_ids: list[str],
         render_spec: RenderSpec,
         render_mode: str,
+        render_fps: int,
     ):
         super().__init__()
+
+        self.params = params
 
         self.callbacks = []
         self.window = None
         self.canvas = None
-        self.map_canvas = None
 
         self.time_renderer = None
 
         self.render_spec = render_spec
-        self.render_fps = render_spec.render_fps
         self.render_mode = render_mode
+        self.render_fps = render_fps
         self.zoom_level = render_spec.zoom_in_factor
 
         self.cars = None
         self.agent_ids = agent_ids
+
+        colors_rgb = [
+            [255 * rgb for rgb in matplotlib.colors.hex2color(c)]
+            for c in render_spec.vehicle_palette
+        ]
+        self.car_colors = [
+            colors_rgb[i % len(colors_rgb)] for i in range(len(self.agent_ids))
+        ]
 
         width, height = render_spec.window_size, render_spec.window_size
 
@@ -192,39 +74,60 @@ class PygameEnvRenderer(EnvRenderer):
             except yaml.YAMLError as ex:
                 print(ex)
 
+        # fps and time renderer
+        self.fps_renderer = FPS(window_shape=(width, height))
+        self.time_renderer = Timer(window_shape=(width, height))
+        self.bottom_info_renderer = BottomInfo(window_shape=(width, height))
+        self.top_info_renderer = TopInfo(window_shape=(width, height))
+
         # load map image
         original_img = map_filepath.parent / self.map_metadata["image"]
         original_img = np.array(
             Image.open(original_img).transpose(Image.FLIP_TOP_BOTTOM)
         ).astype(np.float64)
 
-        self.map_renderer = Map(map_img=original_img, render_spec=render_spec)
-        mapwidth, mapheight, _ = self.map_renderer.track_map.shape
-        self.ppu = (
-            original_img.shape[0] / self.map_renderer.track_map.shape[0]
-        )  # pixels per unit
+        self.map_renderers = {
+            "map": Map(map_img=original_img, zoom_level=0.4),
+            "car": Map(map_img=original_img, zoom_level=render_spec.zoom_in_factor),
+        }
+        self.map_canvases = {
+            k: pygame.Surface((map_r.track_map.shape[0], map_r.track_map.shape[1]))
+            for k, map_r in self.map_renderers.items()
+        }
+        self.ppus = {
+            k: original_img.shape[0] / map_r.track_map.shape[0]
+            for k, map_r in self.map_renderers.items()
+        }
 
-        self.map_canvas = pygame.Surface((mapwidth, mapheight))
-
-        # fps and time renderer
-        self.fps_renderer = FPS(window_shape=(width, height))
-        self.time_renderer = Timer(window_shape=(width, height))
-        self.info_renderer = Info(window_shape=(width, height))
+        # event handling flags
+        self.draw_flag: bool = True
+        if render_spec.focus_on:
+            self.active_map_renderer = "car"
+            self.follow_agent_flag: bool = True
+            self.agent_to_follow: int = self.agent_ids.index(render_spec.focus_on)
+        else:
+            self.active_map_renderer = "map"
+            self.follow_agent_flag: bool = False
+            self.agent_to_follow: int = None
 
     def update(self, state):
         if self.cars is None:
             self.cars = [
                 Car(
+                    car_length=self.params["length"],
+                    car_width=self.params["width"],
+                    color=self.car_colors[ic],
                     render_spec=self.render_spec,
                     map_origin=self.map_metadata["origin"],
                     resolution=self.map_metadata["resolution"],
-                    ppu=self.ppu,
+                    ppu=self.ppus[self.active_map_renderer],
                 )
-                for _ in range(len(self.agent_ids))
+                for ic in range(len(self.agent_ids))
             ]
 
         for i in range(len(self.agent_ids)):
             self.cars[i].update(state, i)
+            self.cars[i].ppu = self.ppus[self.active_map_renderer]
 
         self.sim_time = state["sim_time"]
 
@@ -232,49 +135,62 @@ class PygameEnvRenderer(EnvRenderer):
         self.callbacks.append(callback_fn)
 
     def render(self):
-        origin = self.map_metadata["origin"]
-        resolution = self.map_metadata["resolution"] * self.ppu
+        self.event_handling()
 
         self.canvas.fill((255, 255, 255))  # white background
+        self.map_canvas = self.map_canvases[self.active_map_renderer]
         self.map_canvas.fill((255, 255, 255))  # white background
-        self.map_renderer.render(self.map_canvas)
 
-        # draw cars
-        for i in range(len(self.agent_ids)):
-            self.cars[i].render(self.map_canvas)
+        if self.draw_flag:
+            self.map_renderers[self.active_map_renderer].render(self.map_canvas)
 
-        # call callbacks
-        for callback_fn in self.callbacks:
-            callback_fn(self)
+            # draw cars
+            for i in range(len(self.agent_ids)):
+                self.cars[i].render(self.map_canvas)
 
-        # follow the first car
-        agent_to_follow = self.render_spec.focus_on
-        surface_mod_rect = self.map_canvas.get_rect()
-        screen_rect = self.canvas.get_rect()
+            # call callbacks
+            for callback_fn in self.callbacks:
+                callback_fn(self)
 
-        if agent_to_follow is not None:
-            id_to_follow = self.agent_ids.index(agent_to_follow)
+            surface_mod_rect = self.map_canvas.get_rect()
+            screen_rect = self.canvas.get_rect()
 
-            ego_x, ego_y = self.cars[id_to_follow].pose[:2]
-            ego_x = (ego_x - origin[0]) / resolution
-            ego_y = (ego_y - origin[1]) / resolution
+            if self.follow_agent_flag:
+                origin = self.map_metadata["origin"]
+                resolution = (
+                    self.map_metadata["resolution"]
+                    * self.ppus[self.active_map_renderer]
+                )
+                ego_x, ego_y = self.cars[self.agent_to_follow].pose[:2]
+                cx = (ego_x - origin[0]) / resolution
+                cy = (ego_y - origin[1]) / resolution
+            else:
+                cx = self.map_canvas.get_width() / 2
+                cy = self.map_canvas.get_height() / 2
 
-            surface_mod_rect.x = screen_rect.centerx - ego_x
-            surface_mod_rect.y = screen_rect.centery - ego_y
-        else:
-            # center the map
-            surface_mod_rect.x = screen_rect.centerx - self.map_canvas.get_width() / 2
-            surface_mod_rect.y = screen_rect.centery - self.map_canvas.get_height() / 2
+            surface_mod_rect.x = screen_rect.centerx - cx
+            surface_mod_rect.y = screen_rect.centery - cy
 
-        self.canvas.blit(self.map_canvas, surface_mod_rect)
+            self.canvas.blit(self.map_canvas, surface_mod_rect)
 
+            agent_to_follow_id = (
+                self.agent_ids[self.agent_to_follow]
+                if self.agent_to_follow is not None
+                else None
+            )
+            self.bottom_info_renderer.render(
+                txt=f"Focus on: {agent_to_follow_id}", display=self.canvas
+            )
+
+        if self.render_spec.show_info:
+            self.top_info_renderer.render(
+                txt=INSTRUCTION_TEXT, display=self.canvas
+            )
         self.time_renderer.render(time=self.sim_time, display=self.canvas)
-        self.info_renderer.render(
-            txt=f"Focus on: {agent_to_follow}", display=self.canvas
-        )
 
         if self.render_mode in ["human", "human_fast"]:
             assert self.window is not None
+
             self.fps_renderer.render(self.canvas)
 
             self.window.blit(self.canvas, self.canvas.get_rect())
@@ -295,6 +211,42 @@ class PygameEnvRenderer(EnvRenderer):
                 )
             return frame
 
+    def event_handling(self):
+
+        for event in pygame.event.get():
+
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                logging.debug("Pressed left button -> Follow Next agent")
+                self.follow_agent_flag = True
+                if self.agent_to_follow is None:
+                    self.agent_to_follow = 0
+                else:
+                    self.agent_to_follow = (self.agent_to_follow + 1) % len(
+                        self.agent_ids
+                    )
+                self.active_map_renderer = "car"
+
+            elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 3:
+                logging.debug("Pressed right button -> Follow Previous agent")
+                self.follow_agent_flag = True
+                if self.agent_to_follow is None:
+                    self.agent_to_follow = 0
+                else:
+                    self.agent_to_follow = (self.agent_to_follow - 1) % len(
+                        self.agent_ids
+                    )
+                self.active_map_renderer = "car"
+
+            elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 2:
+                logging.debug("Pressed middle button -> Change to Map View")
+                self.follow_agent_flag = False
+                self.agent_to_follow = None
+                self.active_map_renderer = "map"
+
+            elif event.type == pygame.KEYDOWN and event.key == pygame.K_s:
+                logging.debug("Pressed S key -> Enable/disable rendering")
+                self.draw_flag = not (self.draw_flag)
+
     def render_points(
         self,
         points: Union[List, np.ndarray],
@@ -310,9 +262,10 @@ class PygameEnvRenderer(EnvRenderer):
             size: size of the points in pixels
         """
         origin = self.map_metadata["origin"]
-        resolution = self.map_metadata["resolution"] * self.ppu
+        ppu = self.ppus[self.active_map_renderer]
+        resolution = self.map_metadata["resolution"] * ppu
         points = ((points - origin[:2]) / resolution).astype(int)
-        size = math.ceil(size / self.ppu)
+        size = math.ceil(size / ppu)
 
         for point in points:
             pygame.draw.circle(self.map_canvas, color, point, size)
@@ -332,9 +285,10 @@ class PygameEnvRenderer(EnvRenderer):
             size: size of the points in pixels
         """
         origin = self.map_metadata["origin"]
-        resolution = self.map_metadata["resolution"] * self.ppu
+        ppu = self.ppus[self.active_map_renderer]
+        resolution = self.map_metadata["resolution"] * ppu
         points = ((points - origin[:2]) / resolution).astype(int)
-        size = math.ceil(size / self.ppu)
+        size = math.ceil(size / ppu)
 
         pygame.draw.lines(
             self.map_canvas, color, closed=False, points=points, width=size
@@ -355,9 +309,10 @@ class PygameEnvRenderer(EnvRenderer):
             size: size of the points in pixels
         """
         origin = self.map_metadata["origin"]
-        resolution = self.map_metadata["resolution"] * self.ppu
+        ppu = self.ppus[self.active_map_renderer]
+        resolution = self.map_metadata["resolution"] * ppu
         points = ((points - origin[:2]) / resolution).astype(int)
-        size = math.ceil(size / self.ppu)
+        size = math.ceil(size / ppu)
 
         pygame.draw.lines(
             self.map_canvas, color, closed=True, points=points, width=size

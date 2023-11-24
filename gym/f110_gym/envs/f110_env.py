@@ -27,9 +27,9 @@ Author: Hongrui Zheng
 # gym imports
 import gymnasium as gym
 
-from f110_gym.envs import IntegratorType
 from f110_gym.envs.action import CarActionEnum, from_single_to_multi_action_space
-from f110_gym.envs.rendering import make_renderer, RenderSpec
+from f110_gym.envs.integrator import IntegratorType
+from f110_gym.envs.rendering import make_renderer
 
 from f110_gym.envs.track import Track
 
@@ -165,10 +165,13 @@ class F110Env(gym.Env):
         # add choice of colors (same, random, ...)
         self.render_obs = None
         self.render_mode = render_mode
+        if self.render_mode == "human_fast":
+            self.metadata["render_fps"] *= 10   # boost fps by 10x
         self.renderer, self.render_spec = make_renderer(
-            track=self.track, agent_ids=self.agent_ids, render_mode=render_mode
+            params=self.params, track=self.track, agent_ids=self.agent_ids,
+            render_mode=render_mode, render_fps=self.metadata["render_fps"]
         )
-        self.metadata["render_fps"] = self.render_spec.render_fps
+
 
     @classmethod
     def default_config(cls) -> dict:
