@@ -165,6 +165,9 @@ class F110Env(gym.Env):
         # add choice of colors (same, random, ...)
         self.render_obs = None
         self.render_mode = render_mode
+
+        # match render_fps to integration timestep
+        self.metadata["render_fps"] = int(1.0 / self.timestep)
         if self.render_mode == "human_fast":
             self.metadata["render_fps"] *= 10   # boost fps by 10x
         self.renderer, self.render_spec = make_renderer(

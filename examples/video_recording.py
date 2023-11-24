@@ -12,7 +12,7 @@ def main():
         "lf": 0.15597534362552312,
         "tlad": 0.82461887897713965,
         "vgain": 1,
-    }  # 0.90338203837889}
+    }
 
     env = gym.make(
         "f110_gym:f110-v0",
@@ -68,6 +68,9 @@ def main():
         print(laptime)
 
     print("Sim elapsed time:", laptime, "Real elapsed time:", time.time() - start)
+
+    # close env to trigger video saving
+    env.close()
 
 
 if __name__ == "__main__":

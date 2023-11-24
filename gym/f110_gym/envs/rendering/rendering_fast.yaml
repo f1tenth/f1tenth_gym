@@ -1,8 +1,0 @@
-window_size: 800 # px
-zoom_in_factor: 0.4 # 1.0 is no zoom, 2.0 is 2x zoom, etc.
-focus_on: null  # agent id
-render_fps: 1000 # Hz
-car_length: 0.58  # m
-car_width: 0.31 # m
-car_tickness: 2 # px
-show_wheels: False # bool, if true show vehicle wheels
