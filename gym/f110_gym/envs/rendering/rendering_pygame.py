@@ -16,6 +16,7 @@ from f110_gym.envs.rendering.objects import FPS, Timer, BottomInfo, Map, Car, To
 from f110_gym.envs.track import Track
 from f110_gym.envs.rendering.renderer import EnvRenderer, RenderSpec
 
+# one-line instructions visualized at the top of the screen (if show_info=True)
 INSTRUCTION_TEXT = "Mouse click (L/M/R): Change POV - 'S' key: On/Off"
 
 
@@ -30,22 +31,16 @@ class PygameEnvRenderer(EnvRenderer):
         render_fps: int,
     ):
         super().__init__()
+        self.params = params  # simulation params
+        self.agent_ids = agent_ids  # list of agent ids
 
-        self.params = params
-
-        self.callbacks = []
+        self.cars = None
         self.window = None
         self.canvas = None
-
-        self.time_renderer = None
 
         self.render_spec = render_spec
         self.render_mode = render_mode
         self.render_fps = render_fps
-        self.zoom_level = render_spec.zoom_in_factor
-
-        self.cars = None
-        self.agent_ids = agent_ids
 
         colors_rgb = [
             [255 * rgb for rgb in matplotlib.colors.hex2color(c)]
@@ -100,6 +95,9 @@ class PygameEnvRenderer(EnvRenderer):
             for k, map_r in self.map_renderers.items()
         }
 
+        # callbacks for custom visualization, called at every rendering step
+        self.callbacks = []
+
         # event handling flags
         self.draw_flag: bool = True
         if render_spec.focus_on:
@@ -112,6 +110,13 @@ class PygameEnvRenderer(EnvRenderer):
             self.agent_to_follow: int = None
 
     def update(self, state):
+        """
+        Update the simulation state to be rendered.
+
+        Args:
+            state: simulation state as dictionary
+        """
+        # initialize cars
         if self.cars is None:
             self.cars = [
                 Car(
@@ -126,10 +131,12 @@ class PygameEnvRenderer(EnvRenderer):
                 for ic in range(len(self.agent_ids))
             ]
 
+        # update cars state and zoom level (updating points-per-unit)
         for i in range(len(self.agent_ids)):
             self.cars[i].update(state, i)
             self.cars[i].ppu = self.ppus[self.active_map_renderer]
 
+        # update time
         self.sim_time = state["sim_time"]
 
     def add_renderer_callback(self, callback_fn: callable):
@@ -211,11 +218,20 @@ class PygameEnvRenderer(EnvRenderer):
             return frame
 
     def event_handling(self):
+        """
+        Handle interaction events to change point-of-view.
 
+        Events:
+            - Left mouse button: follow next agent (according to agent_ids order)
+            - Right mouse button: follow previous agent
+            - Middle mouse button: change to map view
+            - S key: enable/disable rendering
+        """
         for event in pygame.event.get():
 
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 logging.debug("Pressed left button -> Follow Next agent")
+
                 self.follow_agent_flag = True
                 if self.agent_to_follow is None:
                     self.agent_to_follow = 0
@@ -223,10 +239,12 @@ class PygameEnvRenderer(EnvRenderer):
                     self.agent_to_follow = (self.agent_to_follow + 1) % len(
                         self.agent_ids
                     )
+
                 self.active_map_renderer = "car"
 
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 3:
                 logging.debug("Pressed right button -> Follow Previous agent")
+
                 self.follow_agent_flag = True
                 if self.agent_to_follow is None:
                     self.agent_to_follow = 0
@@ -234,12 +252,15 @@ class PygameEnvRenderer(EnvRenderer):
                     self.agent_to_follow = (self.agent_to_follow - 1) % len(
                         self.agent_ids
                     )
+
                 self.active_map_renderer = "car"
 
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 2:
                 logging.debug("Pressed middle button -> Change to Map View")
+
                 self.follow_agent_flag = False
                 self.agent_to_follow = None
+
                 self.active_map_renderer = "map"
 
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_s:
