@@ -6,7 +6,6 @@ import pathlib
 from typing import Union, List, Tuple, Any
 
 import cv2
-import matplotlib
 import numpy as np
 import pygame
 import yaml
