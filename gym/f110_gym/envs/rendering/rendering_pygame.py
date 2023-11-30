@@ -10,7 +10,7 @@ import matplotlib
 import numpy as np
 import pygame
 import yaml
-from PIL import Image
+from PIL import Image, ImageColor
 
 from f110_gym.envs.rendering.objects import FPS, Timer, BottomInfo, Map, Car, TopInfo
 from f110_gym.envs.track import Track
@@ -43,7 +43,7 @@ class PygameEnvRenderer(EnvRenderer):
         self.render_fps = render_fps
 
         colors_rgb = [
-            [255 * rgb for rgb in matplotlib.colors.hex2color(c)]
+            [rgb for rgb in ImageColor.getcolor(c, "RGB")]
             for c in render_spec.vehicle_palette
         ]
         self.car_colors = [
