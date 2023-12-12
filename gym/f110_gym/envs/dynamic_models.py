@@ -242,17 +242,17 @@ def vehicle_dynamics_ks(
     # system dynamics
     f = np.array(
         [
-            V * np.cos(PSI),
-            V * np.sin(PSI),
-            STEER_VEL,
-            ACCL,
-            (V / lwb) * np.tan(DELTA),
+            V * np.cos(PSI),            #X_DOT
+            V * np.sin(PSI),            #Y_DOT
+            STEER_VEL,                  #DELTA_DOT
+            ACCL,                       #V_DOT
+            (V / lwb) * np.tan(DELTA),  #PSI_DOT
         ]
     )
     return f
 
 
-#@njit(cache=True)
+@njit(cache=True)
 def vehicle_dynamics_st(
     x,
     u_init,
@@ -335,43 +335,43 @@ def vehicle_dynamics_st(
     ACCL = u[1]
 
     # switch to kinematic model for small velocities
-    if abs(V) < 0.1:
+    if abs(V) < 0.5:
         # wheelbase
         lwb = lf + lr
         BETA_HAT = np.arctan(np.tan(DELTA) * lr /lwb)
         BETA_DOT = (1/(1+ (np.tan(DELTA)*(lr/lwb))**2))*(lr/(lwb*np.cos(DELTA)**2))*STEER_VEL
         f = np.array([
-            V * np.cos(PSI + BETA_HAT),             # X
-            V * np.sin(PSI + BETA_HAT),             # Y
-            STEER_VEL,                              # DELTA
-            ACCL,                                   # V
-            V*np.cos(BETA_HAT)*np.tan(DELTA)/lwb,   # PSI
+            V * np.cos(PSI + BETA_HAT),             # X_DOT
+            V * np.sin(PSI + BETA_HAT),             # Y_DOT
+            STEER_VEL,                              # DELTA_DOT
+            ACCL,                                   # V_DOT
+            V*np.cos(BETA_HAT)*np.tan(DELTA)/lwb,   # PSI_DOT
             (1/lwb)*(
                 ACCL*np.cos(BETA)*np.tan(DELTA) - \
                 V*np.sin(BETA)*np.tan(DELTA)*BETA_DOT + \
                 ((V*np.cos(BETA)*STEER_VEL)/(np.cos(DELTA)**2))
-                ),                                  # PSI_DOT
-            BETA_DOT                                # BETA
+                ),                                  # PSI_DOT_DOT
+            BETA_DOT                                # BETA_DOT
         ])
     else:
         # system dynamics
         f = np.array(
             [
-                V * np.cos(PSI + BETA), # X
-                V * np.sin(PSI + BETA), # Y
-                STEER_VEL,              # DELTA
-                ACCL,                   # V
-                PSI_DOT,                # PSI
+                V * np.cos(PSI + BETA), # X_DOT
+                V * np.sin(PSI + BETA), # Y_DOT
+                STEER_VEL,              # DELTA_DOT
+                ACCL,                   # V_DOT
+                PSI_DOT,                # PSI_DOT
                 ((mu*m)/(I*(lf+lr)))*(
                     lf*C_Sf*(g*lr - ACCL*h)*DELTA + \
                     (lr*C_Sr*(g*lf + ACCL*h) - lf*C_Sf*(g*lr - ACCL*h))*BETA - \
                     (lf*lf*C_Sf*(g*lr - ACCL*h) + lr*lr*C_Sr*(g*lf + ACCL*h))*(PSI_DOT/V)
-                ),                      # PSI_DOT
+                ),                      # PSI_DOT_DOT
                 (mu/(V*(lr+lf)))*(
                     C_Sf*(g*lr - ACCL*h)*DELTA - \
                     (C_Sr*(g*lf + ACCL*h) + C_Sf*(g*lr - ACCL*h))*BETA + \
                     (C_Sr*(g*lf + ACCL*h)*lr - C_Sf*(g*lr - ACCL*h)*lf)*(PSI_DOT/V)
-                ) - PSI_DOT,            # BETA
+                ) - PSI_DOT,            # BETA_DOT
             ]
         )
 
