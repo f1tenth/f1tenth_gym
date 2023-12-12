@@ -12,6 +12,6 @@ setup(name='f110_gym',
                         'scipy>=1.7.3',
                         'numba>=0.55.2',
                         'pyyaml>=5.3.1',
-                        'pyglet<1.5',
+                        'pyglet==1.5.28',
                         'pyopengl']
       )
