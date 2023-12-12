@@ -24,7 +24,7 @@ Prototype of vehicle dynamics functions and classes for simulating 2D Single
 Track dynamic model
 Following the implementation of commanroad's Single Track Dynamics model
 Original implementation: https://gitlab.lrz.de/tum-cps/commonroad-vehicle-models/
-Author: Hongrui Zheng
+Author: Hongrui Zheng, Renukanandan Tumu
 """
 import warnings
 from enum import Enum
@@ -78,15 +78,37 @@ class DynamicModel(Enum):
 
 
 @njit(cache=True)
-def accl_constraints(vel, accl, v_switch, a_max, v_min, v_max):
+def upper_accel_limit(vel, a_max, v_switch):
+    """
+    Upper acceleration limit, adjusts the acceleration based on constraints
+
+        Args:
+            vel (float): current velocity of the vehicle
+            a_max (float): maximum allowed acceleration, symmetrical
+            v_switch (float): switching velocity (velocity at which the acceleration is no longer able to create wheel spin)
+
+        Returns:
+            positive_accel_limit (float): adjusted acceleration
+    """
+    if vel > v_switch:
+        pos_limit = a_max * (v_switch / vel)
+    else:
+        pos_limit = a_max
+
+    return pos_limit
+    
+
+
+@njit(cache=True)
+def accl_constraints(vel, a_long_d, v_switch, a_max, v_min, v_max):
     """
     Acceleration constraints, adjusts the acceleration based on constraints
 
         Args:
             vel (float): current velocity of the vehicle
-            accl (float): unconstraint desired acceleration
+            a_long_d (float): unconstrained desired acceleration in the direction of travel.
             v_switch (float): switching velocity (velocity at which the acceleration is no longer able to create wheel spin)
-            a_max (float): maximum allowed acceleration
+            a_max (float): maximum allowed acceleration, symmetrical
             v_min (float): minimum allowed velocity
             v_max (float): maximum allowed velocity
 
@@ -94,22 +116,18 @@ def accl_constraints(vel, accl, v_switch, a_max, v_min, v_max):
             accl (float): adjusted acceleration
     """
 
-    # positive accl limit
-    if vel > v_switch:
-        pos_limit = a_max * v_switch / vel
+    uac = upper_accel_limit(vel, a_max, v_switch)
+
+    if (vel <= v_min and a_long_d <= 0) or (vel >= v_max and a_long_d >= 0):
+        a_long = 0.0
+    elif a_long_d <= -a_max:
+        a_long = -a_max
+    elif a_long_d >= uac:
+        a_long = uac
     else:
-        pos_limit = a_max
+        a_long = a_long_d
 
-    # accl limit reached?
-    if (vel <= v_min and accl <= 0) or (vel >= v_max and accl >= 0):
-        accl = 0.0
-    elif accl <= -a_max:
-        accl = -a_max
-    elif accl >= pos_limit:
-        accl = pos_limit
-
-    return accl
-
+    return a_long
 
 @njit(cache=True)
 def steering_constraint(
@@ -165,110 +183,76 @@ def vehicle_dynamics_ks(
     v_max,
 ):
     """
-    Single Track Kinematic Vehicle Dynamics.
+    Single Track Kinematic Vehicle Dynamics. 
+    Follows https://gitlab.lrz.de/tum-cps/commonroad-vehicle-models/-/blob/master/vehicleModels_commonRoad.pdf, section 5
 
         Args:
-            x (numpy.ndarray (3, )): vehicle state vector (x1, x2, x3, x4, x5)
-                x1: x position in global coordinates
-                x2: y position in global coordinates
-                x3: steering angle of front wheels
-                x4: velocity in x direction
-                x5: yaw angle
+            x (numpy.ndarray (5, )): vehicle state vector (x0, x1, x2, x3, x4)
+                x0: x position in global coordinates
+                x1: y position in global coordinates
+                x2: steering angle of front wheels
+                x3: velocity in x direction
+                x4: yaw angle
             u (numpy.ndarray (2, )): control input vector (u1, u2)
                 u1: steering angle velocity of front wheels
                 u2: longitudinal acceleration
+            mu (float): friction coefficient
+            C_Sf (float): cornering stiffness of front wheels
+            C_Sr (float): cornering stiffness of rear wheels
+            lf (float): distance from center of gravity to front axle
+            lr (float): distance from center of gravity to rear axle
+            h (float): height of center of gravity
+            m (float): mass of vehicle
+            I (float): moment of inertia of vehicle, about Z axis
+            s_min (float): minimum steering angle
+            s_max (float): maximum steering angle
+            sv_min (float): minimum steering velocity
+            sv_max (float): maximum steering velocity
+            v_switch (float): velocity above which the acceleration is no longer able to create wheel slip
+            a_max (float): maximum allowed acceleration
+            v_min (float): minimum allowed velocity
+            v_max (float): maximum allowed velocity
 
         Returns:
             f (numpy.ndarray): right hand side of differential equations
     """
+    # Controls
+    X = x[0]
+    Y = x[1]
+    DELTA = x[2]
+    V = x[3]
+    PSI = x[4]
+    # Raw Actions
+    RAW_STEER_VEL = u_init[0]
+    RAW_ACCL = u_init[1]
     # wheelbase
     lwb = lf + lr
 
     # constraints
     u = np.array(
         [
-            steering_constraint(x[2], u_init[0], s_min, s_max, sv_min, sv_max),
-            accl_constraints(x[3], u_init[1], v_switch, a_max, v_min, v_max),
+            steering_constraint(DELTA, RAW_STEER_VEL, s_min, s_max, sv_min, sv_max),
+            accl_constraints(V, RAW_ACCL, v_switch, a_max, v_min, v_max),
         ]
     )
+    # Corrected Actions
+    STEER_VEL = u[0]
+    ACCL = u[1]
 
     # system dynamics
     f = np.array(
         [
-            x[3] * np.cos(x[4]),
-            x[3] * np.sin(x[4]),
-            u[0],
-            u[1],
-            x[3] / lwb * np.tan(x[2]),
+            V * np.cos(PSI),
+            V * np.sin(PSI),
+            STEER_VEL,
+            ACCL,
+            (V / lwb) * np.tan(DELTA),
         ]
     )
     return f
 
 
-@njit(cache=True)
-def vehicle_dynamics_ks_cog(
-    x,
-    u_init,
-    mu,
-    C_Sf,
-    C_Sr,
-    lf,
-    lr,
-    h,
-    m,
-    I,
-    s_min,
-    s_max,
-    sv_min,
-    sv_max,
-    v_switch,
-    a_max,
-    v_min,
-    v_max,
-):
-    """
-    Single Track Kinematic Vehicle Dynamics at CoG.
-
-        Args:
-            x (numpy.ndarray (3, )): vehicle state vector (x1, x2, x3, x4, x5)
-                x1: x position in global coordinates
-                x2: y position in global coordinates
-                x3: steering angle of front wheels
-                x4: velocity in x direction
-                x5: yaw angle
-            u (numpy.ndarray (2, )): control input vector (u1, u2)
-                u1: steering angle velocity of front wheels
-                u2: longitudinal acceleration
-
-        Returns:
-            f (numpy.ndarray): right hand side of differential equations
-    """
-    # wheelbase
-    lwb = lf + lr
-
-    # constraints
-    u = np.array(
-        [
-            steering_constraint(x[2], u_init[0], s_min, s_max, sv_min, sv_max),
-            accl_constraints(x[3], u_init[1], v_switch, a_max, v_min, v_max),
-        ]
-    )
-
-    # system dynamics
-    beta = np.arctan(np.tan(x[2]) * lr / lwb)
-    f = np.array(
-        [
-            x[3] * np.cos(beta + x[4]),
-            x[3] * np.sin(beta + x[4]),
-            u[0],
-            u[1],
-            x[3] * np.cos(beta) * np.tan(x[2]) / lwb,
-        ]
-    )
-    return f
-
-
-@njit(cache=True)
+#@njit(cache=True)
 def vehicle_dynamics_st(
     x,
     u_init,
@@ -290,24 +274,51 @@ def vehicle_dynamics_st(
     v_max,
 ):
     """
-    Single Track Dynamic Vehicle Dynamics.
+    Single Track Vehicle Dynamics.
+    From https://gitlab.lrz.de/tum-cps/commonroad-vehicle-models/-/blob/master/vehicleModels_commonRoad.pdf, section 7
 
         Args:
-            x (numpy.ndarray (3, )): vehicle state vector (x1, x2, x3, x4, x5, x6, x7)
-                x1: x position in global coordinates
-                x2: y position in global coordinates
-                x3: steering angle of front wheels
-                x4: velocity in x direction
-                x5: yaw angle
-                x6: yaw rate
-                x7: slip angle at vehicle center
+            x (numpy.ndarray (7, )): vehicle state vector (x0, x1, x2, x3, x4, x5, x6)
+                x0: x position in global coordinates
+                x1: y position in global coordinates
+                x2: steering angle of front wheels
+                x3: velocity in x direction
+                x4:yaw angle
+                x5: yaw rate
+                x6: slip angle at vehicle center
             u (numpy.ndarray (2, )): control input vector (u1, u2)
                 u1: steering angle velocity of front wheels
                 u2: longitudinal acceleration
+            mu (float): friction coefficient
+            C_Sf (float): cornering stiffness of front wheels
+            C_Sr (float): cornering stiffness of rear wheels
+            lf (float): distance from center of gravity to front axle
+            lr (float): distance from center of gravity to rear axle
+            h (float): height of center of gravity
+            m (float): mass of vehicle
+            I (float): moment of inertia of vehicle, about Z axis
+            s_min (float): minimum steering angle
+            s_max (float): maximum steering angle
+            sv_min (float): minimum steering velocity
+            sv_max (float): maximum steering velocity
+            v_switch (float): velocity above which the acceleration is no longer able to create wheel spin
+            a_max (float): maximum allowed acceleration
+            v_min (float): minimum allowed velocity
+            v_max (float): maximum allowed velocity
 
         Returns:
             f (numpy.ndarray): right hand side of differential equations
     """
+    # States
+    X = x[0]
+    Y = x[1]
+    DELTA = x[2]
+    V = x[3]
+    PSI = x[4]
+    PSI_DOT = x[5]
+    BETA = x[6]
+    # We have to wrap the slip angle to [-pi, pi]
+    #BETA = np.arctan2(np.sin(BETA), np.cos(BETA))
 
     # gravity constant m/s^2
     g = 9.81
@@ -315,100 +326,52 @@ def vehicle_dynamics_st(
     # constraints
     u = np.array(
         [
-            steering_constraint(x[2], u_init[0], s_min, s_max, sv_min, sv_max),
-            accl_constraints(x[3], u_init[1], v_switch, a_max, v_min, v_max),
+            steering_constraint(DELTA, u_init[0], s_min, s_max, sv_min, sv_max),
+            accl_constraints(V, u_init[1], v_switch, a_max, v_min, v_max),
         ]
     )
+    # Controls
+    STEER_VEL = u[0]
+    ACCL = u[1]
 
     # switch to kinematic model for small velocities
-    if abs(x[3]) < 0.5:
+    if abs(V) < 0.1:
         # wheelbase
         lwb = lf + lr
-
-        # system dynamics
-        x_ks = x[0:5]
-        f_ks = vehicle_dynamics_ks_cog(
-            x_ks,
-            u,
-            mu,
-            C_Sf,
-            C_Sr,
-            lf,
-            lr,
-            h,
-            m,
-            I,
-            s_min,
-            s_max,
-            sv_min,
-            sv_max,
-            v_switch,
-            a_max,
-            v_min,
-            v_max,
-        )
-        d_beta = (lr * u[0]) / (
-            lwb * np.cos(x[2]) ** 2 * (1 + (np.tan(x[2]) ** 2 * lr / lwb) ** 2)
-        )
-        dd_psi = (
-            1
-            / lwb
-            * (
-                u[1] * np.cos(x[6]) * np.tan(x[2])
-                - x[3] * np.sin(x[6]) * d_beta * np.tan(x[2])
-                + x[3] * np.cos(x[6]) * u[0] / np.cos(x[2]) ** 2
-            )
-        )
-        f = np.hstack(
-            (
-                f_ks,
-                np.array(
-                    [
-                        dd_psi,
-                        d_beta,
-                    ]
-                ),
-            )
-        )
-
+        BETA_HAT = np.arctan(np.tan(DELTA) * lr /lwb)
+        BETA_DOT = (1/(1+ (np.tan(DELTA)*(lr/lwb))**2))*(lr/(lwb*np.cos(DELTA)**2))*STEER_VEL
+        f = np.array([
+            V * np.cos(PSI + BETA_HAT),             # X
+            V * np.sin(PSI + BETA_HAT),             # Y
+            STEER_VEL,                              # DELTA
+            ACCL,                                   # V
+            V*np.cos(BETA_HAT)*np.tan(DELTA)/lwb,   # PSI
+            (1/lwb)*(
+                ACCL*np.cos(BETA)*np.tan(DELTA) - \
+                V*np.sin(BETA)*np.tan(DELTA)*BETA_DOT + \
+                ((V*np.cos(BETA)*STEER_VEL)/(np.cos(DELTA)**2))
+                ),                                  # PSI_DOT
+            BETA_DOT                                # BETA
+        ])
     else:
         # system dynamics
         f = np.array(
             [
-                x[3] * np.cos(x[6] + x[4]),
-                x[3] * np.sin(x[6] + x[4]),
-                u[0],
-                u[1],
-                x[5],
-                -mu
-                * m
-                / (x[3] * I * (lr + lf))
-                * (
-                    lf**2 * C_Sf * (g * lr - u[1] * h)
-                    + lr**2 * C_Sr * (g * lf + u[1] * h)
-                )
-                * x[5]
-                + mu
-                * m
-                / (I * (lr + lf))
-                * (lr * C_Sr * (g * lf + u[1] * h) - lf * C_Sf * (g * lr - u[1] * h))
-                * x[6]
-                + mu * m / (I * (lr + lf)) * lf * C_Sf * (g * lr - u[1] * h) * x[2],
-                (
-                    mu
-                    / (x[3] ** 2 * (lr + lf))
-                    * (
-                        C_Sr * (g * lf + u[1] * h) * lr
-                        - C_Sf * (g * lr - u[1] * h) * lf
-                    )
-                    - 1
-                )
-                * x[5]
-                - mu
-                / (x[3] * (lr + lf))
-                * (C_Sr * (g * lf + u[1] * h) + C_Sf * (g * lr - u[1] * h))
-                * x[6]
-                + mu / (x[3] * (lr + lf)) * (C_Sf * (g * lr - u[1] * h)) * x[2],
+                V * np.cos(PSI + BETA), # X
+                V * np.sin(PSI + BETA), # Y
+                STEER_VEL,              # DELTA
+                ACCL,                   # V
+                PSI_DOT,                # PSI
+                ((mu*m)/(I*(lf+lr)))*(
+                    lf*C_Sf*(g*lr - ACCL*h)*DELTA + \
+                    (lr*C_Sr*(g*lf + ACCL*h) - lf*C_Sf*(g*lr - ACCL*h))*BETA - \
+                    (lf*lf*C_Sf*(g*lr - ACCL*h) + lr*lr*C_Sr*(g*lf + ACCL*h))*(PSI_DOT/V)
+                ),                      # PSI_DOT
+                (mu/(V*(lr+lf)))*(
+                    C_Sf*(g*lr - ACCL*h)*DELTA - \
+                    (C_Sr*(g*lf + ACCL*h) + C_Sf*(g*lr - ACCL*h))*BETA + \
+                    (C_Sr*(g*lf + ACCL*h)*lr - C_Sf*(g*lr - ACCL*h)*lf)*(PSI_DOT/V)
+                ) - PSI_DOT,            # BETA
             ]
         )
 
