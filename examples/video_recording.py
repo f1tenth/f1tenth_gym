@@ -3,7 +3,7 @@ import gymnasium as gym
 import gymnasium.wrappers
 import numpy as np
 
-from examples.waypoint_follow import PurePursuitPlanner
+from waypoint_follow import PurePursuitPlanner
 
 
 def main():
@@ -29,15 +29,16 @@ def main():
         render_mode="rgb_array",
     )
     env = gymnasium.wrappers.RecordVideo(env, f"video_{time.time()}")
+    track = env.unwrapped.track
 
-    planner = PurePursuitPlanner(track=env.track, wb=0.17145 + 0.15875)
+    planner = PurePursuitPlanner(track=track, wb=0.17145 + 0.15875)
 
     poses = np.array(
         [
             [
-                env.track.raceline.xs[0],
-                env.track.raceline.ys[0],
-                env.track.raceline.yaws[0],
+                track.raceline.xs[0],
+                track.raceline.ys[0],
+                track.raceline.yaws[0],
             ]
         ]
     )
@@ -50,22 +51,24 @@ def main():
 
     frames = [env.render()]
     while not done and laptime < 15.0:
-        agent_id = env.agent_ids[0]
-        speed, steer = planner.plan(
-            obs[agent_id]["pose_x"],
-            obs[agent_id]["pose_y"],
-            obs[agent_id]["pose_theta"],
-            work["tlad"],
-            work["vgain"],
-        )
-        action = np.array([[steer, speed]])
+        action = env.action_space.sample()
+        for i, agent_id in enumerate(obs.keys()):
+            speed, steer = planner.plan(
+                obs[agent_id]["pose_x"],
+                obs[agent_id]["pose_y"],
+                obs[agent_id]["pose_theta"],
+                work["tlad"],
+                work["vgain"],
+            )
+            action[i] = [speed, steer]
+
         obs, step_reward, done, truncated, info = env.step(action)
         laptime += step_reward
 
         frame = env.render()
         frames.append(frame)
 
-        print(laptime)
+        #print(laptime)
 
     print("Sim elapsed time:", laptime, "Real elapsed time:", time.time() - start)
 
