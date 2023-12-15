@@ -68,8 +68,6 @@ def main():
         frame = env.render()
         frames.append(frame)
 
-        #print(laptime)
-
     print("Sim elapsed time:", laptime, "Real elapsed time:", time.time() - start)
 
     # close env to trigger video saving

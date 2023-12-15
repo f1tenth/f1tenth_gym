@@ -1,13 +1,10 @@
 import time
 from typing import Tuple
 
-import yaml
 import gymnasium as gym
 import numpy as np
 from numba import njit
-from pyglet.gl import GL_POINTS
 
-from f110_gym.envs import F110Env
 
 """
 Planner Helpers
@@ -299,7 +296,7 @@ def main():
         "lf": 0.15597534362552312,
         "tlad": 0.82461887897713965,
         "vgain": 1,
-    }  # 0.90338203837889}
+    }
 
     env = gym.make(
         "f110_gym:f110-v0",
@@ -315,21 +312,16 @@ def main():
         },
         render_mode="human",
     )
+    track = env.unwrapped.track
 
-    planner = PurePursuitPlanner(track=env.track, wb=0.17145 + 0.15875)
+    planner = PurePursuitPlanner(track=track, wb=0.17145 + 0.15875)
 
     poses = np.array(
-        [
-            [
-                env.track.raceline.xs[0],
-                env.track.raceline.ys[0],
-                env.track.raceline.yaws[0],
-            ]
-        ]
+        [[track.raceline.xs[0], track.raceline.ys[0], track.raceline.yaws[0],]]
     )
-    env.add_render_callback(planner.render_waypoints)
-    env.add_render_callback(planner.render_local_plan)
-    env.add_render_callback(planner.render_lookahead_point)
+    env.unwrapped.add_render_callback(planner.render_waypoints)
+    env.unwrapped.add_render_callback(planner.render_local_plan)
+    env.unwrapped.add_render_callback(planner.render_lookahead_point)
 
     obs, info = env.reset(options={"poses": poses})
     done = False
@@ -339,16 +331,18 @@ def main():
     start = time.time()
 
     while not done:
-        agent_id = env.agent_ids[0]
-        speed, steer = planner.plan(
-            obs[agent_id]["pose_x"],
-            obs[agent_id]["pose_y"],
-            obs[agent_id]["pose_theta"],
-            work["tlad"],
-            work["vgain"],
-        )
+        action = env.action_space.sample()
+        for i, agent_id in enumerate(obs.keys()):
+            speed, steer = planner.plan(
+                obs[agent_id]["pose_x"],
+                obs[agent_id]["pose_y"],
+                obs[agent_id]["pose_theta"],
+                work["tlad"],
+                work["vgain"],
+            )
+            action[i] = np.array([steer, speed])
 
-        obs, step_reward, done, truncated, info = env.step(np.array([[steer, speed]]))
+        obs, step_reward, done, truncated, info = env.step(action)
         laptime += step_reward
         frame = env.render()
 
