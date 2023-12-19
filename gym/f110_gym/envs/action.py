@@ -80,7 +80,7 @@ class SteerAction:
 
     @property
     def type(self) -> str:
-        return self._steer_action_type
+        return self._type
     
     @property
     def space(self) -> gym.Space:
@@ -111,7 +111,7 @@ class SteeringAngleAction(SteerAction):
     def act(
         self, action: Tuple[float, float], state: np.ndarray, params: Dict
     ) -> float: # pid(speed, steer, current_speed, current_steer, max_sv, max_a, max_v, min_v)
-        return action[1]
+        return action
 
 class SteerActionEnum(Enum):
     Angle = 1
@@ -125,16 +125,19 @@ class SteerActionEnum(Enum):
             return SteeringSpeedAction
         else:
             raise ValueError(f"Unknown action type {action}")
+
 class CarAction:
-    def __init__(self, control_mode : list[str, str]) -> None:
-        self._longitudinal_action : LongitudinalAction = LongitudinalActionEnum.from_string(control_mode[0])
-        self._steer_action : SteerAction = SteerActionEnum.from_string(control_mode[1])
+    def __init__(self, control_mode : list[str, str], params: Dict) -> None:
+        long_act_type_fn = LongitudinalActionEnum.from_string(control_mode[0])
+        self._longitudinal_action : LongitudinalAction = long_act_type_fn(params)
+        steer_act_type_fn = SteerActionEnum.from_string(control_mode[1])
+        self._steer_action : SteerAction = steer_act_type_fn(params)
 
     @abstractmethod
     def act(self, action: Any, **kwargs) -> Tuple[float, float]:
         longitudinal_action = self._longitudinal_action.act(action[0], **kwargs)
         steer_action = self._steer_action.act(action[1], **kwargs)
-        return steer_action, longitudinal_action
+        return longitudinal_action, steer_action
 
     @property
     def type(self) -> Tuple[str, str]:
