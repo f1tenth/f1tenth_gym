@@ -7,7 +7,7 @@ import numpy as np
 from f110_gym.envs.dynamic_models import pid_steer, pid_accl
 
 
-class CarActionEnum(Enum):
+class LongitudinalActionEnum(Enum):
     Accl = 1
     Speed = 2
 
@@ -19,11 +19,13 @@ class CarActionEnum(Enum):
             return SpeedAction
         else:
             raise ValueError(f"Unknown action type {action}")
-
-
+        
 class LongitudinalAction:
     def __init__(self) -> None:
-        self._longitudinal_action_type = None
+        self._type = None
+
+        self.lower_limit = None
+        self.upper_limit = None
 
     @abstractmethod
     def act(self, longitudinal_action: Any, **kwargs) -> float:
@@ -31,16 +33,46 @@ class LongitudinalAction:
 
     @property
     def type(self) -> str:
-        return self._longitudinal_action_type
+        return self._type
 
     @property
     def space(self) -> gym.Space:
-        return NotImplementedError(
-            f"space method not implemented for longitudinal action type {self.type}"
+        return gym.spaces.Box(low=self.lower_limit, high=self.upper_limit, dtype=np.float32)
+
+class AcclAction(LongitudinalAction):
+    def __init__(self, params: Dict) -> None:
+        super().__init__()
+        self._type = "accl"
+        self.lower_limit, self.upper_limit = -params["a_max"], params["a_max"]
+
+    def act(self, action: Tuple[float, float], state, params) -> float:
+        return action
+
+class SpeedAction(LongitudinalAction):
+    def __init__(self, params: Dict) -> None:
+        super().__init__()
+        self._type = "speed"
+        self.lower_limit, self.upper_limit = params["v_min"], params["v_max"]
+
+    def act(
+        self, action: Tuple[float, float], state: np.ndarray, params: Dict
+    ) -> float:
+        accl = pid_accl(
+            action[0],
+            state[3],
+            params["a_max"],
+            params["v_max"],
+            params["v_min"],
         )
+
+        return accl
+
 class SteerAction:
     def __init__(self) -> None:
-        self._steer_action_type = None
+        self._type = None
+
+        self.lower_limit = None
+        self.upper_limit = None
 
     @abstractmethod
     def act(self, steer_action: Any, **kwargs) -> float:
@@ -49,17 +81,54 @@ class SteerAction:
     @property
     def type(self) -> str:
         return self._steer_action_type
-
+    
     @property
     def space(self) -> gym.Space:
-        return NotImplementedError(
-            f"space method not implemented for steer action type {self.type}"
+        return gym.spaces.Box(low=self.lower_limit, high=self.upper_limit, dtype=np.float32)
+
+class SteeringSpeedAction(SteerAction):
+    def __init__(self, params: Dict) -> None:
+        super().__init__()
+        self._type = "speed"
+        self.lower_limit, self.upper_limit = params["sv_min"], params["sv_max"]
+
+    def act(
+        self, action: Tuple[float, float], state: np.ndarray, params: Dict
+    ) -> float: # pid(speed, steer, current_speed, current_steer, max_sv, max_a, max_v, min_v)
+        sv = pid_steer(
+            action[1],
+            state[2],
+            params["sv_max"],
         )
+        return sv
     
+class SteeringAngleAction(SteerAction):
+    def __init__(self, params: Dict) -> None:
+        super().__init__()
+        self._type = "speed"
+        self.lower_limit, self.upper_limit = params["s_min"], params["s_max"]
+
+    def act(
+        self, action: Tuple[float, float], state: np.ndarray, params: Dict
+    ) -> float: # pid(speed, steer, current_speed, current_steer, max_sv, max_a, max_v, min_v)
+        return action[1]
+
+class SteerActionEnum(Enum):
+    Angle = 1
+    Speed = 2
+
+    @staticmethod
+    def from_string(action: str):
+        if action == "angle":
+            return SteeringAngleAction
+        elif action == "speed":
+            return SteeringSpeedAction
+        else:
+            raise ValueError(f"Unknown action type {action}")
 class CarAction:
-    def __init__(self) -> None:
-        self._steer_action = SteerAction()
-        self._longitudinal_action = LongitudinalAction()
+    def __init__(self, control_mode : list[str, str]) -> None:
+        self._longitudinal_action : LongitudinalAction = LongitudinalActionEnum.from_string(control_mode[0])
+        self._steer_action : SteerAction = SteerActionEnum.from_string(control_mode[1])
 
     @abstractmethod
     def act(self, action: Any, **kwargs) -> Tuple[float, float]:
@@ -73,63 +142,8 @@ class CarAction:
 
     @property
     def space(self) -> gym.Space:
-        return NotImplementedError(
-            f"space method not implemented for action type {self.type}"
-        )
-
-
-class AcclAction(CarAction):
-    def __init__(self, params: Dict) -> None:
-        super().__init__()
-        self._steer_action_type = "speed"
-        self._longitudinal_action_type = "accl"
-
-        self.steering_low, self.steering_high = params["sv_min"], params["sv_max"]
-        self.acc_low, self.acc_high = -params["a_max"], params["a_max"]
-
-    def act(self, action: Tuple[float, float], state, params) -> Tuple[float, float]:
-        return action
-
-    @property
-    def space(self) -> gym.Space:
-        low = np.array([self.steering_low, self.acc_low]).astype(np.float32)
-        high = np.array([self.steering_high, self.acc_high]).astype(np.float32)
-
-        return gym.spaces.Box(low=low, high=high, shape=(2,), dtype=np.float32)
-
-
-class SpeedAction(CarAction):
-    def __init__(self, params: Dict) -> None:
-        super().__init__()
-        self._steer_action_type = "angle"
-        self._longitudinal_action_type = "speed"
-
-        self.steering_low, self.steering_high = params["s_min"], params["s_max"]
-        self.velocity_low, self.velocity_high = params["v_min"], params["v_max"]
-
-    def act(
-        self, action: Tuple[float, float], state: np.ndarray, params: Dict
-    ) -> Tuple[float, float]: # pid(speed, steer, current_speed, current_steer, max_sv, max_a, max_v, min_v)
-        accl = pid_accl(
-            action[0],
-            state[3],
-            params["a_max"],
-            params["v_max"],
-            params["v_min"],
-        )
-
-        sv = pid_steer(
-            action[1],
-            state[2],
-            params["sv_max"],
-        )
-
-        return accl, sv
-
-    @property
-    def space(self) -> gym.Space:
-        low = np.array([self.steering_low, self.velocity_low]).astype(np.float32)
-        high = np.array([self.steering_high, self.velocity_high]).astype(np.float32)
+        low = np.array([self._steer_action.lower_limit, self._longitudinal_action.lower_limit]).astype(np.float32)
+        high = np.array([self._steer_action.upper_limit, self._longitudinal_action.upper_limit]).astype(np.float32)
 
         return gym.spaces.Box(low=low, high=high, shape=(2,), dtype=np.float32)
 
