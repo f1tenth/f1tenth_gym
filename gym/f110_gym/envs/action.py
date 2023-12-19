@@ -21,18 +21,55 @@ class CarActionEnum(Enum):
             raise ValueError(f"Unknown action type {action}")
 
 
-class CarAction:
+class LongitudinalAction:
     def __init__(self) -> None:
-        self._steer_action_type = None
         self._longitudinal_action_type = None
 
     @abstractmethod
+    def act(self, longitudinal_action: Any, **kwargs) -> float:
+        raise NotImplementedError("longitudinal act method not implemented")
+
+    @property
+    def type(self) -> str:
+        return self._longitudinal_action_type
+
+    @property
+    def space(self) -> gym.Space:
+        return NotImplementedError(
+            f"space method not implemented for longitudinal action type {self.type}"
+        )
+class SteerAction:
+    def __init__(self) -> None:
+        self._steer_action_type = None
+
+    @abstractmethod
+    def act(self, steer_action: Any, **kwargs) -> float:
+        raise NotImplementedError("steer act method not implemented")
+
+    @property
+    def type(self) -> str:
+        return self._steer_action_type
+
+    @property
+    def space(self) -> gym.Space:
+        return NotImplementedError(
+            f"space method not implemented for steer action type {self.type}"
+        )
+    
+class CarAction:
+    def __init__(self) -> None:
+        self._steer_action = SteerAction()
+        self._longitudinal_action = LongitudinalAction()
+
+    @abstractmethod
     def act(self, action: Any, **kwargs) -> Tuple[float, float]:
-        raise NotImplementedError("act method not implemented")
+        longitudinal_action = self._longitudinal_action.act(action[0], **kwargs)
+        steer_action = self._steer_action.act(action[1], **kwargs)
+        return steer_action, longitudinal_action
 
     @property
     def type(self) -> Tuple[str, str]:
-        return (self._steer_action_type, self._longitudinal_action_type)
+        return (self._steer_action.type, self._longitudinal_action.type)
 
     @property
     def space(self) -> gym.Space:
