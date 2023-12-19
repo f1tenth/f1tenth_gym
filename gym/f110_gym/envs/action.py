@@ -23,15 +23,16 @@ class CarActionEnum(Enum):
 
 class CarAction:
     def __init__(self) -> None:
-        self._action_type = None
+        self._steer_action_type = None
+        self._longitudinal_action_type = None
 
     @abstractmethod
     def act(self, action: Any, **kwargs) -> Tuple[float, float]:
         raise NotImplementedError("act method not implemented")
 
     @property
-    def type(self) -> str:
-        return self._action_type
+    def type(self) -> Tuple[str, str]:
+        return (self._steer_action_type, self._longitudinal_action_type)
 
     @property
     def space(self) -> gym.Space:
@@ -43,7 +44,8 @@ class CarAction:
 class AcclAction(CarAction):
     def __init__(self, params: Dict) -> None:
         super().__init__()
-        self._action_type = "accl"
+        self._steer_action_type = "speed"
+        self._longitudinal_action_type = "accl"
 
         self.steering_low, self.steering_high = params["sv_min"], params["sv_max"]
         self.acc_low, self.acc_high = -params["a_max"], params["a_max"]
@@ -62,7 +64,8 @@ class AcclAction(CarAction):
 class SpeedAction(CarAction):
     def __init__(self, params: Dict) -> None:
         super().__init__()
-        self._action_type = "speed"
+        self._steer_action_type = "angle"
+        self._longitudinal_action_type = "speed"
 
         self.steering_low, self.steering_high = params["s_min"], params["s_max"]
         self.velocity_low, self.velocity_high = params["v_min"], params["v_max"]
