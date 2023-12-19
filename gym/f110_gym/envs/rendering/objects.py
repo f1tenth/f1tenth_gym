@@ -7,92 +7,79 @@ from f110_gym.envs.collision_models import get_vertices
 from f110_gym.envs.rendering import RenderSpec
 
 
-class FPS:
-    """
-    Class to display the current FPS on the screen.
-    """
-
-    def __init__(self, window_shape: tuple[int, int] = (1000, 1000)):
-        self.clock = pygame.time.Clock()
-        font_size = int(32 * window_shape[0] / 1000)
-        self.font = pygame.font.SysFont("Arial", font_size)
+class TextObject:
+    def __init__(
+        self,
+        window_shape: tuple[int, int] = (1000, 1000),
+        relative_font_size: int = 32,
+        font_name: str = "Arial",
+        position: str | tuple = "bottom_right",
+    ):
+        font_size = int(relative_font_size * window_shape[0] / 1000)
+        self.font = pygame.font.SysFont(font_name, font_size)
+        self.position = position
 
         self.text = self.font.render("", True, (125, 125, 125))
 
-    def render(self, display: pygame.Surface):
-        txt = f"FPS: {self.clock.get_fps():.2f}"
-        self.text = self.font.render(txt, True, (125, 125, 125))
+    def _position_resolver(
+        self, position: str | tuple, display: pygame.Surface
+    ) -> tuple[int, int]:
+        """
+        This function takes strings like "bottom center" and converts them into a location for the text to be displayed.
+        if position is tuple, then passthrough.
+        """
+        if isinstance(position, tuple):
+            return position
 
-        # find bottom left corner of display
-        display_height = display.get_height()
-        text_height = self.text.get_height()
-        bottom_left = (0, display_height - text_height)
+        if isinstance(position, str):
+            position = position.lower()
+            if position == "bottom_right":
+                display_width, display_height = (
+                    display.get_width(),
+                    display.get_height(),
+                )
+                text_width, text_height = self.text.get_width(), self.text.get_height()
+                bottom_right = (
+                    display_width - text_width,
+                    display_height - text_height,
+                )
+                return bottom_right
+            elif position == "bottom_left":
+                display_height = display.get_height()
+                text_height = self.text.get_height()
+                bottom_left = (0, display_height - text_height)
+                return bottom_left
+            elif position == "bottom_center":
+                display_width, display_height = (
+                    display.get_width(),
+                    display.get_height(),
+                )
+                text_width, text_height = self.text.get_width(), self.text.get_height()
+                bottom_center = (
+                    (display_width - text_width) / 2,
+                    display_height - text_height,
+                )
+                return bottom_center
+            elif position == "top_right":
+                display_width = display.get_width()
+                text_width = self.text.get_width()
+                top_right = (display_width - text_width, 0)
+                return top_right
+            elif position == "top_left":
+                top_left = (0, 0)
+                return top_left
+            elif position == "top_center":
+                display_width = display.get_width()
+                text_width = self.text.get_width()
+                top_center = ((display_width - text_width) / 2, 0)
+                return top_center
+            else:
+                raise NotImplementedError(f"Position {position} not implemented.")
 
-        display.blit(self.text, bottom_left)
-
-
-class Timer:
-    """
-    Class to display the current time on the screen.
-    """
-
-    def __init__(self, window_shape: tuple[int, int] = (1000, 1000)):
-        self.font = pygame.font.SysFont("Arial", 32)
-        font_size = int(32 * window_shape[0] / 1000)
-        self.font = pygame.font.SysFont("Arial", font_size)
-
-    def render(self, time: float, display: pygame.Surface):
-        txt = f"Time: {time:.2f}"
-        self.text = self.font.render(txt, True, (125, 125, 125))
-
-        # find bottom right corner of display
-        display_width, display_height = display.get_width(), display.get_height()
-        text_width, text_height = self.text.get_width(), self.text.get_height()
-        bottom_right = (display_width - text_width, display_height - text_height)
-
-        display.blit(self.text, bottom_right)
-
-
-class BottomInfo:
-    """
-    Class to display text on the bottom of the screen.
-    """
-
-    def __init__(self, window_shape: tuple[int, int] = (1000, 1000)):
-        font_size = int(32 * window_shape[0] / 1000)
-        self.font = pygame.font.SysFont("Arial", font_size)
-        self.text = self.font.render("", True, (125, 125, 125))
-
-    def render(self, txt: str, display: pygame.Surface):
-        self.text = self.font.render(txt, True, (125, 125, 125))
-
-        # find bottom center of display
-        display_width, display_height = display.get_width(), display.get_height()
-        text_width, text_height = self.text.get_width(), self.text.get_height()
-        bottom_center = ((display_width - text_width) / 2, display_height - text_height)
-
-        display.blit(self.text, bottom_center)
-
-
-class TopInfo:
-    """
-    Class to display text on the top of the screen.
-    """
-
-    def __init__(self, window_shape: tuple[int, int] = (1000, 1000)):
-        font_size = int(32 * window_shape[0] / 1000)
-        self.font = pygame.font.SysFont("Arial", font_size)
-        self.text = self.font.render("", True, (125, 125, 125))
-
-    def render(self, txt: str, display: pygame.Surface):
-        self.text = self.font.render(txt, True, (125, 125, 125))
-
-        # find top center of display
-        display_width, display_height = display.get_width(), display.get_height()
-        text_width, text_height = self.text.get_width(), self.text.get_height()
-        top_center = ((display_width - text_width) / 2, 0)
-
-        display.blit(self.text, top_center)
+    def render(self, text: str, display: pygame.Surface):
+        self.text = self.font.render(text, True, (125, 125, 125))
+        position_tuple = self._position_resolver(self.position, display)
+        display.blit(self.text, position_tuple)
 
 
 class Map:

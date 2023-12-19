@@ -11,7 +11,15 @@ import pygame
 import yaml
 from PIL import Image, ImageColor
 
-from f110_gym.envs.rendering.objects import FPS, Timer, BottomInfo, Map, Car, TopInfo
+from f110_gym.envs.rendering.objects import (
+    FPS,
+    Timer,
+    BottomInfo,
+    Map,
+    Car,
+    TopInfo,
+    TextObject,
+)
 from f110_gym.envs.track import Track
 from f110_gym.envs.rendering.renderer import EnvRenderer, RenderSpec
 
@@ -70,10 +78,19 @@ class PygameEnvRenderer(EnvRenderer):
                 print(ex)
 
         # fps and time renderer
-        self.fps_renderer = FPS(window_shape=(width, height))
-        self.time_renderer = Timer(window_shape=(width, height))
-        self.bottom_info_renderer = BottomInfo(window_shape=(width, height))
-        self.top_info_renderer = TopInfo(window_shape=(width, height))
+        self.clock = pygame.time.Clock()
+        self.fps_renderer = TextObject(
+            window_shape=(width, height), position="bottom_left"
+        )
+        self.time_renderer = TextObject(
+            window_shape=(width, height), position="bottom_right"
+        )
+        self.bottom_info_renderer = TextObject(
+            window_shape=(width, height), position="bottom_center"
+        )
+        self.top_info_renderer = TextObject(
+            window_shape=(width, height), position="top_center"
+        )
 
         # load map image
         original_img = map_filepath.parent / self.map_metadata["image"]
@@ -186,17 +203,19 @@ class PygameEnvRenderer(EnvRenderer):
                 else None
             )
             self.bottom_info_renderer.render(
-                txt=f"Focus on: {agent_to_follow_id}", display=self.canvas
+                text=f"Focus on: {agent_to_follow_id}", display=self.canvas
             )
 
         if self.render_spec.show_info:
-            self.top_info_renderer.render(txt=INSTRUCTION_TEXT, display=self.canvas)
-        self.time_renderer.render(time=self.sim_time, display=self.canvas)
+            self.top_info_renderer.render(text=INSTRUCTION_TEXT, display=self.canvas)
+        self.time_renderer.render(text=f"{self.sim_time:.2f}", display=self.canvas)
 
         if self.render_mode in ["human", "human_fast"]:
             assert self.window is not None
 
-            self.fps_renderer.render(self.canvas)
+            self.fps_renderer.render(
+                text=f"FPS: {self.clock.get_fps():.2f}", display=self.canvas
+            )
 
             self.window.blit(self.canvas, self.canvas.get_rect())
 
@@ -205,7 +224,7 @@ class PygameEnvRenderer(EnvRenderer):
 
             # We need to ensure that human-rendering occurs at the predefined framerate.
             # The following line will automatically add a delay to keep the framerate stable.
-            self.fps_renderer.clock.tick(self.render_fps)
+            self.clock.tick(self.render_fps)
         else:  # rgb_array
             frame = np.transpose(
                 np.array(pygame.surfarray.pixels3d(self.canvas)), axes=(1, 0, 2)
@@ -227,7 +246,6 @@ class PygameEnvRenderer(EnvRenderer):
             - S key: enable/disable rendering
         """
         for event in pygame.event.get():
-
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 logging.debug("Pressed left button -> Follow Next agent")
 
