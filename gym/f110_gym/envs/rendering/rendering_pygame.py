@@ -12,12 +12,8 @@ import yaml
 from PIL import Image, ImageColor
 
 from f110_gym.envs.rendering.objects import (
-    FPS,
-    Timer,
-    BottomInfo,
     Map,
     Car,
-    TopInfo,
     TextObject,
 )
 from f110_gym.envs.track import Track

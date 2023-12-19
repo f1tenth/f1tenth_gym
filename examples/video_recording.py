@@ -60,7 +60,7 @@ def main():
                 work["tlad"],
                 work["vgain"],
             )
-            action[i] = [speed, steer]
+            action[i] = [steer, speed]
 
         obs, step_reward, done, truncated, info = env.step(action)
         laptime += step_reward
