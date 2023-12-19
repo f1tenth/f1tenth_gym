@@ -4,7 +4,7 @@ from typing import Any, Dict, Tuple
 
 import gymnasium as gym
 import numpy as np
-from f110_gym.envs.dynamic_models import pid
+from f110_gym.envs.dynamic_models import pid_steer, pid_accl
 
 
 class CarActionEnum(Enum):
@@ -109,17 +109,21 @@ class SpeedAction(CarAction):
 
     def act(
         self, action: Tuple[float, float], state: np.ndarray, params: Dict
-    ) -> Tuple[float, float]:
-        accl, sv = pid(
+    ) -> Tuple[float, float]: # pid(speed, steer, current_speed, current_steer, max_sv, max_a, max_v, min_v)
+        accl = pid_accl(
             action[0],
-            action[1],
             state[3],
-            state[2],
-            params["sv_max"],
             params["a_max"],
             params["v_max"],
             params["v_min"],
         )
+
+        sv = pid_steer(
+            action[1],
+            state[2],
+            params["sv_max"],
+        )
+
         return accl, sv
 
     @property
