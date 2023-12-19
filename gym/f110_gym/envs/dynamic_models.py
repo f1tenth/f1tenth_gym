@@ -335,7 +335,7 @@ def vehicle_dynamics_st(
     ACCL = u[1]
 
     # switch to kinematic model for small velocities
-    if abs(V) < 0.5:
+    if V < 0.5:
         # wheelbase
         lwb = lf + lr
         BETA_HAT = np.arctan(np.tan(DELTA) * lr /lwb)
