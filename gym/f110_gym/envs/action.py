@@ -58,7 +58,7 @@ class SpeedAction(LongitudinalAction):
         self, action: Tuple[float, float], state: np.ndarray, params: Dict
     ) -> float:
         accl = pid_accl(
-            action[0],
+            action,
             state[3],
             params["a_max"],
             params["v_max"],
