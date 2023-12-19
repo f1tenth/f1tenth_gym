@@ -86,7 +86,7 @@ class SteerAction:
     def space(self) -> gym.Space:
         return gym.spaces.Box(low=self.lower_limit, high=self.upper_limit, dtype=np.float32)
 
-class SteeringSpeedAction(SteerAction):
+class SteeringAngleAction(SteerAction):
     def __init__(self, params: Dict) -> None:
         super().__init__()
         self._type = "speed"
@@ -94,15 +94,15 @@ class SteeringSpeedAction(SteerAction):
 
     def act(
         self, action: Tuple[float, float], state: np.ndarray, params: Dict
-    ) -> float: # pid(speed, steer, current_speed, current_steer, max_sv, max_a, max_v, min_v)
+    ) -> float: 
         sv = pid_steer(
-            action[1],
+            action,
             state[2],
             params["sv_max"],
         )
         return sv
     
-class SteeringAngleAction(SteerAction):
+class SteeringSpeedAction(SteerAction):
     def __init__(self, params: Dict) -> None:
         super().__init__()
         self._type = "speed"
@@ -110,7 +110,7 @@ class SteeringAngleAction(SteerAction):
 
     def act(
         self, action: Tuple[float, float], state: np.ndarray, params: Dict
-    ) -> float: # pid(speed, steer, current_speed, current_steer, max_sv, max_a, max_v, min_v)
+    ) -> float: 
         return action
 
 class SteerActionEnum(Enum):
