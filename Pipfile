@@ -1,0 +1,32 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+gymnasium = "*"
+numpy = "<1.25"
+pillow = ">=9.0.1"
+scipy = ">=1.7.3"
+pyglet = "<1.5"
+pyyaml = ">=5.3.1"
+yamldataclassconfig = "*"
+requests = "*"
+pyopengl = "*"
+numba = "*"
+shapely = "*"
+opencv-python = "*"
+f110-gym = {file = "."}
+
+[dev-packages]
+flake8 = "*"
+black = "*"
+ipykernel = "*"
+pytest = "*"
+isort = "*"
+autoflake = "*"
+matplotlib = "*"
+
+[requires]
+python_version = "3.10"
+python_full_version = "3.10.11"

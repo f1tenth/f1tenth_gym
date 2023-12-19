@@ -27,12 +27,11 @@ Replacement of the old RaceCar, Simulator classes in C++
 Author: Hongrui Zheng
 """
 import numpy as np
-
-from f110_gym.envs import DynamicModel
+from f110_gym.envs.dynamic_models import DynamicModel
 from f110_gym.envs.action import CarAction
+from f110_gym.envs.collision_models import collision_multiple, get_vertices
 from f110_gym.envs.integrator import EulerIntegrator, IntegratorType
 from f110_gym.envs.laser_models import ScanSimulator2D, check_ttc_jit, ray_cast
-from f110_gym.envs.collision_models import get_vertices, collision_multiple
 
 
 class RaceCar(object):
@@ -407,6 +406,7 @@ class Simulator(object):
         self.ego_idx = ego_idx
         self.params = params
         self.agent_poses = np.empty((self.num_agents, 3))
+        self.agent_steerings = np.empty((self.num_agents,))
         self.agents = []
         self.collisions = np.zeros((self.num_agents,))
         self.collision_idx = -1 * np.ones((self.num_agents,))
@@ -496,8 +496,6 @@ class Simulator(object):
             observations (dict): dictionary for observations: poses of agents, current laser scan of each agent, collision indicators, etc.
         """
 
-        agent_scans = []
-
         # looping over agents
         for i, agent in enumerate(self.agents):
             # update each agent's pose
@@ -506,6 +504,7 @@ class Simulator(object):
 
             # update sim's information of agent poses
             self.agent_poses[i, :] = np.append(agent.state[0:2], agent.state[4])
+            self.agent_steerings[i] = agent.state[2]
 
         # check collisions between all agents
         self.check_collision()
@@ -513,7 +512,7 @@ class Simulator(object):
         for i, agent in enumerate(self.agents):
             # update agent's information on other agents
             opp_poses = np.concatenate(
-                (self.agent_poses[0:i, :], self.agent_poses[i + 1 :, :]), axis=0
+                (self.agent_poses[0:i, :], self.agent_poses[i + 1:, :]), axis=0
             )
             agent.update_opp_poses(opp_poses)
 

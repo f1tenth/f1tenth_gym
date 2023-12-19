@@ -3,13 +3,12 @@ import time
 import unittest
 
 import numpy as np
-
-from f110_gym.envs.track import Track, find_track_dir, Raceline
+from f110_gym.envs.track import Raceline, Track, find_track_dir
 
 
 class TestTrack(unittest.TestCase):
     def test_loading_default_tracks(self):
-        track_names = ["Berlin", "Skirk", "Spielberg"]
+        track_names = ["Berlin", "Example", "Levine", "Skirk", "StataBasement", "Vegas"]
         for track_name in track_names:
             track = Track.from_track_name(track_name)
             self.assertEqual(track.spec.name, track_name)
@@ -19,7 +18,7 @@ class TestTrack(unittest.TestCase):
         self.assertRaises(FileNotFoundError, Track.from_track_name, wrong_track_name)
 
     def test_raceline(self):
-        track_name = "Spielberg"  # Example is the only track with a raceline for now
+        track_name = "Example"  # Example is the only track with a raceline for now
         track = Track.from_track_name(track_name)
 
         # check raceline is not None
@@ -41,7 +40,7 @@ class TestTrack(unittest.TestCase):
         self.assertTrue(np.isclose(track.raceline.axs, raceline[:, ax_idx]).all())
 
     def test_missing_raceline(self):
-        track = Track.from_track_name("Berlin")
+        track = Track.from_track_name("Vegas")
         self.assertEqual(track.raceline, None)
         self.assertEqual(track.centerline, None)
 
@@ -55,7 +54,7 @@ class TestTrack(unittest.TestCase):
                 - [Trackname_raceline.csv]      # raceline (optional)
                 - [Trackname_centerline.csv]    # centerline (optional)
         """
-        mapdir = find_track_dir("Spielberg").parent # maps/
+        mapdir = pathlib.Path(__file__).parent.parent / "gym" / "f110_gym" / "maps"
         for trackdir in mapdir.iterdir():
             if trackdir.is_file():
                 continue
@@ -90,12 +89,12 @@ class TestTrack(unittest.TestCase):
             if file_raceline.exists():
                 # try to load raceline files
                 # it will raise an assertion error if the file format are not valid
-                raceline = Raceline.from_raceline_file(file_raceline)
+                Raceline.from_raceline_file(file_raceline)
 
             if file_centerline.exists():
                 # try to load raceline files
                 # it will raise an assertion error if the file format are not valid
-                centerline = Raceline.from_centerline_file(file_centerline)
+                Raceline.from_centerline_file(file_centerline)
 
     def test_download_racetrack(self):
         import shutil

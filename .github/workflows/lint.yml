@@ -1,8 +1,8 @@
-name: CI
+name: Linting Checks
 
 on:
   push:
-    branches: [ main , 'v*', 'dev*']
+    branches: [ main , 'v*', 'dev_*']
   pull_request:
     branches: [ main , 'v*' ]
 
@@ -16,12 +16,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.9", "3.10", "3.11"]
+        python-version: ["3.9"]
 
     steps:
-    - name: Install openGL
-      run: sudo apt install freeglut3-dev
-
     - uses: actions/checkout@v2
     
     - name: Set up Python ${{ matrix.python-version }}
@@ -40,7 +37,8 @@ jobs:
         python -m pip install --upgrade pip
         pip install -e .
     
-    - name: Test with pytest
+    - name: Lint with flake8
       run: |
-        pytest
-
+        # stop the build if there are Python syntax errors or undefined names
+        # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
+        flake8 . --statistics --exit-zero

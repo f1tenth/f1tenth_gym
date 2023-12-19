@@ -24,31 +24,23 @@
 Author: Hongrui Zheng
 """
 
-# gym imports
-import gym
-from gym import error, spaces, utils
-from gym.utils import seeding
-
-# zmq imports
-import zmq
-
-# protobuf import
-import sim_requests_pb2
-
-# others
-import numpy as np
-
-from numba import njit
-from scipy.ndimage import distance_transform_edt as edt
-
-from PIL import Image
-import sys
 import os
 import signal
 import subprocess
-import math
+import sys
+
+# others
+import numpy as np
+# protobuf import
+import sim_requests_pb2
 import yaml
-import csv
+# zmq imports
+import zmq
+from PIL import Image
+
+# gym imports
+import gym
+from gym import utils
 
 # from matplotlib.pyplot import imshow
 # import matplotlib.pyplot as plt
@@ -158,7 +150,7 @@ class F110Env(gym.Env, utils.EzPickle):
                 # self.socket.connect('tcp://localhost:6666')
                 self.port = min_port + tries
                 break
-            except:
+            except Exception as _:  # noqa: F841
                 tries = tries + 1
                 # print('Gym env - retrying for ' + str(tries) + ' times')
 
@@ -269,7 +261,7 @@ class F110Env(gym.Env, utils.EzPickle):
             temp_y[idx2] = -right_t - temp_y[idx2]
             temp_y[np.invert(np.logical_or(idx1, idx2))] = 0
 
-            dist2 = delta_pt[0, :] ** 2 + temp_y**2
+            dist2 = delta_pt[0, :] ** 2 + temp_y ** 2
             closes = dist2 <= 0.1
             for i in range(self.num_agents):
                 if closes[i] and not self.near_starts[i]:
@@ -297,7 +289,7 @@ class F110Env(gym.Env, utils.EzPickle):
             temp_y = -right_t - delta_pt[1]
         else:
             temp_y = 0
-        dist2 = delta_pt[0] ** 2 + temp_y**2
+        dist2 = delta_pt[0] ** 2 + temp_y ** 2
         close = dist2 <= 0.1
         # close = dist_to_start <= self.start_thresh
         if close and not self.near_start:

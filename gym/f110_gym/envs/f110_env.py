@@ -27,8 +27,9 @@ Author: Hongrui Zheng
 # gym imports
 import gymnasium as gym
 
-from f110_gym.envs import IntegratorType
 from f110_gym.envs.action import CarActionEnum, from_single_to_multi_action_space
+from f110_gym.envs.integrator import IntegratorType
+from f110_gym.envs.rendering import make_renderer
 
 from f110_gym.envs.track import Track
 
@@ -41,20 +42,6 @@ from f110_gym.envs.utils import deep_update
 
 # others
 import numpy as np
-import os
-import time
-
-# gl
-import pyglet
-
-pyglet.options["debug_gl"] = False
-from pyglet import gl
-
-# rendering
-VIDEO_W = 600
-VIDEO_H = 400
-WINDOW_W = 1000
-WINDOW_H = 800
 
 
 class F110Env(gym.Env):
@@ -97,11 +84,6 @@ class F110Env(gym.Env):
 
     # NOTE: change matadata with default rendering-modes, add definition of render_fps
     metadata = {"render_modes": ["human", "human_fast", "rgb_array"], "render_fps": 100}
-
-    # rendering
-    renderer = None
-    current_obs = None
-    render_callbacks = []
 
     def __init__(self, config: dict = None, render_mode=None, **kwargs):
         super().__init__()
@@ -180,14 +162,19 @@ class F110Env(gym.Env):
         )
 
         # stateful observations for rendering
+        # add choice of colors (same, random, ...)
         self.render_obs = None
         self.render_mode = render_mode
 
-    def __del__(self):
-        """
-        Finalizer, does cleanup
-        """
-        pass
+        # match render_fps to integration timestep
+        self.metadata["render_fps"] = int(1.0 / self.timestep)
+        if self.render_mode == "human_fast":
+            self.metadata["render_fps"] *= 10   # boost fps by 10x
+        self.renderer, self.render_spec = make_renderer(
+            params=self.params, track=self.track, agent_ids=self.agent_ids,
+            render_mode=render_mode, render_fps=self.metadata["render_fps"]
+        )
+
 
     @classmethod
     def default_config(cls) -> dict:
@@ -277,7 +264,7 @@ class F110Env(gym.Env):
         temp_y[idx2] = -right_t - temp_y[idx2]
         temp_y[np.invert(np.logical_or(idx1, idx2))] = 0
 
-        dist2 = delta_pt[0, :] ** 2 + temp_y**2
+        dist2 = delta_pt[0, :] ** 2 + temp_y ** 2
         closes = dist2 <= 0.1
         for i in range(self.num_agents):
             if closes[i] and not self.near_starts[i]:
@@ -323,23 +310,25 @@ class F110Env(gym.Env):
         # observation
         obs = self.observation_type.observe()
 
-        # rendering observation
-        F110Env.current_obs = obs
-        self.render_obs = {
-            "ego_idx": self.sim.ego_idx,
-            "poses_x": self.sim.agent_poses[:, 0],
-            "poses_y": self.sim.agent_poses[:, 1],
-            "poses_theta": self.sim.agent_poses[:, 2],
-            "lap_times": self.lap_times,
-            "lap_counts": self.lap_counts,
-        }
-
         # times
         reward = self.timestep
         self.current_time = self.current_time + self.timestep
 
         # update data member
         self._update_state()
+
+        # rendering observation
+        self.render_obs = {
+            "ego_idx": self.sim.ego_idx,
+            "poses_x": self.sim.agent_poses[:, 0],
+            "poses_y": self.sim.agent_poses[:, 1],
+            "poses_theta": self.sim.agent_poses[:, 2],
+            "steering_angles": self.sim.agent_steerings,
+            "lap_times": self.lap_times,
+            "lap_counts": self.lap_counts,
+            "collisions": self.sim.collisions,
+            "sim_time": self.current_time,
+        }
 
         # check done
         done, toggle_list = self._check_done()
@@ -442,7 +431,7 @@ class F110Env(gym.Env):
             callback_func (function (EnvRenderer) -> None): custom function to called during render()
         """
 
-        F110Env.render_callbacks.append(callback_func)
+        self.renderer.add_renderer_callback(callback_func)
 
     def render(self, mode="human"):
         """
@@ -460,46 +449,14 @@ class F110Env(gym.Env):
 
         if self.render_mode not in self.metadata["render_modes"]:
             return
-        if self.render_mode in ["human", "human_fast"]:
-            self.render_frame(mode=self.render_mode)
-        elif self.render_mode == "rgb_array":
-            # NOTE: this is extremely slow and should be changed to use pygame
-            import PIL
-            from PIL.Image import Transpose
 
-            self.render_frame(mode="human_fast")
-            image_data = (
-                pyglet.image.get_buffer_manager().get_color_buffer().get_image_data()
-            )
-            fmt = "RGB"
-            pitch = image_data.width * len(fmt)
-            pil_image = PIL.Image.frombytes(
-                fmt,
-                (image_data.width, image_data.height),
-                image_data.get_data(fmt, pitch),
-            )
-            pil_image = pil_image.transpose(Transpose.FLIP_TOP_BOTTOM)
-            return np.array(pil_image)
-        else:
-            raise NotImplementedError(f"mode {self.render_mode} not implemented")
+        self.renderer.update(state=self.render_obs)
+        return self.renderer.render()
 
-    def render_frame(self, mode):
-        if F110Env.renderer is None:
-            # first call, initialize everything
-            from f110_gym.envs.rendering import EnvRenderer
-
-            F110Env.renderer = EnvRenderer(WINDOW_W, WINDOW_H)
-            F110Env.renderer.update_map(track=self.track)
-
-        F110Env.renderer.update_obs(self.render_obs)
-
-        for render_callback in F110Env.render_callbacks:
-            render_callback(F110Env.renderer)
-
-        F110Env.renderer.dispatch_events()
-        F110Env.renderer.on_draw()
-        F110Env.renderer.flip()
-        if mode == "human":
-            time.sleep(0.005)
-        elif mode == "human_fast":
-            pass
+    def close(self):
+        """
+        Ensure renderer is closed upon deletion
+        """
+        if self.renderer is not None:
+            self.renderer.close()
+        super().close()

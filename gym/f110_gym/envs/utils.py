@@ -1,7 +1,5 @@
-from typing import Dict, Any
-
 # types
-from typing import TypeVar
+from typing import Any, Dict, TypeVar
 
 KeyType = TypeVar("KeyType")
 

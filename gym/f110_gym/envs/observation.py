@@ -17,7 +17,7 @@ class Observation:
     :param kwargs: Additional arguments.
     """
 
-    def __init__(self, env: "F110Env"):
+    def __init__(self, env):
         self.env = env
 
     @abstractmethod
@@ -30,7 +30,7 @@ class Observation:
 
 
 class OriginalObservation(Observation):
-    def __init__(self, env: "F110Env"):
+    def __init__(self, env):
         super().__init__(env)
 
     def space(self):
@@ -152,7 +152,7 @@ class OriginalObservation(Observation):
 
 
 class FeaturesObservation(Observation):
-    def __init__(self, env: "F110Env", features: List[str]):
+    def __init__(self, env, features: List[str]):
         super().__init__(env)
         self.features = features
 
@@ -263,7 +263,7 @@ class FeaturesObservation(Observation):
         return obs
 
 
-def observation_factory(env: "F110Env", type: str, **kwargs) -> Observation:
+def observation_factory(env, type: str, **kwargs) -> Observation:
     if type == "original":
         return OriginalObservation(env)
     elif type == "features":

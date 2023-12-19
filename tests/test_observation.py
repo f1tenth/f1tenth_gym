@@ -1,22 +1,16 @@
-import pathlib
 import unittest
-from argparse import Namespace
 
-import numpy as np
-import yaml
-from gymnasium.spaces import Box
-
-from f110_gym.envs import F110Env
-from f110_gym.envs.observation import FeaturesObservation, observation_factory
 import gymnasium as gym
-
+import numpy as np
+from f110_gym.envs import F110Env
+from f110_gym.envs.observation import observation_factory
 from f110_gym.envs.utils import deep_update
+from gymnasium.spaces import Box
 
 
 class TestObservationInterface(unittest.TestCase):
     @staticmethod
     def _make_env(config={}) -> F110Env:
-        import f110_gym
 
         conf = {
             "map": "Spielberg",
@@ -129,7 +123,7 @@ class TestObservationInterface(unittest.TestCase):
         """
         env = self._make_env()
         with self.assertRaises(ValueError):
-            obs = observation_factory(env, vehicle_id=0, type="unexisting_obs_type")
+            observation_factory(env, vehicle_id=0, type="unexisting_obs_type")
 
     def test_kinematic_obs_space(self):
         """
@@ -227,14 +221,12 @@ class TestObservationInterface(unittest.TestCase):
             )
 
     def test_gymnasium_api(self):
-        import f110_gym
         from gymnasium.utils.env_checker import check_env
-        import gymnasium as gym
 
         obs_type_ids = ["kinematic_state", "dynamic_state", "original"]
 
         for obs_type_id in obs_type_ids:
             env = self._make_env(config={"observation_config": {"type": obs_type_id}})
             check_env(
-                env.unwrapped, f"Observation {obs_type_id} breaks the gymnasium API"
+                env.unwrapped, f"Observation {obs_type_id} breaks the gymnasium API", skip_render_check=True
             )

@@ -1,8 +1,8 @@
-import os
 import pathlib
 import tarfile
 from dataclasses import dataclass
 from typing import Tuple
+import tempfile
 
 import numpy as np
 import requests
@@ -137,12 +137,14 @@ def find_track_dir(track_name):
         if tracks_r.status_code == 404:
             raise FileNotFoundError(f"No maps exists for {track_name}.")
 
-        with open("/tmp/" + track_name + ".tar.xz", "wb") as f:
+        tempdir = tempfile.gettempdir() + "/"
+
+        with open(tempdir + track_name + ".tar.xz", "wb") as f:
             f.write(tracks_r.content)
 
         # extract
         print("Extracting Files for: " + track_name)
-        tracks_file = tarfile.open("/tmp/" + track_name + ".tar.xz")
+        tracks_file = tarfile.open(tempdir + track_name + ".tar.xz")
         tracks_file.extractall(map_dir)
         tracks_file.close()
 
@@ -237,6 +239,7 @@ class Track:
                 raceline=raceline,
             )
         except Exception as ex:
+            print(ex)
             raise FileNotFoundError(f"could not load track {track}") from ex
 
 

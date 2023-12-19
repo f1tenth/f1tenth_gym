@@ -11,7 +11,7 @@ class IntegratorType(Enum):
     def from_string(integrator: str):
         if integrator == "rk4":
             warnings.warn(
-                f"Chosen integrator is RK4. This is different from previous versions of the gym."
+                "Chosen integrator is RK4. This is different from previous versions of the gym."
             )
             return RK4Integrator()
         elif integrator == "euler":
