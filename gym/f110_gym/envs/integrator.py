@@ -10,9 +10,6 @@ class IntegratorType(Enum):
     @staticmethod
     def from_string(integrator: str):
         if integrator == "rk4":
-            warnings.warn(
-                "Chosen integrator is RK4. This is different from previous versions of the gym."
-            )
             return RK4Integrator()
         elif integrator == "euler":
             return EulerIntegrator()
