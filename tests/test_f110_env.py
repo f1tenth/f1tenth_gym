@@ -7,7 +7,6 @@ from f110_gym.envs.utils import deep_update
 
 class TestEnvInterface(unittest.TestCase):
     def _make_env(self, config={}):
-
         conf = {
             "map": "Spielberg",
             "num_agents": 1,
@@ -18,7 +17,10 @@ class TestEnvInterface(unittest.TestCase):
         }
         conf = deep_update(conf, config)
 
-        env = gym.make("f110_gym:f110-v0", config=conf,)
+        env = gym.make(
+            "f110_gym:f110-v0",
+            config=conf,
+        )
         return env
 
     def test_gymnasium_api(self):

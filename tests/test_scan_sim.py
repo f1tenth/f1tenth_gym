@@ -46,7 +46,6 @@ class ScanTests(unittest.TestCase):
         wdir = os.path.dirname(os.path.abspath(__file__))
         self.sample_scans = np.load(f"{wdir}/legacy_scan.npz")
 
-
     def _test_map_scan(self, map_name: str, debug=False):
         scan_rng = np.random.default_rng(seed=12345)
         scan_sim = ScanSimulator2D(self.num_beams, self.fov)

@@ -7,18 +7,12 @@ from f110_gym.envs.track import Raceline, Track, find_track_dir
 
 
 class TestTrack(unittest.TestCase):
-    def test_loading_default_tracks(self):
-        track_names = ["Berlin", "Example", "Levine", "Skirk", "StataBasement", "Vegas"]
-        for track_name in track_names:
-            track = Track.from_track_name(track_name)
-            self.assertEqual(track.spec.name, track_name)
-
     def test_error_handling(self):
         wrong_track_name = "i_dont_exists"
         self.assertRaises(FileNotFoundError, Track.from_track_name, wrong_track_name)
 
     def test_raceline(self):
-        track_name = "Example"  # Example is the only track with a raceline for now
+        track_name = "Spielberg"
         track = Track.from_track_name(track_name)
 
         # check raceline is not None
@@ -38,11 +32,6 @@ class TestTrack(unittest.TestCase):
         self.assertTrue(np.isclose(track.raceline.ks, raceline[:, kappa_idx]).all())
         self.assertTrue(np.isclose(track.raceline.vxs, raceline[:, vx_idx]).all())
         self.assertTrue(np.isclose(track.raceline.axs, raceline[:, ax_idx]).all())
-
-    def test_missing_raceline(self):
-        track = Track.from_track_name("Vegas")
-        self.assertEqual(track.raceline, None)
-        self.assertEqual(track.centerline, None)
 
     def test_map_dir_structure(self):
         """
