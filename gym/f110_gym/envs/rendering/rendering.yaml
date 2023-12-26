@@ -1,0 +1,15 @@
+window_size: 800      # [px] width and height of the window
+focus_on: agent_0     # [str] agent id to focus on (e.g., agent_0) or null for map view
+zoom_in_factor: 1.5   # [float] zoom in factor. 1.0 is no zoom, >1.0 is zoom in, <1.0 is zoom out
+show_wheels: True     # [bool] it toggles the visualization of the vehicle wheels
+car_tickness: 1       # [px] thickness of the car
+show_info: True       # [bool] it toggles the visualization of the instruction text
+vehicle_palette:      # [list] cyclic list of colors for the vehicles
+  - "#984ea3"
+  - "#e41a1c"
+  - "#ff7f00"
+  - "#a65628"
+  - "#f781bf"
+  - "#888888"
+  - "#a6cee3"
+  - "#b2df8a"

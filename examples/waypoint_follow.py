@@ -1,9 +1,10 @@
 import time
+from typing import Tuple
 
 import gymnasium as gym
 import numpy as np
 from numba import njit
-from pyglet.gl import GL_POINTS
+
 
 """
 Planner Helpers
@@ -183,6 +184,8 @@ class PurePursuitPlanner:
         self.max_reacquire = 20.0
 
         self.drawn_waypoints = []
+        self.lookahead_point = None
+        self.current_index = None
 
     def load_waypoints(self, conf):
         """
@@ -195,32 +198,42 @@ class PurePursuitPlanner:
 
     def render_waypoints(self, e):
         """
-        update waypoints being drawn by EnvRenderer
+        Callback to render waypoints.
         """
         points = self.waypoints[:, :2]
+        e.render_closed_lines(points, color=(128, 0, 0), size=1)
 
-        scaled_points = 50.0 * points
-
-        for i in range(points.shape[0]):
-            if len(self.drawn_waypoints) < points.shape[0]:
-                b = e.batch.add(
-                    1,
-                    GL_POINTS,
-                    None,
-                    ("v3f/stream", [scaled_points[i, 0], scaled_points[i, 1], 0.0]),
-                    ("c3B/stream", [183, 193, 222]),
-                )
-                self.drawn_waypoints.append(b)
-            else:
-                self.drawn_waypoints[i].vertices = [
-                    scaled_points[i, 0],
-                    scaled_points[i, 1],
-                    0.0,
-                ]
-
-    def _get_current_waypoint(self, waypoints, lookahead_distance, position, theta):
+    def render_lookahead_point(self, e):
         """
-        gets the current waypoint to follow
+        Callback to render the lookahead point.
+        """
+        if self.lookahead_point is not None:
+            points = self.lookahead_point[:2][None]  # shape (1, 2)
+            e.render_points(points, color=(0, 0, 128), size=2)
+
+    def render_local_plan(self, e):
+        """
+        update waypoints being drawn by EnvRenderer
+        """
+        if self.current_index is not None:
+            points = self.waypoints[self.current_index : self.current_index + 10, :2]
+            e.render_lines(points, color=(0, 128, 0), size=1)
+
+    def _get_current_waypoint(
+        self, waypoints, lookahead_distance, position, theta
+    ) -> Tuple[np.ndarray, int]:
+        """
+        Returns the current waypoint to follow given the current pose.
+
+        Args:
+            waypoints: The waypoints to follow (Nx3 array)
+            lookahead_distance: The lookahead distance [m]
+            position: The current position (2D array)
+            theta: The current heading [rad]
+
+        Returns:
+            waypoint: The current waypoint to follow (x, y, speed)
+            i: The index of the current waypoint
         """
         wpts = waypoints[:, :2]
         lookahead_distance = np.float32(lookahead_distance)
@@ -231,59 +244,46 @@ class PurePursuitPlanner:
                 position, lookahead_distance, wpts, t1, wrap=True
             )
             if i2 is None:
-                return None
+                return None, None
             current_waypoint = np.empty((3,), dtype=np.float32)
             # x, y
             current_waypoint[0:2] = wpts[i2, :]
             # speed
             current_waypoint[2] = waypoints[i, -1]
-            return current_waypoint
+            return current_waypoint, i
         elif nearest_dist < self.max_reacquire:
             # NOTE: specify type or numba complains
-            return wpts[i, :]
+            return wpts[i, :], i
         else:
-            return None
+            return None, None
 
     def plan(self, pose_x, pose_y, pose_theta, lookahead_distance, vgain):
         """
         gives actuation given observation
         """
         position = np.array([pose_x, pose_y])
-        lookahead_point = self._get_current_waypoint(
+        lookahead_point, i = self._get_current_waypoint(
             self.waypoints, lookahead_distance, position, pose_theta
         )
 
         if lookahead_point is None:
             return 4.0, 0.0
 
+        # for rendering
+        self.lookahead_point = lookahead_point
+        self.current_index = i
+
+        # actuation
         speed, steering_angle = get_actuation(
-            pose_theta, lookahead_point, position, lookahead_distance, self.wheelbase
+            pose_theta,
+            self.lookahead_point,
+            position,
+            lookahead_distance,
+            self.wheelbase,
         )
         speed = vgain * speed
 
         return speed, steering_angle
-
-
-class FlippyPlanner:
-    """
-    Planner designed to exploit integration methods and dynamics.
-    For testing only. To observe this error, use single track dynamics for all velocities >0.1
-    """
-
-    def __init__(self, speed=1, flip_every=1, steer=2):
-        self.speed = speed
-        self.flip_every = flip_every
-        self.counter = 0
-        self.steer = steer
-
-    def render_waypoints(self, *args, **kwargs):
-        pass
-
-    def plan(self, *args, **kwargs):
-        if self.counter % self.flip_every == 0:
-            self.counter = 0
-            self.steer *= -1
-        return self.speed, self.steer
 
 
 def main():
@@ -296,7 +296,7 @@ def main():
         "lf": 0.15597534362552312,
         "tlad": 0.82461887897713965,
         "vgain": 1,
-    }  # 0.90338203837889}
+    }
 
     env = gym.make(
         "f110_gym:f110-v0",
@@ -312,40 +312,23 @@ def main():
         },
         render_mode="human",
     )
+    track = env.unwrapped.track
 
-    planner = PurePursuitPlanner(
-        track=env.track, wb=0.17145 + 0.15875
-    )  # FlippyPlanner(speed=0.2, flip_every=1, steer=10)
-
-    def render_callback(env_renderer):
-        # custom extra drawing function
-
-        e = env_renderer
-
-        # update camera to follow car
-        x = e.cars[0].vertices[::2]
-        y = e.cars[0].vertices[1::2]
-        top, bottom, left, right = max(y), min(y), min(x), max(x)
-        e.score_label.x = left
-        e.score_label.y = top - 700
-        e.left = left - 800
-        e.right = right + 800
-        e.top = top + 800
-        e.bottom = bottom - 800
-
-        planner.render_waypoints(env_renderer)
-
-    env.add_render_callback(render_callback)
+    planner = PurePursuitPlanner(track=track, wb=0.17145 + 0.15875)
 
     poses = np.array(
         [
             [
-                env.track.raceline.xs[0],
-                env.track.raceline.ys[0],
-                env.track.raceline.yaws[0],
+                track.raceline.xs[0],
+                track.raceline.ys[0],
+                track.raceline.yaws[0],
             ]
         ]
     )
+    env.unwrapped.add_render_callback(planner.render_waypoints)
+    env.unwrapped.add_render_callback(planner.render_local_plan)
+    env.unwrapped.add_render_callback(planner.render_lookahead_point)
+
     obs, info = env.reset(options={"poses": poses})
     done = False
     env.render()
@@ -354,17 +337,20 @@ def main():
     start = time.time()
 
     while not done:
-        agent_id = env.agent_ids[0]
-        speed, steer = planner.plan(
-            obs[agent_id]["pose_x"],
-            obs[agent_id]["pose_y"],
-            obs[agent_id]["pose_theta"],
-            work["tlad"],
-            work["vgain"],
-        )
-        obs, step_reward, done, truncated, info = env.step(np.array([[steer, speed]]))
+        action = env.action_space.sample()
+        for i, agent_id in enumerate(obs.keys()):
+            speed, steer = planner.plan(
+                obs[agent_id]["pose_x"],
+                obs[agent_id]["pose_y"],
+                obs[agent_id]["pose_theta"],
+                work["tlad"],
+                work["vgain"],
+            )
+            action[i] = np.array([steer, speed])
+
+        obs, step_reward, done, truncated, info = env.step(action)
         laptime += step_reward
-        env.render()
+        frame = env.render()
 
     print("Sim elapsed time:", laptime, "Real elapsed time:", time.time() - start)
 
