@@ -44,64 +44,45 @@ class ScanTests(unittest.TestCase):
 
         # legacy gym data
         wdir = os.path.dirname(os.path.abspath(__file__))
-        sample_scan = np.load(f"{wdir}/legacy_scan.npz")
-        self.berlin_scan = sample_scan["berlin"]
-        self.skirk_scan = sample_scan["skirk"]
+        self.sample_scans = np.load(f"{wdir}/legacy_scan.npz")
 
-    def test_map_berlin(self, debug=False):
+    def _test_map_scan(self, map_name: str, debug=False):
         scan_rng = np.random.default_rng(seed=12345)
         scan_sim = ScanSimulator2D(self.num_beams, self.fov)
-        new_berlin = np.empty((self.num_test, self.num_beams))
-        scan_sim.set_map(map_name="Berlin")
+        new_scan = np.empty((self.num_test, self.num_beams))
+        scan_sim.set_map(map_name=map_name)
         # scan gen loop
         for i in range(self.num_test):
             test_pose = self.test_poses[i]
-            new_berlin[i, :] = scan_sim.scan(pose=test_pose, rng=scan_rng)
-        diff = self.berlin_scan - new_berlin
+            new_scan[i, :] = scan_sim.scan(pose=test_pose, rng=scan_rng)
+        diff = self.sample_scans[map_name] - new_scan
         mse = np.mean(diff**2)
-        # print('Levine distance test, norm: ' + str(norm))
 
         if debug:
             # plotting
             import matplotlib.pyplot as plt
 
             theta = np.linspace(-self.fov / 2.0, self.fov / 2.0, num=self.num_beams)
-            plt.polar(theta, new_berlin[1, :], ".", lw=0)
-            plt.polar(theta, self.berlin_scan[1, :], ".", lw=0)
+            plt.polar(theta, new_scan[1, :], ".", lw=0)
+            plt.polar(theta, self.sample_scans[map_name][1, :], ".", lw=0)
             plt.show()
 
         self.assertLess(mse, 2.0)
 
-    def test_map_skirk(self, debug=False):
-        scan_rng = np.random.default_rng(seed=12345)
-        scan_sim = ScanSimulator2D(self.num_beams, self.fov)
-        new_skirk = np.empty((self.num_test, self.num_beams))
-        scan_sim.set_map(map_name="Skirk")
-        print("map set")
-        # scan gen loop
-        for i in range(self.num_test):
-            test_pose = self.test_poses[i]
-            new_skirk[i, :] = scan_sim.scan(pose=test_pose, rng=scan_rng)
-        diff = self.skirk_scan - new_skirk
-        mse = np.mean(diff**2)
-        print("skirk distance test, mse: " + str(mse))
+    def test_map_spielberg(self, debug=False):
+        self._test_map_scan("Spielberg", debug=debug)
 
-        if debug:
-            # plotting
-            import matplotlib.pyplot as plt
+    def test_map_monza(self, debug=False):
+        self._test_map_scan("Monza", debug=debug)
 
-            theta = np.linspace(-self.fov / 2.0, self.fov / 2.0, num=self.num_beams)
-            plt.polar(theta, new_skirk[1, :], ".", lw=0)
-            plt.polar(theta, self.skirk_scan[1, :], ".", lw=0)
-            plt.show()
-
-        self.assertLess(mse, 2.0)
+    def test_map_austin(self, debug=False):
+        self._test_map_scan("Austin", debug=debug)
 
     def test_fps(self):
         # scan fps should be greater than 500
         scan_rng = np.random.default_rng(seed=12345)
         scan_sim = ScanSimulator2D(self.num_beams, self.fov)
-        scan_sim.set_map(map_name="Skirk")
+        scan_sim.set_map(map_name="Spielberg")
 
         import time
 

@@ -8,7 +8,7 @@ from f110_gym.envs.utils import deep_update
 class TestEnvInterface(unittest.TestCase):
     def _make_env(self, config={}):
         conf = {
-            "map": "Example",
+            "map": "Spielberg",
             "num_agents": 1,
             "timestep": 0.01,
             "integrator": "rk4",
