@@ -89,8 +89,8 @@ class SteerAction:
 class SteeringAngleAction(SteerAction):
     def __init__(self, params: Dict) -> None:
         super().__init__()
-        self._type = "speed"
-        self.lower_limit, self.upper_limit = params["sv_min"], params["sv_max"]
+        self._type = "steering_angle"
+        self.lower_limit, self.upper_limit = params["s_min"], params["s_max"]
 
     def act(
         self, action: Tuple[float, float], state: np.ndarray, params: Dict
@@ -105,8 +105,8 @@ class SteeringAngleAction(SteerAction):
 class SteeringSpeedAction(SteerAction):
     def __init__(self, params: Dict) -> None:
         super().__init__()
-        self._type = "speed"
-        self.lower_limit, self.upper_limit = params["s_min"], params["s_max"]
+        self._type = "steering_speed"
+        self.lower_limit, self.upper_limit = params["sv_min"], params["sv_max"]
 
     def act(
         self, action: Tuple[float, float], state: np.ndarray, params: Dict
@@ -114,14 +114,14 @@ class SteeringSpeedAction(SteerAction):
         return action
 
 class SteerActionEnum(Enum):
-    Angle = 1
-    Speed = 2
+    Steering_Angle = 1
+    Steering_Speed = 2
 
     @staticmethod
     def from_string(action: str):
-        if action == "angle":
+        if action == "steering_angle":
             return SteeringAngleAction
-        elif action == "speed":
+        elif action == "steering_speed":
             return SteeringSpeedAction
         else:
             raise ValueError(f"Unknown action type {action}")

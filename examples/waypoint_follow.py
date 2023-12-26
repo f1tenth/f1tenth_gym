@@ -305,7 +305,7 @@ def main():
             "num_agents": 1,
             "timestep": 0.01,
             "integrator": "rk4",
-            "control_input": ["speed", "angle"],
+            "control_input": ["speed", "steering_angle"],
             "model": "st",
             "observation_config": {"type": "kinematic_state"},
             "params": {"mu": 1.0},

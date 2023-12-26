@@ -217,7 +217,7 @@ class F110Env(gym.Env):
             "ego_idx": 0,
             "integrator": "rk4",
             "model": "st",
-            "control_input": ["speed", "angle"],
+            "control_input": ["speed", "steering_angle"],
             "observation_config": {"type": "original"},
         }
 
