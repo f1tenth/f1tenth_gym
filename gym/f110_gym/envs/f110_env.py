@@ -27,13 +27,13 @@ Author: Hongrui Zheng
 # gym imports
 import gymnasium as gym
 
-from f110_gym.envs.integrator import IntegratorType
 from f110_gym.envs.action import (CarAction,
                                   from_single_to_multi_action_space)
-
+from f110_gym.envs.integrator import IntegratorType
 from f110_gym.envs.rendering import make_renderer
 
 from f110_gym.envs.track import Track
+
 # base classes
 from f110_gym.envs.base_classes import Simulator, DynamicModel
 from f110_gym.envs.observation import observation_factory
@@ -217,7 +217,7 @@ class F110Env(gym.Env):
             "ego_idx": 0,
             "integrator": "rk4",
             "model": "st",
-            "control_input": ["speed", "angle"],
+            "control_input": ["speed", "steering_angle"],
             "observation_config": {"type": "original"},
         }
 
