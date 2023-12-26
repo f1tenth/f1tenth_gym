@@ -134,20 +134,34 @@ class CarAction:
         if type(control_mode) == str: # only one control mode specified
             try:
                 long_act_type_fn = LongitudinalActionEnum.from_string(control_mode)
-                warnings.warn(
-                    f'Only one control mode specified, using {control_mode} for longitudinal control and defaulting to steering angle for steering'
-                )
             except ValueError:
                 try:
                     steer_act_type_fn = SteerActionEnum.from_string(control_mode)
                 except ValueError:
                     raise ValueError(f"Unknown control mode {control_mode}")
-                warnings.warn(
-                    f'Only one control mode specified, using {control_mode} for steering and defaulting to speed for longitudinal control'
-                )
-                long_act_type_fn = LongitudinalActionEnum.from_string("speed")
+                if control_mode == "steering_speed":
+                    warnings.warn(
+                        f'Only one control mode specified, using {control_mode} for steering and defaulting to acceleration for longitudinal control'
+                    )
+                    long_act_type_fn = LongitudinalActionEnum.from_string("accl")
+                else:
+                    warnings.warn(
+                        f'Only one control mode specified, using {control_mode} for steering and defaulting to speed for longitudinal control'
+                    )
+                    long_act_type_fn = LongitudinalActionEnum.from_string("speed")
+
             else:
-                steer_act_type_fn = SteerActionEnum.from_string("steering_angle")
+                if control_mode == "accl":
+                    warnings.warn(
+                        f'Only one control mode specified, using {control_mode} for longitudinal control and defaulting to steering speed for steering'
+                    )
+                    steer_act_type_fn = SteerActionEnum.from_string("steering_speed")
+                else:
+                    warnings.warn(
+                        f'Only one control mode specified, using {control_mode} for longitudinal control and defaulting to steering angle for steering'
+                    )
+                    steer_act_type_fn = SteerActionEnum.from_string("steering_angle")
+
         elif type(control_mode) == list:
             long_act_type_fn = LongitudinalActionEnum.from_string(control_mode[0])
             steer_act_type_fn = SteerActionEnum.from_string(control_mode[1])
