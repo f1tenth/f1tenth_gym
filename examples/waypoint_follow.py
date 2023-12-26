@@ -298,17 +298,19 @@ def main():
         "vgain": 1,
     }
 
+    num_agents = 3
     env = gym.make(
         "f110_gym:f110-v0",
         config={
             "map": "Spielberg",
-            "num_agents": 1,
+            "num_agents": num_agents,
             "timestep": 0.01,
             "integrator": "rk4",
             "control_input": "speed",
             "model": "st",
             "observation_config": {"type": "kinematic_state"},
             "params": {"mu": 1.0},
+            "reset_config": {"type": "random_static"},
         },
         render_mode="human",
     )

@@ -69,6 +69,7 @@ class ScanTests(unittest.TestCase):
 
         self.assertLess(mse, 2.0)
 
+
     def test_map_spielberg(self, debug=False):
         self._test_map_scan("Spielberg", debug=debug)
 
