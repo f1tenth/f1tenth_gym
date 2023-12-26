@@ -11,7 +11,6 @@ from gymnasium.spaces import Box
 class TestObservationInterface(unittest.TestCase):
     @staticmethod
     def _make_env(config={}) -> F110Env:
-
         conf = {
             "map": "Spielberg",
             "num_agents": 1,

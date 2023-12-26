@@ -26,6 +26,7 @@ Prototype of base classes
 Replacement of the old RaceCar, Simulator classes in C++
 Author: Hongrui Zheng
 """
+from __future__ import annotations
 import numpy as np
 from f110_gym.envs.dynamic_models import DynamicModel
 from f110_gym.envs.action import CarAction
@@ -407,7 +408,7 @@ class Simulator(object):
         self.params = params
         self.agent_poses = np.empty((self.num_agents, 3))
         self.agent_steerings = np.empty((self.num_agents,))
-        self.agents = []
+        self.agents: list[RaceCar] = []
         self.collisions = np.zeros((self.num_agents,))
         self.collision_idx = -1 * np.ones((self.num_agents,))
         self.model = model

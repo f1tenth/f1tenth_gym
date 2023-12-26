@@ -22,14 +22,14 @@ setup(
         "opencv-python",
     ],
     extras_require={
-        'dev': [
-            'pytest',
-            'flake8',
-            'black',
-            'ipykernel',
-            'isort',
-            'autoflake',
-            'matplotlib'
+        "dev": [
+            "pytest",
+            "flake8",
+            "black",
+            "ipykernel",
+            "isort",
+            "autoflake",
+            "matplotlib",
         ]
-    }
+    },
 )

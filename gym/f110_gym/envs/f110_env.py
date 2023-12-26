@@ -175,12 +175,14 @@ class F110Env(gym.Env):
         # match render_fps to integration timestep
         self.metadata["render_fps"] = int(1.0 / self.timestep)
         if self.render_mode == "human_fast":
-            self.metadata["render_fps"] *= 10   # boost fps by 10x
+            self.metadata["render_fps"] *= 10  # boost fps by 10x
         self.renderer, self.render_spec = make_renderer(
-            params=self.params, track=self.track, agent_ids=self.agent_ids,
-            render_mode=render_mode, render_fps=self.metadata["render_fps"]
+            params=self.params,
+            track=self.track,
+            agent_ids=self.agent_ids,
+            render_mode=render_mode,
+            render_fps=self.metadata["render_fps"],
         )
-
 
     @classmethod
     def default_config(cls) -> dict:
@@ -271,7 +273,7 @@ class F110Env(gym.Env):
         temp_y[idx2] = -right_t - temp_y[idx2]
         temp_y[np.invert(np.logical_or(idx1, idx2))] = 0
 
-        dist2 = delta_pt[0, :] ** 2 + temp_y ** 2
+        dist2 = delta_pt[0, :] ** 2 + temp_y**2
         closes = dist2 <= 0.1
         for i in range(self.num_agents):
             if closes[i] and not self.near_starts[i]:

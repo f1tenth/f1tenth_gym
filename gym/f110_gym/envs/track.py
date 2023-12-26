@@ -128,7 +128,7 @@ class TrackSpec(YamlDataClassConfig):
 def find_track_dir(track_name):
     # we assume there are no blank space in the track name. however, to take into account eventual blank spaces in
     # the map dirpath, we loop over all possible maps and check if there is a matching with the current track
-    map_dir = pathlib.Path(__file__).parent.parent / "maps"
+    map_dir = pathlib.Path(__file__).parent.parent.parent.parent / "maps"
 
     if not (map_dir / track_name).exists():
         print("Downloading Files for: " + track_name)

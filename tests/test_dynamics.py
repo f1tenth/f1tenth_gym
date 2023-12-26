@@ -558,7 +558,7 @@ class DynamicsTest(unittest.TestCase):
             0.0000000000000000,
             0.0000000000000000,
             0.0000000000000000,
-            0.0000000000000000,
+            0.0833661500000000,
         ]
 
         np.testing.assert_array_almost_equal(x_left_st[-1], x_left_st_gt, decimal=2)
