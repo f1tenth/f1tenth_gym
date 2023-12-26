@@ -170,5 +170,4 @@ cython_debug/
 #.idea/
 *.zip
 
-/maps/*
-/examples/maps
+**/maps/*

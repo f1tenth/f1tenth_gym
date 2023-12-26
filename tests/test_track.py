@@ -43,7 +43,7 @@ class TestTrack(unittest.TestCase):
                 - [Trackname_raceline.csv]      # raceline (optional)
                 - [Trackname_centerline.csv]    # centerline (optional)
         """
-        mapdir = pathlib.Path(__file__).parent.parent / "gym" / "f110_gym" / "maps"
+        mapdir = pathlib.Path(__file__).parent.parent / "maps"
         for trackdir in mapdir.iterdir():
             if trackdir.is_file():
                 continue
