@@ -82,4 +82,3 @@ class CollisionTests(unittest.TestCase):
         fps = 1000 / elapsed
         print("gjk fps:", fps)
         # self.assertGreater(fps, 500)  This is a platform dependent test, not ideal.
-

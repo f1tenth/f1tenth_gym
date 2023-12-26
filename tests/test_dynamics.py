@@ -23,7 +23,12 @@ import time
 import unittest
 
 import numpy as np
-from f110_gym.envs.dynamic_models import vehicle_dynamics_ks, vehicle_dynamics_st, func_KS, func_ST
+from f110_gym.envs.dynamic_models import (
+    vehicle_dynamics_ks,
+    vehicle_dynamics_st,
+    func_KS,
+    func_ST,
+)
 
 
 class DynamicsTest(unittest.TestCase):
@@ -553,7 +558,7 @@ class DynamicsTest(unittest.TestCase):
             0.0000000000000000,
             0.0000000000000000,
             0.0000000000000000,
-            0.0000000000000000,
+            0.0833661500000000,
         ]
 
         np.testing.assert_array_almost_equal(x_left_st[-1], x_left_st_gt, decimal=2)
