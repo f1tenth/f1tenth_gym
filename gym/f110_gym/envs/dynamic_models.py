@@ -96,7 +96,6 @@ def upper_accel_limit(vel, a_max, v_switch):
         pos_limit = a_max
 
     return pos_limit
-    
 
 
 @njit(cache=True)
@@ -128,6 +127,7 @@ def accl_constraints(vel, a_long_d, v_switch, a_max, v_min, v_max):
         a_long = a_long_d
 
     return a_long
+
 
 @njit(cache=True)
 def steering_constraint(
@@ -183,7 +183,7 @@ def vehicle_dynamics_ks(
     v_max,
 ):
     """
-    Single Track Kinematic Vehicle Dynamics. 
+    Single Track Kinematic Vehicle Dynamics.
     Follows https://gitlab.lrz.de/tum-cps/commonroad-vehicle-models/-/blob/master/vehicleModels_commonRoad.pdf, section 5
 
         Args:
@@ -242,11 +242,11 @@ def vehicle_dynamics_ks(
     # system dynamics
     f = np.array(
         [
-            V * np.cos(PSI),            #X_DOT
-            V * np.sin(PSI),            #Y_DOT
-            STEER_VEL,                  #DELTA_DOT
-            ACCL,                       #V_DOT
-            (V / lwb) * np.tan(DELTA),  #PSI_DOT
+            V * np.cos(PSI),  # X_DOT
+            V * np.sin(PSI),  # Y_DOT
+            STEER_VEL,  # DELTA_DOT
+            ACCL,  # V_DOT
+            (V / lwb) * np.tan(DELTA),  # PSI_DOT
         ]
     )
     return f
@@ -318,7 +318,7 @@ def vehicle_dynamics_st(
     PSI_DOT = x[5]
     BETA = x[6]
     # We have to wrap the slip angle to [-pi, pi]
-    #BETA = np.arctan2(np.sin(BETA), np.cos(BETA))
+    # BETA = np.arctan2(np.sin(BETA), np.cos(BETA))
 
     # gravity constant m/s^2
     g = 9.81
@@ -338,40 +338,62 @@ def vehicle_dynamics_st(
     if V < 0.5:
         # wheelbase
         lwb = lf + lr
-        BETA_HAT = np.arctan(np.tan(DELTA) * lr /lwb)
-        BETA_DOT = (1/(1+ (np.tan(DELTA)*(lr/lwb))**2))*(lr/(lwb*np.cos(DELTA)**2))*STEER_VEL
-        f = np.array([
-            V * np.cos(PSI + BETA_HAT),             # X_DOT
-            V * np.sin(PSI + BETA_HAT),             # Y_DOT
-            STEER_VEL,                              # DELTA_DOT
-            ACCL,                                   # V_DOT
-            V*np.cos(BETA_HAT)*np.tan(DELTA)/lwb,   # PSI_DOT
-            (1/lwb)*(
-                ACCL*np.cos(BETA)*np.tan(DELTA) - \
-                V*np.sin(BETA)*np.tan(DELTA)*BETA_DOT + \
-                ((V*np.cos(BETA)*STEER_VEL)/(np.cos(DELTA)**2))
-                ),                                  # PSI_DOT_DOT
-            BETA_DOT                                # BETA_DOT
-        ])
+        BETA_HAT = np.arctan(np.tan(DELTA) * lr / lwb)
+        BETA_DOT = (
+            (1 / (1 + (np.tan(DELTA) * (lr / lwb)) ** 2))
+            * (lr / (lwb * np.cos(DELTA) ** 2))
+            * STEER_VEL
+        )
+        f = np.array(
+            [
+                V * np.cos(PSI + BETA_HAT),  # X_DOT
+                V * np.sin(PSI + BETA_HAT),  # Y_DOT
+                STEER_VEL,  # DELTA_DOT
+                ACCL,  # V_DOT
+                V * np.cos(BETA_HAT) * np.tan(DELTA) / lwb,  # PSI_DOT
+                (1 / lwb)
+                * (
+                    ACCL * np.cos(BETA) * np.tan(DELTA)
+                    - V * np.sin(BETA) * np.tan(DELTA) * BETA_DOT
+                    + ((V * np.cos(BETA) * STEER_VEL) / (np.cos(DELTA) ** 2))
+                ),  # PSI_DOT_DOT
+                BETA_DOT,  # BETA_DOT
+            ]
+        )
     else:
         # system dynamics
         f = np.array(
             [
-                V * np.cos(PSI + BETA), # X_DOT
-                V * np.sin(PSI + BETA), # Y_DOT
-                STEER_VEL,              # DELTA_DOT
-                ACCL,                   # V_DOT
-                PSI_DOT,                # PSI_DOT
-                ((mu*m)/(I*(lf+lr)))*(
-                    lf*C_Sf*(g*lr - ACCL*h)*DELTA + \
-                    (lr*C_Sr*(g*lf + ACCL*h) - lf*C_Sf*(g*lr - ACCL*h))*BETA - \
-                    (lf*lf*C_Sf*(g*lr - ACCL*h) + lr*lr*C_Sr*(g*lf + ACCL*h))*(PSI_DOT/V)
-                ),                      # PSI_DOT_DOT
-                (mu/(V*(lr+lf)))*(
-                    C_Sf*(g*lr - ACCL*h)*DELTA - \
-                    (C_Sr*(g*lf + ACCL*h) + C_Sf*(g*lr - ACCL*h))*BETA + \
-                    (C_Sr*(g*lf + ACCL*h)*lr - C_Sf*(g*lr - ACCL*h)*lf)*(PSI_DOT/V)
-                ) - PSI_DOT,            # BETA_DOT
+                V * np.cos(PSI + BETA),  # X_DOT
+                V * np.sin(PSI + BETA),  # Y_DOT
+                STEER_VEL,  # DELTA_DOT
+                ACCL,  # V_DOT
+                PSI_DOT,  # PSI_DOT
+                ((mu * m) / (I * (lf + lr)))
+                * (
+                    lf * C_Sf * (g * lr - ACCL * h) * DELTA
+                    + (
+                        lr * C_Sr * (g * lf + ACCL * h)
+                        - lf * C_Sf * (g * lr - ACCL * h)
+                    )
+                    * BETA
+                    - (
+                        lf * lf * C_Sf * (g * lr - ACCL * h)
+                        + lr * lr * C_Sr * (g * lf + ACCL * h)
+                    )
+                    * (PSI_DOT / V)
+                ),  # PSI_DOT_DOT
+                (mu / (V * (lr + lf)))
+                * (
+                    C_Sf * (g * lr - ACCL * h) * DELTA
+                    - (C_Sr * (g * lf + ACCL * h) + C_Sf * (g * lr - ACCL * h)) * BETA
+                    + (
+                        C_Sr * (g * lf + ACCL * h) * lr
+                        - C_Sf * (g * lr - ACCL * h) * lf
+                    )
+                    * (PSI_DOT / V)
+                )
+                - PSI_DOT,  # BETA_DOT
             ]
         )
 

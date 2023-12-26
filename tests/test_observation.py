@@ -11,7 +11,6 @@ from gymnasium.spaces import Box
 class TestObservationInterface(unittest.TestCase):
     @staticmethod
     def _make_env(config={}) -> F110Env:
-
         conf = {
             "map": "Example",
             "num_agents": 1,
@@ -228,5 +227,7 @@ class TestObservationInterface(unittest.TestCase):
         for obs_type_id in obs_type_ids:
             env = self._make_env(config={"observation_config": {"type": obs_type_id}})
             check_env(
-                env.unwrapped, f"Observation {obs_type_id} breaks the gymnasium API", skip_render_check=True
+                env.unwrapped,
+                f"Observation {obs_type_id} breaks the gymnasium API",
+                skip_render_check=True,
             )
