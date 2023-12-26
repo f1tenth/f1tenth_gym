@@ -407,7 +407,7 @@ class Simulator(object):
         self.ego_idx = ego_idx
         self.params = params
         self.agent_poses = np.empty((self.num_agents, 3))
-        self.agents: List[RaceCar] = []
+        self.agents: list[RaceCar] = []
         self.collisions = np.zeros((self.num_agents,))
         self.collision_idx = -1 * np.ones((self.num_agents,))
         self.model = model
