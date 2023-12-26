@@ -2,6 +2,7 @@ from abc import abstractmethod
 from enum import Enum
 from typing import Any, Dict, Tuple
 
+import warnings
 import gymnasium as gym
 import numpy as np
 from f110_gym.envs.dynamic_models import pid_steer, pid_accl
@@ -128,9 +129,32 @@ class SteerActionEnum(Enum):
 
 class CarAction:
     def __init__(self, control_mode : list[str, str], params: Dict) -> None:
-        long_act_type_fn = LongitudinalActionEnum.from_string(control_mode[0])
+        long_act_type_fn = None
+        steer_act_type_fn = None
+        if type(control_mode) == str: # only one control mode specified
+            try:
+                long_act_type_fn = LongitudinalActionEnum.from_string(control_mode)
+                warnings.warn(
+                    f'Only one control mode specified, using {control_mode} for longitudinal control and defaulting to steering angle for steering'
+                )
+            except ValueError:
+                try:
+                    steer_act_type_fn = SteerActionEnum.from_string(control_mode)
+                except ValueError:
+                    raise ValueError(f"Unknown control mode {control_mode}")
+                warnings.warn(
+                    f'Only one control mode specified, using {control_mode} for steering and defaulting to speed for longitudinal control'
+                )
+                long_act_type_fn = LongitudinalActionEnum.from_string("speed")
+            else:
+                steer_act_type_fn = SteerActionEnum.from_string("steering_angle")
+        elif type(control_mode) == list:
+            long_act_type_fn = LongitudinalActionEnum.from_string(control_mode[0])
+            steer_act_type_fn = SteerActionEnum.from_string(control_mode[1])
+        else:
+            raise ValueError(f"Unknown control mode {control_mode}")
+        
         self._longitudinal_action : LongitudinalAction = long_act_type_fn(params)
-        steer_act_type_fn = SteerActionEnum.from_string(control_mode[1])
         self._steer_action : SteerAction = steer_act_type_fn(params)
 
     @abstractmethod
