@@ -407,6 +407,7 @@ class Simulator(object):
         self.ego_idx = ego_idx
         self.params = params
         self.agent_poses = np.empty((self.num_agents, 3))
+        self.agent_steerings = np.empty((self.num_agents,))
         self.agents: list[RaceCar] = []
         self.collisions = np.zeros((self.num_agents,))
         self.collision_idx = -1 * np.ones((self.num_agents,))
@@ -504,6 +505,7 @@ class Simulator(object):
 
             # update sim's information of agent poses
             self.agent_poses[i, :] = np.append(agent.state[0:2], agent.state[4])
+            self.agent_steerings[i] = agent.state[2]
 
         # check collisions between all agents
         self.check_collision()
