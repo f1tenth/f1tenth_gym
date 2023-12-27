@@ -27,7 +27,8 @@ Author: Hongrui Zheng
 # gym imports
 import gymnasium as gym
 
-from f110_gym.envs.action import CarActionEnum, from_single_to_multi_action_space
+from f110_gym.envs.action import (CarAction,
+                                  from_single_to_multi_action_space)
 from f110_gym.envs.integrator import IntegratorType
 from f110_gym.envs.rendering import make_renderer
 
@@ -102,8 +103,7 @@ class F110Env(gym.Env):
         self.integrator = IntegratorType.from_string(self.config["integrator"])
         self.model = DynamicModel.from_string(self.config["model"])
         self.observation_config = self.config["observation_config"]
-        action_type_fn = CarActionEnum.from_string(self.config["control_input"])
-        self.action_type = action_type_fn(params=self.params)
+        self.action_type = CarAction(self.config["control_input"], params=self.params)
 
         # radius to consider done
         self.start_thresh = 0.5  # 10cm
@@ -225,7 +225,7 @@ class F110Env(gym.Env):
             "ego_idx": 0,
             "integrator": "rk4",
             "model": "st",
-            "control_input": "speed",
+            "control_input": ["speed", "steering_angle"],
             "observation_config": {"type": "original"},
             "reset_config": {"type": "grid_static"},
         }
@@ -240,8 +240,7 @@ class F110Env(gym.Env):
 
             if hasattr(self, "action_space"):
                 # if some parameters changed, recompute action space
-                action_type_fn = CarActionEnum.from_string(self.config["control_input"])
-                self.action_type = action_type_fn(params=self.params)
+                self.action_type = CarAction(self.config["control_input"], params=self.params)
                 self.action_space = from_single_to_multi_action_space(
                     self.action_type.space, self.num_agents
                 )

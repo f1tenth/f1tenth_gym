@@ -16,7 +16,7 @@ class TestObservationInterface(unittest.TestCase):
             "num_agents": 1,
             "timestep": 0.01,
             "integrator": "rk4",
-            "control_input": "speed",
+            "control_input": ["speed", "steering_angle"],
             "params": {"mu": 1.0},
         }
         conf = deep_update(conf, config)

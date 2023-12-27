@@ -12,7 +12,7 @@ class TestEnvInterface(unittest.TestCase):
             "num_agents": 1,
             "timestep": 0.01,
             "integrator": "rk4",
-            "control_input": "speed",
+            "control_input": ["speed", "steering_angle"],
             "params": {"mu": 1.0},
         }
         conf = deep_update(conf, config)
@@ -125,7 +125,7 @@ class TestEnvInterface(unittest.TestCase):
         """
         Test that the acceleration action space is correctly configured.
         """
-        base_env = self._make_env(config={"control_input": "accl"})
+        base_env = self._make_env(config={"control_input": ["accl", "steering_speed"]})
         params = base_env.sim.params
         action_space_low = base_env.action_space.low
         action_space_high = base_env.action_space.high

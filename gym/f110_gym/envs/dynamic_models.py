@@ -401,7 +401,19 @@ def vehicle_dynamics_st(
 
 
 @njit(cache=True)
-def pid(speed, steer, current_speed, current_steer, max_sv, max_a, max_v, min_v):
+def pid_steer(steer, current_steer, max_sv):
+    # steering
+    steer_diff = steer - current_steer
+    if np.fabs(steer_diff) > 1e-4:
+        sv = (steer_diff / np.fabs(steer_diff)) * max_sv
+    else:
+        sv = 0.0
+
+    return sv
+
+
+@njit(cache=True)
+def pid_accl(speed, current_speed, max_a, max_v, min_v):
     """
     Basic controller for speed/steer -> accl./steer vel.
 
@@ -413,13 +425,6 @@ def pid(speed, steer, current_speed, current_steer, max_sv, max_a, max_v, min_v)
             accl (float): desired input acceleration
             sv (float): desired input steering velocity
     """
-    # steering
-    steer_diff = steer - current_steer
-    if np.fabs(steer_diff) > 1e-4:
-        sv = (steer_diff / np.fabs(steer_diff)) * max_sv
-    else:
-        sv = 0.0
-
     # accl
     vel_diff = speed - current_speed
     # currently forward
@@ -443,7 +448,7 @@ def pid(speed, steer, current_speed, current_steer, max_sv, max_a, max_v, min_v)
             kp = 2.0 * max_a / (-min_v)
             accl = kp * vel_diff
 
-    return accl, sv
+    return accl
 
 
 def func_KS(
