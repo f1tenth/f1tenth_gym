@@ -318,20 +318,11 @@ def main():
 
     planner = PurePursuitPlanner(track=track, wb=0.17145 + 0.15875)
 
-    poses = np.array(
-        [
-            [
-                track.raceline.xs[0],
-                track.raceline.ys[0],
-                track.raceline.yaws[0],
-            ]
-        ]
-    )
     env.unwrapped.add_render_callback(planner.render_waypoints)
     env.unwrapped.add_render_callback(planner.render_local_plan)
     env.unwrapped.add_render_callback(planner.render_lookahead_point)
 
-    obs, info = env.reset(options={"poses": poses})
+    obs, info = env.reset()
     done = False
     env.render()
 
