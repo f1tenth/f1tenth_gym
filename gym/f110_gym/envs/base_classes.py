@@ -30,7 +30,12 @@ from __future__ import annotations
 import numpy as np
 from f110_gym.envs.dynamic_models import DynamicModel
 from f110_gym.envs.action import CarAction
-from f110_gym.envs.collision_models import collision_multiple, get_vertices
+from f110_gym.envs.collision_models import (
+    collision_multiple,
+    get_vertices,
+    collision_multiple_map,
+)
+from f110_gym.envs.track import Track
 from f110_gym.envs.integrator import EulerIntegrator, IntegratorType
 from f110_gym.envs.laser_models import ScanSimulator2D, check_ttc_jit, ray_cast
 
@@ -314,13 +319,6 @@ class RaceCar(object):
         elif self.state[4] < 0:
             self.state[4] = self.state[4] + 2 * np.pi
 
-        # update scan
-        current_scan = RaceCar.scan_simulator.scan(
-            np.append(self.state[0:2], self.state[4]), self.scan_rng
-        )
-
-        return current_scan
-
     def update_opp_poses(self, opp_poses):
         """
         Updates the vehicle's information on other vehicles
@@ -346,7 +344,12 @@ class RaceCar(object):
             None
         """
 
-        current_scan = agent_scans[agent_index]
+        # update scan with current pose
+        current_scan = RaceCar.scan_simulator.scan(
+            np.append(self.state[0:2], self.state[4]), self.scan_rng
+        )
+
+        # current_scan = agent_scans[agent_index]
 
         # check ttc
         self.check_ttc(current_scan)
@@ -354,6 +357,7 @@ class RaceCar(object):
         # ray cast other agents to modify scan
         new_scan = self.ray_cast_agents(current_scan)
 
+        # update attribute
         agent_scans[agent_index] = new_scan
 
 
@@ -373,6 +377,7 @@ class Simulator(object):
         integrator (Integrator): integrator to use for vehicle dynamics
         model (Model): model to use for vehicle dynamics
         action_type (Action): action type to use for vehicle dynamics
+        track (Track): track of the current simulator
     """
 
     def __init__(
@@ -381,10 +386,12 @@ class Simulator(object):
         num_agents,
         seed,
         action_type: CarAction,
+        track: Track,
         integrator=IntegratorType.RK4,
         model=DynamicModel.ST,
         time_step=0.01,
         ego_idx=0,
+        gen_scan=True,
     ):
         """
         Init function
@@ -412,6 +419,8 @@ class Simulator(object):
         self.collisions = np.zeros((self.num_agents,))
         self.collision_idx = -1 * np.ones((self.num_agents,))
         self.model = model
+        self.track = track
+        self.gen_scan = gen_scan
 
         # initializing agents
         for i in range(self.num_agents):
@@ -432,7 +441,8 @@ class Simulator(object):
 
     def set_map(self, map_name):
         """
-        Sets the map of the environment and sets the map for scan simulator of each agent
+        Sets the map of the environment, initialize map pixel world coordinates,
+        Sets the map for scan simulator of each agent if scan enabled
 
         Args:
             map_name (str): name of the map
@@ -440,8 +450,23 @@ class Simulator(object):
         Returns:
             None
         """
-        for agent in self.agents:
-            agent.set_map(map_name)
+        # generate map pixels in world frame (pixel center)
+        map_img = self.track.occupancy_map
+        h, w = map_img.shape
+        reso = self.track.spec.resolution
+        ox = self.track.spec.origin[0]
+        oy = self.track.spec.origin[1]
+        x_ind, y_ind = np.meshgrid(np.arange(w), np.arange(h))
+        pcx = (x_ind * reso + ox + reso / 2).flatten()
+        pcy = (y_ind * reso + oy + reso / 2).flatten()
+        self.pixel_centers = np.vstack((pcx, pcy)).T
+        map_mask = (map_img == 0.0).flatten()
+        self.pixel_centers = self.pixel_centers[map_mask, :]
+
+        # set scan simulator map if scan enabled
+        if self.gen_scan:
+            for agent in self.agents:
+                agent.set_map(map_name)
 
     def update_params(self, params, agent_idx=-1):
         """
@@ -486,6 +511,30 @@ class Simulator(object):
             )
         self.collisions, self.collision_idx = collision_multiple(all_vertices)
 
+    def check_map_collision(self):
+        """
+        Checks for collision between agents and map
+
+        Args:
+            None
+
+        Returns:
+            None
+        """
+        # get vertices of all agents
+        all_vertices = np.empty((self.num_agents, 4, 2))
+        for i in range(self.num_agents):
+            all_vertices[i, :, :] = get_vertices(
+                np.append(self.agents[i].state[0:2], self.agents[i].state[4]),
+                self.params["length"],
+                self.params["width"],
+            )
+
+        self.collisions = collision_multiple_map(
+            all_vertices,
+            self.pixel_centers,
+        )
+
     def step(self, control_inputs):
         """
         Steps the simulation environment
@@ -497,11 +546,11 @@ class Simulator(object):
             observations (dict): dictionary for observations: poses of agents, current laser scan of each agent, collision indicators, etc.
         """
 
+        # pose updates
         # looping over agents
         for i, agent in enumerate(self.agents):
             # update each agent's pose
-            current_scan = agent.update_pose(control_inputs[i, 0], control_inputs[i, 1])
-            self.agent_scans[i, :] = current_scan
+            agent.update_pose(control_inputs[i, 0], control_inputs[i, 1])
 
             # update sim's information of agent poses
             self.agent_poses[i, :] = np.append(agent.state[0:2], agent.state[4])
@@ -510,19 +559,25 @@ class Simulator(object):
         # check collisions between all agents
         self.check_collision()
 
-        for i, agent in enumerate(self.agents):
-            # update agent's information on other agents
-            opp_poses = np.concatenate(
-                (self.agent_poses[0:i, :], self.agent_poses[i + 1 :, :]), axis=0
-            )
-            agent.update_opp_poses(opp_poses)
+        # update scan if requested, with other agent's poses updated
+        if self.gen_scan:
+            for i, agent in enumerate(self.agents):
+                # update agent's information on other agents
+                opp_poses = np.concatenate(
+                    (self.agent_poses[0:i, :], self.agent_poses[i + 1 :, :]), axis=0
+                )
+                agent.update_opp_poses(opp_poses)
+                # generate scan
+                current_scan = agent.update_scan(self.agent_scans, i)
+                self.agent_scans[i, :] = current_scan
 
-            # update each agent's current scan based on other agents
-            agent.update_scan(self.agent_scans, i)
+                # update agent collision with environment using ittc
+                if agent.in_collision:
+                    self.collisions[i] = 1.0
 
-            # update agent collision with environment
-            if agent.in_collision:
-                self.collisions[i] = 1.0
+        # check map collision if not updating scan
+        else:
+            self.check_map_collision()
 
     def reset(self, poses):
         """
