@@ -217,11 +217,11 @@ def collision_multiple(vertices):
     return collisions, collision_idx
 
 
-# @njit(cache=True)
 @jit
 def collision_multiple_map(vertices, pixel_centers):
     """
     Check pair-wise collisions for all provided vertices
+    JAX impl is about twice faster than the Numba impl
 
     Args:
         vertices (np.ndarray (num_bodies, 4, 2)): agent rectangle vertices, ccw winding order
@@ -232,14 +232,6 @@ def collision_multiple_map(vertices, pixel_centers):
         collisions (np.ndarray (num_vertices, )): whether each body is in collision with map
     """
     collisions = jnp.zeros((vertices.shape[0],))
-
-    # TODO: reduce check size, only pixel_centers occupied around current poses
-    # NOTE: this doesn't work with jit since pixel_center sizes changes
-    # centers = jnp.mean(vertices, axis=1)
-    # dist = jnp.abs(all_pixel_centers[:, None] - centers)
-    # effective_ind = jnp.where(jnp.logical_and(dist[:, :, 0] < 0.5, dist[:, :, 1] < 0.5))
-    # pixel_centers = all_pixel_centers[:, None][effective_ind]
-
     # check if center of pixel to the LEFT of all 4 edges
     # loop because vectorizing is way slower
     for car_ind in range(vertices.shape[0]):
@@ -251,19 +243,33 @@ def collision_multiple_map(vertices, pixel_centers):
         ls = jnp.any((jnp.sum(left_of, axis=0) == 4.0))
         collisions = collisions.at[car_ind].set(jnp.where(ls, 1.0, 0.0))
 
-    # center_vecs = (
-    #     pixel_centers[:, None, None] - vertices
-    # )  # result is (HxW, num_bodies, 4, 2)
-    # cross_prod = np.cross(edges, center_vecs, -1)  # cross_prod is (HxW, num_bodeis, 4)
-    # (pix_ind, body_ind, edge_ind) = np.where((cross_prod < 0))
+    return collisions
 
-    # check if enclosed pixels occupied, inflate?
-    # inside_occupied = map_occupied[pix_ind]
-    # which_collision = np.unique(body_ind[np.where(inside_occupied)[0]])
-    # which_collision = np.unique(body_ind)
 
-    # figure out which car collided
-    # collisions[which_collision] = 1
+@njit(cache=True)
+def collision_multiple_map_nb(vertices, pixel_centers):
+    """
+    Check pair-wise collisions for all provided vertices
+
+    Args:
+        vertices (np.ndarray (num_bodies, 4, 2)): agent rectangle vertices, ccw winding order
+        pixel_centers (np.ndarray (HxW, 2)): x, y position of pixel centers of map image
+        map_occupied (np.ndarray (HxW, )): occupancy indicator of map_image
+
+    Returns:
+        collisions (np.ndarray (num_vertices, )): whether each body is in collision with map
+    """
+    collisions = np.zeros((vertices.shape[0],))
+    # check if center of pixel to the LEFT of all 4 edges
+    # loop because vectorizing is way slower
+    for car_ind in range(vertices.shape[0]):
+        left_of = np.empty((4, pixel_centers.shape[0]))
+        for v_ind in range(-1, 3):
+            edge = vertices[car_ind, v_ind + 1] - vertices[car_ind, v_ind]
+            center_p = pixel_centers - vertices[car_ind, v_ind]
+            left_of[v_ind + 1, :] = cross2d(center_p, edge) <= 0
+        ls = np.any((np.sum(left_of, axis=0) == 4.0))
+        collisions[car_ind] = np.where(ls, 1.0, 0.0)
     return collisions
 
 
