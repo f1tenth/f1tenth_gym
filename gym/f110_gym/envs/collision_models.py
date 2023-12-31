@@ -216,20 +216,43 @@ def collision_multiple(vertices):
 
     return collisions, collision_idx
 
-
 @jit
 def collision_multiple_map(vertices, pixel_centers):
     """
-    Check pair-wise collisions for all provided vertices
+    Check vertices collision with map occupancy
+    Rasters car polygon to map occupancy
+    vmap across number of cars, and number of occupied pixels
+
+    Args:
+        vertices (np.ndarray (num_bodies, 4, 2)): agent rectangle vertices, ccw winding order
+        pixel_centers (np.ndarray (HxW, 2)): x, y position of pixel centers of map image
+
+    Returns:
+        collisions (np.ndarray (num_bodies, )): whether each body is in collision with map
+    """
+    edges = jnp.roll(vertices, 1, axis=1) - vertices
+    center_p = pixel_centers[:, None, None] - edges
+    cross_prods = jnp.cross(center_p, edges)
+    left_of = jnp.where(cross_prods <= 0, 1.0, 0.0)
+    all_left_of = jnp.sum(left_of, axis=-1)
+    collisions = jnp.where(jnp.sum(jnp.where(all_left_of == 4.0, 1.0, 0.0), axis=0) > 0.0, 1.0, 0.0)
+    return collisions
+
+
+
+@jit
+def collision_multiple_map_jaxloop(vertices, pixel_centers):
+    """
+    Check vertices collision with map occupancy
+    Rasters car polygon to map occupancy
     JAX impl is about twice faster than the Numba impl
 
     Args:
         vertices (np.ndarray (num_bodies, 4, 2)): agent rectangle vertices, ccw winding order
         pixel_centers (np.ndarray (HxW, 2)): x, y position of pixel centers of map image
-        map_occupied (np.ndarray (HxW, )): occupancy indicator of map_image
 
     Returns:
-        collisions (np.ndarray (num_vertices, )): whether each body is in collision with map
+        collisions (np.ndarray (num_bodies, )): whether each body is in collision with map
     """
     collisions = jnp.zeros((vertices.shape[0],))
     # check if center of pixel to the LEFT of all 4 edges
@@ -249,15 +272,15 @@ def collision_multiple_map(vertices, pixel_centers):
 @njit(cache=True)
 def collision_multiple_map_nb(vertices, pixel_centers):
     """
-    Check pair-wise collisions for all provided vertices
+    Check vertices collision with map occupancy
+    Rasters car polygon to map occupancy
 
     Args:
         vertices (np.ndarray (num_bodies, 4, 2)): agent rectangle vertices, ccw winding order
         pixel_centers (np.ndarray (HxW, 2)): x, y position of pixel centers of map image
-        map_occupied (np.ndarray (HxW, )): occupancy indicator of map_image
 
     Returns:
-        collisions (np.ndarray (num_vertices, )): whether each body is in collision with map
+        collisions (np.ndarray (num_bodies, )): whether each body is in collision with map
     """
     collisions = np.zeros((vertices.shape[0],))
     # check if center of pixel to the LEFT of all 4 edges
