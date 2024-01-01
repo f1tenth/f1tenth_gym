@@ -29,6 +29,10 @@ Author: Hongrui Zheng
 
 import numpy as np
 from numba import njit
+from numba.np.extensions import cross2d
+import jax.numpy as jnp
+from jax import jit
+import jax
 
 
 @njit(cache=True)
@@ -211,6 +215,85 @@ def collision_multiple(vertices):
                 collision_idx[j] = i
 
     return collisions, collision_idx
+
+@jit
+def collision_multiple_map(vertices, pixel_centers):
+    """
+    Check vertices collision with map occupancy
+    Rasters car polygon to map occupancy
+    vmap across number of cars, and number of occupied pixels
+
+    Args:
+        vertices (np.ndarray (num_bodies, 4, 2)): agent rectangle vertices, ccw winding order
+        pixel_centers (np.ndarray (HxW, 2)): x, y position of pixel centers of map image
+
+    Returns:
+        collisions (np.ndarray (num_bodies, )): whether each body is in collision with map
+    """
+    edges = jnp.roll(vertices, 1, axis=1) - vertices
+    center_p = pixel_centers[:, None, None] - edges
+    cross_prods = jnp.cross(center_p, edges)
+    left_of = jnp.where(cross_prods <= 0, 1.0, 0.0)
+    all_left_of = jnp.sum(left_of, axis=-1)
+    collisions = jnp.where(jnp.sum(jnp.where(all_left_of == 4.0, 1.0, 0.0), axis=0) > 0.0, 1.0, 0.0)
+    return collisions
+
+
+
+@jit
+def collision_multiple_map_jaxloop(vertices, pixel_centers):
+    """
+    Check vertices collision with map occupancy
+    Rasters car polygon to map occupancy
+    JAX impl is about twice faster than the Numba impl
+
+    Args:
+        vertices (np.ndarray (num_bodies, 4, 2)): agent rectangle vertices, ccw winding order
+        pixel_centers (np.ndarray (HxW, 2)): x, y position of pixel centers of map image
+
+    Returns:
+        collisions (np.ndarray (num_bodies, )): whether each body is in collision with map
+    """
+    collisions = jnp.zeros((vertices.shape[0],))
+    # check if center of pixel to the LEFT of all 4 edges
+    # loop because vectorizing is way slower
+    for car_ind in range(vertices.shape[0]):
+        left_of = jnp.empty((4, pixel_centers.shape[0]))
+        for v_ind in range(-1, 3):
+            edge = vertices[car_ind, v_ind + 1] - vertices[car_ind, v_ind]
+            center_p = pixel_centers - vertices[car_ind, v_ind]
+            left_of = left_of.at[v_ind + 1, :].set((jnp.cross(center_p, edge) <= 0))
+        ls = jnp.any((jnp.sum(left_of, axis=0) == 4.0))
+        collisions = collisions.at[car_ind].set(jnp.where(ls, 1.0, 0.0))
+
+    return collisions
+
+
+@njit(cache=True)
+def collision_multiple_map_nb(vertices, pixel_centers):
+    """
+    Check vertices collision with map occupancy
+    Rasters car polygon to map occupancy
+
+    Args:
+        vertices (np.ndarray (num_bodies, 4, 2)): agent rectangle vertices, ccw winding order
+        pixel_centers (np.ndarray (HxW, 2)): x, y position of pixel centers of map image
+
+    Returns:
+        collisions (np.ndarray (num_bodies, )): whether each body is in collision with map
+    """
+    collisions = np.zeros((vertices.shape[0],))
+    # check if center of pixel to the LEFT of all 4 edges
+    # loop because vectorizing is way slower
+    for car_ind in range(vertices.shape[0]):
+        left_of = np.empty((4, pixel_centers.shape[0]))
+        for v_ind in range(-1, 3):
+            edge = vertices[car_ind, v_ind + 1] - vertices[car_ind, v_ind]
+            center_p = pixel_centers - vertices[car_ind, v_ind]
+            left_of[v_ind + 1, :] = cross2d(center_p, edge) <= 0
+        ls = np.any((np.sum(left_of, axis=0) == 4.0))
+        collisions[car_ind] = np.where(ls, 1.0, 0.0)
+    return collisions
 
 
 """

@@ -27,8 +27,7 @@ Author: Hongrui Zheng
 # gym imports
 import gymnasium as gym
 
-from f110_gym.envs.action import (CarAction,
-                                  from_single_to_multi_action_space)
+from f110_gym.envs.action import CarAction, from_single_to_multi_action_space
 from f110_gym.envs.integrator import IntegratorType
 from f110_gym.envs.rendering import make_renderer
 
@@ -104,6 +103,7 @@ class F110Env(gym.Env):
         self.model = DynamicModel.from_string(self.config["model"])
         self.observation_config = self.config["observation_config"]
         self.action_type = CarAction(self.config["control_input"], params=self.params)
+        self.gen_scan = self.config["scan"]
 
         # radius to consider done
         self.start_thresh = 0.5  # 10cm
@@ -133,6 +133,10 @@ class F110Env(gym.Env):
         self.start_thetas = np.zeros((self.num_agents,))
         self.start_rot = np.eye(2)
 
+        self.track = Track.from_track_name(
+            self.map_name
+        )  # load track in gym env for convenience
+
         # initiate stuff
         self.sim = Simulator(
             self.params,
@@ -142,11 +146,12 @@ class F110Env(gym.Env):
             integrator=self.integrator,
             model=self.model,
             action_type=self.action_type,
+            track=self.track,
+            gen_scan=self.gen_scan,
         )
+        
+        # TODO: from_track_name is basically called twice here, necessary?
         self.sim.set_map(self.map_name)
-        self.track = Track.from_track_name(
-            self.map_name
-        )  # load track in gym env for convenience
 
         # observations
         self.agent_ids = [f"agent_{i}" for i in range(self.num_agents)]
@@ -154,6 +159,10 @@ class F110Env(gym.Env):
         assert (
             "type" in self.observation_config
         ), "observation_config must contain 'type' key"
+
+        # TODO: how to handle obs when not generating scan?
+        #       right now it's just returning empty array
+
         self.observation_type = observation_factory(env=self, **self.observation_config)
         self.observation_space = self.observation_type.space()
 
@@ -223,6 +232,7 @@ class F110Env(gym.Env):
             "num_agents": 2,
             "timestep": 0.01,
             "ego_idx": 0,
+            "scan": True,
             "integrator": "rk4",
             "model": "st",
             "control_input": ["speed", "steering_angle"],
@@ -240,7 +250,9 @@ class F110Env(gym.Env):
 
             if hasattr(self, "action_space"):
                 # if some parameters changed, recompute action space
-                self.action_type = CarAction(self.config["control_input"], params=self.params)
+                self.action_type = CarAction(
+                    self.config["control_input"], params=self.params
+                )
                 self.action_space = from_single_to_multi_action_space(
                     self.action_type.space, self.num_agents
                 )
