@@ -81,7 +81,7 @@ class TestEnvInterface(unittest.TestCase):
             for k in obs0:
                 self.assertTrue(
                     np.allclose(obs0[k], obs1[k]),
-                    f"Observations {k} should be the same",
+                    f"Observations {k} should be the same, got {obs0[k]} and {obs1[k]}",
                 )
             self.assertTrue(done0 == done1, "Done should be the same")
             t += 1
