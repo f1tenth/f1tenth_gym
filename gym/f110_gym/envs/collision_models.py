@@ -186,7 +186,7 @@ def collision(vertices1, vertices2):
     return False
 
 
-# @njit(cache=True)
+@njit(cache=True)
 def collision_multiple(vertices):
     """
     Check pair-wise collisions for all provided vertices
