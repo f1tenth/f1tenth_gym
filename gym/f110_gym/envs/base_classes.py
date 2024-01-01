@@ -360,6 +360,8 @@ class RaceCar(object):
         # update attribute
         agent_scans[agent_index] = new_scan
 
+        return new_scan
+
 
 class Simulator(object):
     """
