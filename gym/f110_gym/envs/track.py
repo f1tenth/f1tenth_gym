@@ -7,6 +7,7 @@ import tempfile
 import numpy as np
 import requests
 import yaml
+import warnings
 from f110_gym.envs.cubic_spline import CubicSpline2D
 from PIL import Image
 from PIL.Image import Transpose
@@ -174,6 +175,7 @@ class Track:
         filepath: str,
         ext: str,
         occupancy_map: np.ndarray,
+        edt: np.ndarray,
         centerline: Raceline = None,
         raceline: Raceline = None,
     ):
@@ -214,6 +216,15 @@ class Track:
             occupancy_map[occupancy_map <= 128] = 0.0
             occupancy_map[occupancy_map > 128] = 255.0
 
+            # if exists, load edt
+            if (track_dir / f"{track}_map.npy").exists():
+                edt = np.load(track_dir / f"{track}_map.npy")
+            else:
+                edt = None
+                warnings.warn(
+                    f"Track Distance Transform file at {track_dir / f'{track}_map.npy'} not found, will be created before initialization."
+                )
+
             # if exists, load centerline
             if (track_dir / f"{track}_centerline.csv").exists():
                 centerline = Raceline.from_centerline_file(
@@ -221,6 +232,9 @@ class Track:
                 )
             else:
                 centerline = None
+                warnings.warn(
+                    f"Track Centerline file at {track_dir / f'{track}_centerline.csv'} not found, setting None."
+                )
 
             # if exists, load raceline
             if (track_dir / f"{track}_raceline.csv").exists():
@@ -229,12 +243,21 @@ class Track:
                 )
             else:
                 raceline = centerline
+                if centerline is None:
+                    warnings.warn(
+                        f"Track Raceline file at {track_dir / f'{track}_raceline.csv'} not found, setting None."
+                    )
+                else:
+                    warnings.warn(
+                        f"Track Raceline file at {track_dir / f'{track}_raceline.csv'} not found, using Centerline."
+                    )
 
             return Track(
                 spec=track_spec,
                 filepath=str((track_dir / map_filename.stem).absolute()),
                 ext=map_filename.suffix,
                 occupancy_map=occupancy_map,
+                edt=edt,
                 centerline=centerline,
                 raceline=raceline,
             )
