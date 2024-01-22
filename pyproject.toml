@@ -33,7 +33,7 @@ packages = [
 ]
 
 [tool.poetry.dependencies]
-python = ">=3.9,<=3.11"
+python = ">=3.9,<3.12"
 gymnasium = "^0.29.1"
 numpy = "<=1.25,>=1.18"
 pillow = ">=9.0.1"
