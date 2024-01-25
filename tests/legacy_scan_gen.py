@@ -25,11 +25,7 @@ for map_name in ["Spielberg", "Monza", "Austin"]:
 
     env = gym.make(
         "f110_gym:f110-v0",
-        config={
-            "map": map_name,
-            "num_agents": 1,
-            "params": params,
-        },
+        config={"map": map_name, "num_agents": 1, "params": params,},
     )
 
     scan = np.empty((num_test, 1080))

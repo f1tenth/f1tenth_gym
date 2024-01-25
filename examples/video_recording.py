@@ -34,13 +34,7 @@ def main():
     planner = PurePursuitPlanner(track=track, wb=0.17145 + 0.15875)
 
     poses = np.array(
-        [
-            [
-                track.raceline.xs[0],
-                track.raceline.ys[0],
-                track.raceline.yaws[0],
-            ]
-        ]
+        [[track.raceline.xs[0], track.raceline.ys[0], track.raceline.yaws[0],]]
     )
 
     obs, info = env.reset(options={"poses": poses})

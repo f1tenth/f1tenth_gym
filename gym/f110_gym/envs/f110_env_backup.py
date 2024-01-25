@@ -263,7 +263,7 @@ class F110Env(gym.Env, utils.EzPickle):
             temp_y[idx2] = -right_t - temp_y[idx2]
             temp_y[np.invert(np.logical_or(idx1, idx2))] = 0
 
-            dist2 = delta_pt[0, :] ** 2 + temp_y**2
+            dist2 = delta_pt[0, :] ** 2 + temp_y ** 2
             closes = dist2 <= 0.1
             for i in range(self.num_agents):
                 if closes[i] and not self.near_starts[i]:
@@ -291,7 +291,7 @@ class F110Env(gym.Env, utils.EzPickle):
             temp_y = -right_t - delta_pt[1]
         else:
             temp_y = 0
-        dist2 = delta_pt[0] ** 2 + temp_y**2
+        dist2 = delta_pt[0] ** 2 + temp_y ** 2
         close = dist2 <= 0.1
         # close = dist_to_start <= self.start_thresh
         if close and not self.near_start:

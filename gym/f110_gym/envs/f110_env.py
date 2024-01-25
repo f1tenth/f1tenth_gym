@@ -27,8 +27,7 @@ Author: Hongrui Zheng
 # gym imports
 import gymnasium as gym
 
-from f110_gym.envs.action import (CarAction,
-                                  from_single_to_multi_action_space)
+from f110_gym.envs.action import CarAction, from_single_to_multi_action_space
 from f110_gym.envs.integrator import IntegratorType
 from f110_gym.envs.rendering import make_renderer
 
@@ -240,7 +239,9 @@ class F110Env(gym.Env):
 
             if hasattr(self, "action_space"):
                 # if some parameters changed, recompute action space
-                self.action_type = CarAction(self.config["control_input"], params=self.params)
+                self.action_type = CarAction(
+                    self.config["control_input"], params=self.params
+                )
                 self.action_space = from_single_to_multi_action_space(
                     self.action_type.space, self.num_agents
                 )
@@ -272,7 +273,7 @@ class F110Env(gym.Env):
         temp_y[idx2] = -right_t - temp_y[idx2]
         temp_y[np.invert(np.logical_or(idx1, idx2))] = 0
 
-        dist2 = delta_pt[0, :] ** 2 + temp_y**2
+        dist2 = delta_pt[0, :] ** 2 + temp_y ** 2
         closes = dist2 <= 0.1
         for i in range(self.num_agents):
             if closes[i] and not self.near_starts[i]:

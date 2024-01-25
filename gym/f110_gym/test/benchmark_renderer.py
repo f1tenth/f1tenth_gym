@@ -55,11 +55,7 @@ class BenchmarkRenderer:
         }
         config = deep_update(base_config, config)
 
-        env = gym.make(
-            "f110_gym:f110-v0",
-            config=config,
-            render_mode=render_mode,
-        )
+        env = gym.make("f110_gym:f110-v0", config=config, render_mode=render_mode,)
 
         return env
 

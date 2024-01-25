@@ -17,10 +17,7 @@ class TestEnvInterface(unittest.TestCase):
         }
         conf = deep_update(conf, config)
 
-        env = gym.make(
-            "f110_gym:f110-v0",
-            config=conf,
-        )
+        env = gym.make("f110_gym:f110-v0", config=conf,)
         return env
 
     def test_gymnasium_api(self):
