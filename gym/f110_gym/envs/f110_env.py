@@ -226,8 +226,8 @@ class F110Env(gym.Env):
             "integrator": "rk4",
             "model": "st",
             "control_input": ["speed", "steering_angle"],
-            "observation_config": {"type": "original"},
-            "reset_config": {"type": "grid_static"},
+            "observation_config": {"type": None},
+            "reset_config": {"type": None},
         }
 
     def configure(self, config: dict) -> None:

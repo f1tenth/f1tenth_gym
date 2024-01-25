@@ -1,6 +1,4 @@
-"""
-Author: Luigi Berducci
-"""
+from __future__ import annotations
 from abc import abstractmethod
 from typing import List
 
@@ -265,7 +263,9 @@ class FeaturesObservation(Observation):
         return obs
 
 
-def observation_factory(env, type: str, **kwargs) -> Observation:
+def observation_factory(env, type: str | None, **kwargs) -> Observation:
+    type = type or "original"
+
     if type == "original":
         return OriginalObservation(env)
     elif type == "features":
