@@ -21,8 +21,7 @@ class LongitudinalActionEnum(Enum):
             return SpeedAction
         else:
             raise ValueError(f"Unknown action type {action}")
-
-
+        
 class LongitudinalAction:
     def __init__(self) -> None:
         self._type = None
@@ -40,10 +39,7 @@ class LongitudinalAction:
 
     @property
     def space(self) -> gym.Space:
-        return gym.spaces.Box(
-            low=self.lower_limit, high=self.upper_limit, dtype=np.float32
-        )
-
+        return gym.spaces.Box(low=self.lower_limit, high=self.upper_limit, dtype=np.float32)
 
 class AcclAction(LongitudinalAction):
     def __init__(self, params: Dict) -> None:
@@ -53,7 +49,6 @@ class AcclAction(LongitudinalAction):
 
     def act(self, action: Tuple[float, float], state, params) -> float:
         return action
-
 
 class SpeedAction(LongitudinalAction):
     def __init__(self, params: Dict) -> None:
@@ -65,11 +60,14 @@ class SpeedAction(LongitudinalAction):
         self, action: Tuple[float, float], state: np.ndarray, params: Dict
     ) -> float:
         accl = pid_accl(
-            action, state[3], params["a_max"], params["v_max"], params["v_min"],
+            action,
+            state[3],
+            params["a_max"],
+            params["v_max"],
+            params["v_min"],
         )
 
         return accl
-
 
 class SteerAction:
     def __init__(self) -> None:
@@ -85,13 +83,10 @@ class SteerAction:
     @property
     def type(self) -> str:
         return self._type
-
+    
     @property
     def space(self) -> gym.Space:
-        return gym.spaces.Box(
-            low=self.lower_limit, high=self.upper_limit, dtype=np.float32
-        )
-
+        return gym.spaces.Box(low=self.lower_limit, high=self.upper_limit, dtype=np.float32)
 
 class SteeringAngleAction(SteerAction):
     def __init__(self, params: Dict) -> None:
@@ -101,11 +96,14 @@ class SteeringAngleAction(SteerAction):
 
     def act(
         self, action: Tuple[float, float], state: np.ndarray, params: Dict
-    ) -> float:
-        sv = pid_steer(action, state[2], params["sv_max"],)
+    ) -> float: 
+        sv = pid_steer(
+            action,
+            state[2],
+            params["sv_max"],
+        )
         return sv
-
-
+    
 class SteeringSpeedAction(SteerAction):
     def __init__(self, params: Dict) -> None:
         super().__init__()
@@ -114,9 +112,8 @@ class SteeringSpeedAction(SteerAction):
 
     def act(
         self, action: Tuple[float, float], state: np.ndarray, params: Dict
-    ) -> float:
+    ) -> float: 
         return action
-
 
 class SteerActionEnum(Enum):
     Steering_Angle = 1
@@ -131,12 +128,11 @@ class SteerActionEnum(Enum):
         else:
             raise ValueError(f"Unknown action type {action}")
 
-
 class CarAction:
-    def __init__(self, control_mode: list[str, str], params: Dict) -> None:
+    def __init__(self, control_mode : list[str, str], params: Dict) -> None:
         long_act_type_fn = None
         steer_act_type_fn = None
-        if type(control_mode) == str:  # only one control mode specified
+        if type(control_mode) == str: # only one control mode specified
             try:
                 long_act_type_fn = LongitudinalActionEnum.from_string(control_mode)
             except ValueError:
@@ -146,24 +142,24 @@ class CarAction:
                     raise ValueError(f"Unknown control mode {control_mode}")
                 if control_mode == "steering_speed":
                     warnings.warn(
-                        f"Only one control mode specified, using {control_mode} for steering and defaulting to acceleration for longitudinal control"
+                        f'Only one control mode specified, using {control_mode} for steering and defaulting to acceleration for longitudinal control'
                     )
                     long_act_type_fn = LongitudinalActionEnum.from_string("accl")
                 else:
                     warnings.warn(
-                        f"Only one control mode specified, using {control_mode} for steering and defaulting to speed for longitudinal control"
+                        f'Only one control mode specified, using {control_mode} for steering and defaulting to speed for longitudinal control'
                     )
                     long_act_type_fn = LongitudinalActionEnum.from_string("speed")
 
             else:
                 if control_mode == "accl":
                     warnings.warn(
-                        f"Only one control mode specified, using {control_mode} for longitudinal control and defaulting to steering speed for steering"
+                        f'Only one control mode specified, using {control_mode} for longitudinal control and defaulting to steering speed for steering'
                     )
                     steer_act_type_fn = SteerActionEnum.from_string("steering_speed")
                 else:
                     warnings.warn(
-                        f"Only one control mode specified, using {control_mode} for longitudinal control and defaulting to steering angle for steering"
+                        f'Only one control mode specified, using {control_mode} for longitudinal control and defaulting to steering angle for steering'
                     )
                     steer_act_type_fn = SteerActionEnum.from_string("steering_angle")
 
@@ -172,9 +168,9 @@ class CarAction:
             steer_act_type_fn = SteerActionEnum.from_string(control_mode[1])
         else:
             raise ValueError(f"Unknown control mode {control_mode}")
-
-        self._longitudinal_action: LongitudinalAction = long_act_type_fn(params)
-        self._steer_action: SteerAction = steer_act_type_fn(params)
+        
+        self._longitudinal_action : LongitudinalAction = long_act_type_fn(params)
+        self._steer_action : SteerAction = steer_act_type_fn(params)
 
     @abstractmethod
     def act(self, action: Any, **kwargs) -> Tuple[float, float]:
@@ -188,12 +184,8 @@ class CarAction:
 
     @property
     def space(self) -> gym.Space:
-        low = np.array(
-            [self._steer_action.lower_limit, self._longitudinal_action.lower_limit]
-        ).astype(np.float32)
-        high = np.array(
-            [self._steer_action.upper_limit, self._longitudinal_action.upper_limit]
-        ).astype(np.float32)
+        low = np.array([self._steer_action.lower_limit, self._longitudinal_action.lower_limit]).astype(np.float32)
+        high = np.array([self._steer_action.upper_limit, self._longitudinal_action.upper_limit]).astype(np.float32)
 
         return gym.spaces.Box(low=low, high=high, shape=(2,), dtype=np.float32)
 
