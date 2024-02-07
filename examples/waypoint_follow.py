@@ -310,7 +310,7 @@ def main():
             "model": "st",
             "observation_config": {"type": "kinematic_state"},
             "params": {"mu": 1.0},
-            "reset_config": {"type": "random_static"},
+            "reset_config": {"type": "rl_random_static"},
         },
         render_mode="human",
     )
