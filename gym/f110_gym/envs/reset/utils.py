@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import numpy as np
 
 from f110_gym.envs.track import Track, Raceline

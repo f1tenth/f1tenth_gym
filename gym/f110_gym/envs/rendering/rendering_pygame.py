@@ -1,8 +1,6 @@
-from __future__ import annotations
-
 import logging
 import math
-from typing import Union, List, Tuple, Any, Callable, Optional
+from typing import Any, Callable, Optional
 
 import cv2
 import numpy as np

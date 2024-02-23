@@ -1,4 +1,3 @@
-from __future__ import annotations
 import pathlib
 from abc import abstractmethod, ABC
 from dataclasses import dataclass
