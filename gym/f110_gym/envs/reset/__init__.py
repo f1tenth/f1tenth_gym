@@ -1,3 +1,4 @@
+from __future__ import annotations
 from f110_gym.envs.reset.masked_reset import GridResetFn, AllTrackResetFn
 from f110_gym.envs.reset.reset_fn import ResetFn
 from f110_gym.envs.track import Track

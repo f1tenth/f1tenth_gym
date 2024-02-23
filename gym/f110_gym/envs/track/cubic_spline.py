@@ -2,6 +2,7 @@
 Code from Cubic spline planner
 Author: Atsushi Sakai(@Atsushi_twi)
 """
+from __future__ import annotations
 import bisect
 import math
 

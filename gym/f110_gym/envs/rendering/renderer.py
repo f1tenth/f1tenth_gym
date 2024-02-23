@@ -1,7 +1,8 @@
+from __future__ import annotations
 import pathlib
 from abc import abstractmethod, ABC
 from dataclasses import dataclass
-from typing import Callable, Optional, Any
+from typing import Optional, Any
 
 import numpy as np
 import yaml

@@ -26,6 +26,7 @@ Prototype of base classes
 Replacement of the old RaceCar, Simulator classes in C++
 Author: Hongrui Zheng
 """
+from __future__ import annotations
 import numpy as np
 from f110_gym.envs.dynamic_models import DynamicModel
 from f110_gym.envs.action import CarAction

@@ -25,6 +25,7 @@
 Prototype of Utility functions and classes for simulating 2D LIDAR scans
 Author: Hongrui Zheng
 """
+from __future__ import annotations
 import unittest
 
 import numpy as np
