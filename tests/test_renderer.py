@@ -91,3 +91,18 @@ class TestRenderer(unittest.TestCase):
         )
 
         env.close()
+
+    def test_render_race_line(self):
+        env = self._make_env(render_mode="human")
+        track = env.unwrapped.track
+
+        env.add_render_callback(track.raceline.render_waypoints(color=(0, 128, 0)))
+        env.reset()
+        env.render()
+
+        for _ in range(100):
+            action = env.action_space.sample()
+            env.step(action)
+            env.render()
+
+        env.close()
