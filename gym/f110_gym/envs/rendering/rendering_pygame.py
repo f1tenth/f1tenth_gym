@@ -64,14 +64,9 @@ class PygameEnvRenderer(EnvRenderer):
 
         self.canvas = pygame.Surface((width, height))
 
-        # load map metadata
-        map_filepath = pathlib.Path(track.filepath)
-        map_yaml = map_filepath.with_suffix(".yaml")
-        with open(map_yaml, "r") as yaml_stream:
-            try:
-                self.map_metadata = yaml.safe_load(yaml_stream)
-            except yaml.YAMLError as ex:
-                print(ex)
+        # map metadata
+        self.map_origin = track.spec.origin
+        self.map_resolution = track.spec.resolution
 
         # fps and time renderer
         self.clock = pygame.time.Clock()
@@ -89,10 +84,7 @@ class PygameEnvRenderer(EnvRenderer):
         )
 
         # load map image
-        original_img = map_filepath.parent / self.map_metadata["image"]
-        original_img = np.array(
-            Image.open(original_img).transpose(Image.FLIP_TOP_BOTTOM)
-        ).astype(np.float64)
+        original_img = track.occupancy_map
 
         self.map_renderers = {
             "map": Map(map_img=original_img, zoom_level=0.4),
@@ -136,8 +128,8 @@ class PygameEnvRenderer(EnvRenderer):
                     car_width=self.params["width"],
                     color=self.car_colors[ic],
                     render_spec=self.render_spec,
-                    map_origin=self.map_metadata["origin"],
-                    resolution=self.map_metadata["resolution"],
+                    map_origin=self.map_origin,
+                    resolution=self.map_resolution,
                     ppu=self.ppus[self.active_map_renderer],
                 )
                 for ic in range(len(self.agent_ids))
@@ -176,9 +168,9 @@ class PygameEnvRenderer(EnvRenderer):
             screen_rect = self.canvas.get_rect()
 
             if self.follow_agent_flag:
-                origin = self.map_metadata["origin"]
+                origin = self.map_origin
                 resolution = (
-                    self.map_metadata["resolution"]
+                    self.map_resolution
                     * self.ppus[self.active_map_renderer]
                 )
                 ego_x, ego_y = self.cars[self.agent_to_follow].pose[:2]
@@ -294,9 +286,9 @@ class PygameEnvRenderer(EnvRenderer):
             color: rgb color of the points
             size: size of the points in pixels
         """
-        origin = self.map_metadata["origin"]
+        origin = self.map_origin
         ppu = self.ppus[self.active_map_renderer]
-        resolution = self.map_metadata["resolution"] * ppu
+        resolution = self.map_resolution * ppu
         points = ((points - origin[:2]) / resolution).astype(int)
         size = math.ceil(size / ppu)
 
@@ -317,9 +309,9 @@ class PygameEnvRenderer(EnvRenderer):
             color: rgb color of the points
             size: size of the points in pixels
         """
-        origin = self.map_metadata["origin"]
+        origin = self.map_origin
         ppu = self.ppus[self.active_map_renderer]
-        resolution = self.map_metadata["resolution"] * ppu
+        resolution = self.map_resolution * ppu
         points = ((points - origin[:2]) / resolution).astype(int)
         size = math.ceil(size / ppu)
 
@@ -341,9 +333,9 @@ class PygameEnvRenderer(EnvRenderer):
             color: rgb color of the points
             size: size of the points in pixels
         """
-        origin = self.map_metadata["origin"]
+        origin = self.map_origin
         ppu = self.ppus[self.active_map_renderer]
-        resolution = self.map_metadata["resolution"] * ppu
+        resolution = self.map_resolution * ppu
         points = ((points - origin[:2]) / resolution).astype(int)
         size = math.ceil(size / ppu)
 
