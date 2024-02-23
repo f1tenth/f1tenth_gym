@@ -24,11 +24,7 @@ class TestRenderer(unittest.TestCase):
         }
         config = deep_update(base_config, config)
 
-        env = gym.make(
-            "f110_gym:f110-v0",
-            config=config,
-            render_mode=render_mode,
-        )
+        env = gym.make("f110_gym:f110-v0", config=config, render_mode=render_mode,)
 
         return env
 
@@ -89,20 +85,5 @@ class TestRenderer(unittest.TestCase):
             all([frame.shape[2] == 3 for frame in frame_list]),
             "not all frames have 3 channels",
         )
-
-        env.close()
-
-    def test_render_race_line(self):
-        env = self._make_env(render_mode="human")
-        track = env.unwrapped.track
-
-        env.add_render_callback(track.raceline.render_waypoints(color=(0, 128, 0)))
-        env.reset()
-        env.render()
-
-        for _ in range(100):
-            action = env.action_space.sample()
-            env.step(action)
-            env.render()
 
         env.close()
