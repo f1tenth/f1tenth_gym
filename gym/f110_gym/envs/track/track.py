@@ -78,7 +78,7 @@ class Track:
         return track_spec
 
     @staticmethod
-    def from_track_name(track: str) -> Track:
+    def from_track_name(track: str):
         """
         Load track from track name.
 
@@ -141,7 +141,7 @@ class Track:
             raise FileNotFoundError(f"It could not load track {track}") from ex
 
     @staticmethod
-    def from_refline(x: np.ndarray, y: np.ndarray, velx: np.ndarray,) -> Track:
+    def from_refline(x: np.ndarray, y: np.ndarray, velx: np.ndarray,):
         """
         Create an empty track reference line.
 
