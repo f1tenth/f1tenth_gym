@@ -9,14 +9,20 @@ def find_track_dir(track_name: str) -> pathlib.Path:
     """
     Find the directory of the track map corresponding to the given track name.
 
-    Args:
-        track_name: name of the track
+    Parameters
+    ----------
+    track_name : str
+        name of the track
 
-    Returns:
-        pathlib.Path: path to the track map directory
+    Returns
+    -------
+    pathlib.Path
+        path to the track map directory
 
-    Raises:
-        FileNotFoundError: if no mapdir matching the track name is found
+    Raises
+    ------
+    FileNotFoundError
+        if no map directory matching the track name is found
     """
     map_dir = pathlib.Path(__file__).parent.parent.parent.parent / "maps"
 

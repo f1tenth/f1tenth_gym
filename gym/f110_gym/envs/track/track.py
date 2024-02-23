@@ -10,6 +10,7 @@ from PIL.Image import Transpose
 from yamldataclassconfig.config import YamlDataClassConfig
 
 from f110_gym.envs.track import Raceline
+from f110_gym.envs.track.cubic_spline import CubicSpline2D
 from f110_gym.envs.track.utils import find_track_dir
 
 
@@ -82,14 +83,20 @@ class Track:
         """
         Load track from track name.
 
-        Args:
-            track: name of the track
+        Parameters
+        ----------
+        track : str
+            name of the track
 
-        Returns:
-            Track: track object
+        Returns
+        -------
+        Track
+            track object
 
-        Raises:
-            FileNotFoundError: if the track cannot be loaded
+        Raises
+        ------
+        FileNotFoundError
+            if the track cannot be loaded
         """
         try:
             track_dir = find_track_dir(track)
@@ -133,3 +140,88 @@ class Track:
         except Exception as ex:
             print(ex)
             raise FileNotFoundError(f"It could not load track {track}") from ex
+
+    @staticmethod
+    def from_refline(x: np.ndarray, y: np.ndarray, velx: np.ndarray,) -> Track:
+        """
+        Create an empty track reference line.
+
+        Parameters
+        ----------
+        x : np.ndarray
+            x-coordinates of the waypoints
+        y : np.ndarray
+            y-coordinates of the waypoints
+        velx : np.ndarray
+            velocities at the waypoints
+
+        Returns
+        -------
+        Track
+            track object
+        """
+        ds = 0.1
+        resolution = 0.05
+        margin_perc = 0.1
+
+        spline = CubicSpline2D(x=x, y=y)
+        ss, xs, ys, yaws, ks, vxs = [], [], [], [], [], []
+        for i_s in np.arange(0, spline.s[-1], ds):
+            xi, yi = spline.calc_position(i_s)
+            yaw = spline.calc_yaw(i_s)
+            k = spline.calc_curvature(i_s)
+
+            # find closest waypoint
+            closest = np.argmin(np.hypot(x - xi, y - yi))
+            v = velx[closest]
+
+            xs.append(xi)
+            ys.append(yi)
+            yaws.append(yaw)
+            ks.append(k)
+            ss.append(i_s)
+            vxs.append(v)
+
+        refline = Raceline(
+            ss=np.array(ss).astype(np.float32),
+            xs=np.array(xs).astype(np.float32),
+            ys=np.array(ys).astype(np.float32),
+            psis=np.array(yaws).astype(np.float32),
+            kappas=np.array(ks).astype(np.float32),
+            velxs=np.array(vxs).astype(np.float32),
+            accxs=np.zeros_like(ss).astype(np.float32),
+            spline=spline,
+        )
+
+        min_x, max_x = np.min(xs), np.max(xs)
+        min_y, max_y = np.min(ys), np.max(ys)
+        x_range = max_x - min_x
+        y_range = max_y - min_y
+        occupancy_map = 255.0 * np.ones(
+            (
+                int((1 + 2 * margin_perc) * x_range / resolution),
+                int((1 + 2 * margin_perc) * y_range / resolution),
+            ),
+            dtype=np.float32,
+        )
+        # origin is the bottom left corner
+        origin = (min_x - margin_perc * x_range, min_y - margin_perc * y_range, 0.0)
+
+        track_spec = TrackSpec(
+            name=None,
+            image=None,
+            resolution=resolution,
+            origin=origin,
+            negate=False,
+            occupied_thresh=0.65,
+            free_thresh=0.196,
+        )
+
+        return Track(
+            spec=track_spec,
+            filepath=None,
+            ext=None,
+            occupancy_map=occupancy_map,
+            raceline=refline,
+            centerline=refline,
+        )
