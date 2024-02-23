@@ -1,6 +1,6 @@
 import pathlib
 from dataclasses import dataclass
-from typing import Tuple
+from typing import Tuple, Optional
 
 import numpy as np
 import yaml
@@ -39,19 +39,26 @@ class Track:
         filepath: str,
         ext: str,
         occupancy_map: np.ndarray,
-        centerline: Raceline = None,
-        raceline: Raceline = None,
+        centerline: Optional[Raceline] = None,
+        raceline: Optional[Raceline] = None,
     ):
         """
         Initialize track object.
 
-        Args:
-            spec: track specification containing metadata
-            filepath: path to the track map image
-            ext: extension of the track map image
-            occupancy_map: binary occupancy map
-            centerline: centerline of the track
-            raceline: raceline of the track
+        Parameters
+        ----------
+        spec : TrackSpec
+            track specification
+        filepath : str
+            path to the track image
+        ext : str
+            file extension of the track image file
+        occupancy_map : np.ndarray
+            occupancy grid map
+        centerline : Raceline, optional
+            centerline of the track, by default None
+        raceline : Raceline, optional
+            raceline of the track, by default None
         """
         self.spec = spec
         self.filepath = filepath
@@ -65,12 +72,17 @@ class Track:
         """
         Load track specification from yaml file.
 
-        Args:
-            track: name of the track
-            filespec: path to the yaml file
+        Parameters
+        ----------
+        track : str
+            name of the track
+        filespec : str
+            path to the yaml file
 
-        Returns:
-            TrackSpec: track specification object
+        Returns
+        -------
+        TrackSpec
+            track specification
         """
         with open(filespec, "r") as yaml_stream:
             map_metadata = yaml.safe_load(yaml_stream)
