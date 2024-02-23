@@ -242,6 +242,59 @@ class Track:
             print(ex)
             raise FileNotFoundError(f"could not load track {track}") from ex
 
+    @staticmethod
+    def from_xys(xs: np.ndarray, ys: np.ndarray, ds: float = 0.1):
+        """
+        Create an empty map with raceline/centerline that are a spline interpolation of x, y points.
+        The velocity profile is constant and equal to 1.0 m/s.
+        """
+
+        spline = CubicSpline2D(x=xs, y=ys)
+
+        ss, xs, ys, yaws, ks = [], [], [], [], []
+
+        for i_s in np.arange(0, spline.s[-1], ds):
+            x, y = spline.calc_position(i_s)
+            yaw = spline.calc_yaw(i_s)
+            k = spline.calc_curvature(i_s)
+
+            xs.append(x)
+            ys.append(y)
+            yaws.append(yaw)
+            ks.append(k)
+            ss.append(i_s)
+
+        origin = (xs[0], ys[0], yaws[0])
+        refline = Raceline(
+            ss=np.array(ss).astype(np.float32),
+            xs=np.array(xs).astype(np.float32),
+            ys=np.array(ys).astype(np.float32),
+            psis=np.array(yaws).astype(np.float32),
+            kappas=np.array(ks).astype(np.float32),
+            velxs=np.ones_like(ss).astype(
+                np.float32
+            ),  # constant velocity profile for now
+            accxs=np.zeros_like(ss).astype(np.float32),  # constant acceleration
+        )
+
+        minx, maxx = min(xs), max(xs)
+        miny, maxy = min(ys), max(ys)
+        resolution = 0.05
+        margin_perc = 0.1
+
+        width = int((1 + margin_perc) * (maxx - minx) / resolution)
+        height = int((1 + margin_perc) * (maxy - miny) / resolution)
+
+        return Track(
+            spec=TrackSpec(name=None, image=None, resolution=0.05, origin=origin,
+                           negate=0, occupied_thresh=0.45, free_thresh=0.196),
+            filepath=None,
+            ext=None,
+            occupancy_map=np.ones((width, height)),
+            centerline=refline,
+            raceline=refline,
+        )
+
 
 if __name__ == "__main__":
     track = Track.from_track_name("Example")

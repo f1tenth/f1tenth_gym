@@ -138,3 +138,22 @@ class TestTrack(unittest.TestCase):
         # rename the backup track dir to its original name
         track_backup_dir = find_track_dir(tmp_dir.stem)
         track_backup_dir.rename(track_dir)
+
+    def test_gym_from_empty_track(self):
+        import gymnasium as gym
+
+        center = np.zeros(2)
+        radius = 100
+
+        thetas = np.linspace(0, 2 * np.pi, 100)
+        xs = center[0] + radius * np.cos(thetas)
+        ys = center[1] + radius * np.sin(thetas)
+
+        track = Track.from_xys(xs, ys, ds=0.1)
+
+        env = gym.make("f110_gym:f110-v0", config={"map": track}, render_mode="human")
+
+        env.reset()
+        env.render()
+
+        pass
