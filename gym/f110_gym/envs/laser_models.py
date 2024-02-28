@@ -448,6 +448,9 @@ class ScanSimulator2D(object):
         self.map_height = None
         self.map_width = None
         self.map_resolution = None
+        self.track = None
+        self.map_img = None
+        self.origin = None
         self.dt = None
 
         # precomputing corresponding cosines and sines of the angle array
@@ -465,6 +468,9 @@ class ScanSimulator2D(object):
             Returns:
                 flag (bool): if image reading and loading is successful
         """
+        if self.track and self.track.spec.name == map_name:
+            return True
+
         self.track = Track.from_track_name(map_name)
 
         # load map image
