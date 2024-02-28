@@ -1,12 +1,10 @@
-from __future__ import annotations
-
 import numpy as np
 
-from f110_gym.envs.track import Track
+from f110_gym.envs.track import Raceline
 
 
 def sample_around_waypoint(
-    track: Track,
+    reference_line: Raceline,
     waypoint_id: int,
     n_agents: int,
     min_dist: float,
@@ -26,22 +24,22 @@ def sample_around_waypoint(
         - move_laterally: if True, the agents are sampled on the left/right of the track centerline
     """
     current_wp_id = waypoint_id
-    n_waypoints = track.centerline.n
+    n_waypoints = reference_line.n
 
     poses = []
     rnd_sign = (
-        np.random.choice([-1, 1]) if move_laterally else 1
+        np.random.choice([-1.0, 1.0]) if move_laterally else 0.0
     )  # random sign to sample lateral position (left/right)
     for i in range(n_agents):
         # compute pose from current wp_id
         wp = [
-            track.centerline.xs[current_wp_id],
-            track.centerline.ys[current_wp_id],
+            reference_line.xs[current_wp_id],
+            reference_line.ys[current_wp_id],
         ]
         next_wp_id = (current_wp_id + 1) % n_waypoints
         next_wp = [
-            track.centerline.xs[next_wp_id],
-            track.centerline.ys[next_wp_id],
+            reference_line.xs[next_wp_id],
+            reference_line.ys[next_wp_id],
         ]
         theta = np.arctan2(next_wp[1] - wp[1], next_wp[0] - wp[0])
 
@@ -65,8 +63,8 @@ def sample_around_waypoint(
             if pnt_id > n_waypoints - 1:
                 pnt_id = 0
             # increment distance
-            x_diff = track.centerline.xs[pnt_id] - track.centerline.xs[pnt_id - 1]
-            y_diff = track.centerline.ys[pnt_id] - track.centerline.ys[pnt_id - 1]
+            x_diff = reference_line.xs[pnt_id] - reference_line.xs[pnt_id - 1]
+            y_diff = reference_line.ys[pnt_id] - reference_line.ys[pnt_id - 1]
             dist = dist + np.linalg.norm(
                 [y_diff, x_diff]
             )  # approx distance by summing linear segments

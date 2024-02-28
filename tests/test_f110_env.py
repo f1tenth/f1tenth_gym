@@ -187,8 +187,8 @@ class TestEnvInterface(unittest.TestCase):
             "num_agents": num_agents,
             "observation_config": {"type": "kinematic_state"},
         }
-        vec_env = gym.vector.make(
-            "f110_gym:f110-v0", asynchronous=True, config=config, num_envs=num_envs
+        vec_env = gym.make_vec(
+            "f110_gym:f110-v0", vectorization_mode="async", config=config, num_envs=num_envs
         )
 
         rnd_poses = np.random.random((2, 3))
@@ -217,10 +217,10 @@ class TestEnvInterface(unittest.TestCase):
         config = {
             "num_agents": num_agents,
             "observation_config": {"type": "kinematic_state"},
-            "reset_config": {"type": "random_random"},
+            "reset_config": {"type": "rl_random_random"},
         }
-        vec_env = gym.vector.make(
-            "f110_gym:f110-v0", asynchronous=False, config=config, num_envs=num_envs
+        vec_env = gym.make_vec(
+            "f110_gym:f110-v0", vectorization_mode="sync", config=config, num_envs=num_envs,
         )
 
         obss, infos = vec_env.reset()

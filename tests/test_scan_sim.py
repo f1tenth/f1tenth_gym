@@ -50,7 +50,7 @@ class ScanTests(unittest.TestCase):
         scan_rng = np.random.default_rng(seed=12345)
         scan_sim = ScanSimulator2D(self.num_beams, self.fov)
         new_scan = np.empty((self.num_test, self.num_beams))
-        scan_sim.set_map(map_name=map_name)
+        scan_sim.set_map(map=map_name)
         # scan gen loop
         for i in range(self.num_test):
             test_pose = self.test_poses[i]
@@ -83,7 +83,7 @@ class ScanTests(unittest.TestCase):
         # scan fps should be greater than 500
         scan_rng = np.random.default_rng(seed=12345)
         scan_sim = ScanSimulator2D(self.num_beams, self.fov)
-        scan_sim.set_map(map_name="Spielberg")
+        scan_sim.set_map(map="Spielberg")
 
         import time
 
