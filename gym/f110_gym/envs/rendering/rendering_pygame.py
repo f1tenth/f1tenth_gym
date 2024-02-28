@@ -1,15 +1,12 @@
 from __future__ import annotations
-
 import logging
 import math
-import pathlib
-from typing import Union, List, Tuple, Any
+from typing import Any, Callable, Optional
 
 import cv2
 import numpy as np
 import pygame
-import yaml
-from PIL import Image, ImageColor
+from PIL import ImageColor
 
 from f110_gym.envs.rendering.objects import (
     Map,
@@ -24,6 +21,10 @@ INSTRUCTION_TEXT = "Mouse click (L/M/R): Change POV - 'S' key: On/Off"
 
 
 class PygameEnvRenderer(EnvRenderer):
+    """
+    Renderer of the environment using Pygame.
+    """
+
     def __init__(
         self,
         params: dict[str, Any],
@@ -33,11 +34,30 @@ class PygameEnvRenderer(EnvRenderer):
         render_mode: str,
         render_fps: int,
     ):
+        """
+        Initialize the Pygame renderer.
+
+        Parameters
+        ----------
+        params : dict
+            dictionary of simulation parameters (including vehicle dimensions, etc.)
+        track : Track
+            track object
+        agent_ids : list
+            list of agent ids to render
+        render_spec : RenderSpec
+            rendering specification
+        render_mode : str
+            rendering mode in ["human", "human_fast", "rgb_array"]
+        render_fps : int
+            number of frames per second            
+        """
         super().__init__()
-        self.params = params  # simulation params
-        self.agent_ids = agent_ids  # list of agent ids
+        self.params = params
+        self.agent_ids = agent_ids
 
         self.cars = None
+        self.sim_time = None
         self.window = None
         self.canvas = None
 
@@ -63,15 +83,11 @@ class PygameEnvRenderer(EnvRenderer):
             self.window.fill((255, 255, 255))  # white background
 
         self.canvas = pygame.Surface((width, height))
+        self.map_canvas = None
 
-        # load map metadata
-        map_filepath = pathlib.Path(track.filepath)
-        map_yaml = map_filepath.with_suffix(".yaml")
-        with open(map_yaml, "r") as yaml_stream:
-            try:
-                self.map_metadata = yaml.safe_load(yaml_stream)
-            except yaml.YAMLError as ex:
-                print(ex)
+        # map metadata
+        self.map_origin = track.spec.origin
+        self.map_resolution = track.spec.resolution
 
         # fps and time renderer
         self.clock = pygame.time.Clock()
@@ -89,10 +105,7 @@ class PygameEnvRenderer(EnvRenderer):
         )
 
         # load map image
-        original_img = map_filepath.parent / self.map_metadata["image"]
-        original_img = np.array(
-            Image.open(original_img).transpose(Image.FLIP_TOP_BOTTOM)
-        ).astype(np.float64)
+        original_img = track.occupancy_map
 
         self.map_renderers = {
             "map": Map(map_img=original_img, zoom_level=0.4),
@@ -121,14 +134,14 @@ class PygameEnvRenderer(EnvRenderer):
             self.follow_agent_flag: bool = False
             self.agent_to_follow: int = None
 
-    def update(self, state):
+    def update(self, state: dict) -> None:
         """
         Update the simulation state to be rendered.
 
-        Args:
+        Parameters
+        ----------
             state: simulation state as dictionary
         """
-        # initialize cars
         if self.cars is None:
             self.cars = [
                 Car(
@@ -136,8 +149,8 @@ class PygameEnvRenderer(EnvRenderer):
                     car_width=self.params["width"],
                     color=self.car_colors[ic],
                     render_spec=self.render_spec,
-                    map_origin=self.map_metadata["origin"],
-                    resolution=self.map_metadata["resolution"],
+                    map_origin=self.map_origin[:2],
+                    resolution=self.map_resolution,
                     ppu=self.ppus[self.active_map_renderer],
                 )
                 for ic in range(len(self.agent_ids))
@@ -151,10 +164,28 @@ class PygameEnvRenderer(EnvRenderer):
         # update time
         self.sim_time = state["sim_time"]
 
-    def add_renderer_callback(self, callback_fn: callable):
+    def add_renderer_callback(self, callback_fn: Callable[[EnvRenderer], None]) -> None:
+        """
+        Add a custom callback for visualization.
+        All the callbacks are called at every rendering step, after having rendered the map and the cars.
+
+        Parameters
+        ----------
+        callback_fn : Callable[[EnvRenderer], None]
+            callback function to be called at every rendering step
+        """
         self.callbacks.append(callback_fn)
 
-    def render(self):
+    def render(self) -> Optional[np.ndarray]:
+        """
+        Render the current state in a frame.
+        It renders in the order: map, cars, callbacks, info text.
+
+        Returns
+        -------
+        Optional[np.ndarray]
+            if render_mode is "rgb_array", returns the rendered frame as an array
+        """
         self.event_handling()
 
         self.canvas.fill((255, 255, 255))  # white background
@@ -176,11 +207,8 @@ class PygameEnvRenderer(EnvRenderer):
             screen_rect = self.canvas.get_rect()
 
             if self.follow_agent_flag:
-                origin = self.map_metadata["origin"]
-                resolution = (
-                    self.map_metadata["resolution"]
-                    * self.ppus[self.active_map_renderer]
-                )
+                origin = self.map_origin
+                resolution = self.map_resolution * self.ppus[self.active_map_renderer]
                 ego_x, ego_y = self.cars[self.agent_to_follow].pose[:2]
                 cx = (ego_x - origin[0]) / resolution
                 cy = (ego_y - origin[1]) / resolution
@@ -231,7 +259,7 @@ class PygameEnvRenderer(EnvRenderer):
                 )
             return frame
 
-    def event_handling(self):
+    def event_handling(self) -> None:
         """
         Handle interaction events to change point-of-view.
 
@@ -282,21 +310,25 @@ class PygameEnvRenderer(EnvRenderer):
 
     def render_points(
         self,
-        points: Union[List, np.ndarray],
-        color: Tuple[int, int, int] = (0, 0, 255),
-        size: int = 1,
-    ):
+        points: list | np.ndarray,
+        color: Optional[tuple[int, int, int]] = (0, 0, 255),
+        size: Optional[int] = 1,
+    ) -> None:
         """
         Render a sequence of xy points on screen.
 
-        Args:
-            points: sequence of xy points (N, 2)
-            color: rgb color of the points
-            size: size of the points in pixels
+        Parameters
+        ----------
+        points : list | np.ndarray
+            list of points to render
+        color : Optional[tuple[int, int, int]], optional
+            color as rgb tuple, by default blue (0, 0, 255)
+        size : Optional[int], optional
+            size of the points in pixels, by default 1
         """
-        origin = self.map_metadata["origin"]
+        origin = self.map_origin
         ppu = self.ppus[self.active_map_renderer]
-        resolution = self.map_metadata["resolution"] * ppu
+        resolution = self.map_resolution * ppu
         points = ((points - origin[:2]) / resolution).astype(int)
         size = math.ceil(size / ppu)
 
@@ -305,21 +337,25 @@ class PygameEnvRenderer(EnvRenderer):
 
     def render_lines(
         self,
-        points: Union[List, np.ndarray],
-        color: Tuple[int, int, int] = (0, 0, 255),
-        size: int = 1,
-    ):
+        points: list | np.ndarray,
+        color: Optional[tuple[int, int, int]] = (0, 0, 255),
+        size: Optional[int] = 1,
+    ) -> None:
         """
         Render a sequence of lines segments.
 
-        Args:
-            points: sequence of xy points (N, 2)
-            color: rgb color of the points
-            size: size of the points in pixels
+        Parameters
+        ----------
+        points : list | np.ndarray
+            list of points to render
+        color : Optional[tuple[int, int, int]], optional
+            color as rgb tuple, by default blue (0, 0, 255)
+        size : Optional[int], optional
+            size of the line, by default 1
         """
-        origin = self.map_metadata["origin"]
+        origin = self.map_origin
         ppu = self.ppus[self.active_map_renderer]
-        resolution = self.map_metadata["resolution"] * ppu
+        resolution = self.map_resolution * ppu
         points = ((points - origin[:2]) / resolution).astype(int)
         size = math.ceil(size / ppu)
 
@@ -329,21 +365,25 @@ class PygameEnvRenderer(EnvRenderer):
 
     def render_closed_lines(
         self,
-        points: Union[List, np.ndarray],
-        color: Tuple[int, int, int] = (0, 0, 255),
-        size: int = 1,
-    ):
+        points: list | np.ndarray,
+        color: Optional[tuple[int, int, int]] = (0, 0, 255),
+        size: Optional[int] = 1,
+    ) -> None:
         """
-        Render a sequence of lines segments.
+        Render a sequence of lines segments forming a closed loop (draw a line between the last and the first point).
 
-        Args:
-            points: sequence of xy points (N, 2)
-            color: rgb color of the points
-            size: size of the points in pixels
+        Parameters
+        ----------
+        points : list | np.ndarray
+            list of 2d points to render
+        color : Optional[tuple[int, int, int]], optional
+            color as rgb tuple, by default blue (0, 0, 255)
+        size : Optional[int], optional
+            size of the line, by default 1
         """
-        origin = self.map_metadata["origin"]
+        origin = self.map_origin
         ppu = self.ppus[self.active_map_renderer]
-        resolution = self.map_metadata["resolution"] * ppu
+        resolution = self.map_resolution * ppu
         points = ((points - origin[:2]) / resolution).astype(int)
         size = math.ceil(size / ppu)
 
@@ -351,6 +391,9 @@ class PygameEnvRenderer(EnvRenderer):
             self.map_canvas, color, closed=True, points=points, width=size
         )
 
-    def close(self):
-        if self.render_mode == "human" or self.render_mode == "human_fast":
+    def close(self) -> None:
+        """
+        Close the rendering environment.
+        """
+        if self.render_mode in ["human", "human_fast"]:
             pygame.quit()

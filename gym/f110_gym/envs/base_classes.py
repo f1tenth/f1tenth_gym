@@ -33,6 +33,7 @@ from f110_gym.envs.action import CarAction
 from f110_gym.envs.collision_models import collision_multiple, get_vertices
 from f110_gym.envs.integrator import EulerIntegrator, IntegratorType
 from f110_gym.envs.laser_models import ScanSimulator2D, check_ttc_jit, ray_cast
+from f110_gym.envs.track import Track
 
 
 class RaceCar(object):
@@ -177,14 +178,14 @@ class RaceCar(object):
         """
         self.params = params
 
-    def set_map(self, map_name: str):
+    def set_map(self, map: str | Track):
         """
         Sets the map for scan simulator
 
         Args:
-            map_name (str): name of the map
+            map (str | Track): name of the map, or Track object
         """
-        RaceCar.scan_simulator.set_map(map_name)
+        RaceCar.scan_simulator.set_map(map)
 
     def reset(self, pose):
         """
@@ -430,18 +431,18 @@ class Simulator(object):
         num_beams = self.agents[0].scan_simulator.num_beams
         self.agent_scans = np.empty((self.num_agents, num_beams))
 
-    def set_map(self, map_name):
+    def set_map(self, map: str | Track):
         """
         Sets the map of the environment and sets the map for scan simulator of each agent
 
         Args:
-            map_name (str): name of the map
+            map (str | Track): name of the map, or Track object
 
         Returns:
             None
         """
         for agent in self.agents:
-            agent.set_map(map_name)
+            agent.set_map(map)
 
     def update_params(self, params, agent_idx=-1):
         """

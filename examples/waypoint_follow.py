@@ -196,13 +196,6 @@ class PurePursuitPlanner:
             conf.wpt_path, delimiter=conf.wpt_delim, skiprows=conf.wpt_rowskip
         ).astype(np.float32)
 
-    def render_waypoints(self, e):
-        """
-        Callback to render waypoints.
-        """
-        points = self.waypoints[:, :2]
-        e.render_closed_lines(points, color=(128, 0, 0), size=1)
-
     def render_lookahead_point(self, e):
         """
         Callback to render the lookahead point.
@@ -310,7 +303,7 @@ def main():
             "model": "st",
             "observation_config": {"type": "kinematic_state"},
             "params": {"mu": 1.0},
-            "reset_config": {"type": "random_static"},
+            "reset_config": {"type": "rl_random_static"},
         },
         render_mode="human",
     )
@@ -318,20 +311,11 @@ def main():
 
     planner = PurePursuitPlanner(track=track, wb=0.17145 + 0.15875)
 
-    poses = np.array(
-        [
-            [
-                track.raceline.xs[0],
-                track.raceline.ys[0],
-                track.raceline.yaws[0],
-            ]
-        ]
-    )
-    env.unwrapped.add_render_callback(planner.render_waypoints)
+    env.unwrapped.add_render_callback(track.raceline.render_waypoints)
     env.unwrapped.add_render_callback(planner.render_local_plan)
     env.unwrapped.add_render_callback(planner.render_lookahead_point)
 
-    obs, info = env.reset(options={"poses": poses})
+    obs, info = env.reset()
     done = False
     env.render()
 
