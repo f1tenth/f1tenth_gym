@@ -1,0 +1,61 @@
+[tool.pytest.ini_options]
+minversion = 6.0
+addopts = "-ra -q"
+testpaths =[
+    "tests",
+    "integration",
+]
+
+
+[tool.poetry]
+name = "f1tenth-gym"
+version = "0.2.1"
+description = "Gym environment for F1TENTH"
+license = "MIT"
+authors = [
+    "Hongrui Zheng", 
+    "Renukanandan Tumu", 
+    "Luigi Berducci", 
+    "Ahmad Amine",
+    "Joseph Auckley", 
+    "Matthew O'Kelly", 
+    "Aman Sinha"
+]
+maintainers = [
+    "Hongrui Zheng",
+]
+readme = "README.md"
+homepage = "https://f1tenth.org"
+repository = "https://github.com/f1tenth/f1tenth_gym"
+documentation = "https://f1tenth-gym.readthedocs.io/en/latest/"
+packages = [
+    { include = "f110_gym", from = "gym"},
+]
+
+[tool.poetry.dependencies]
+python = ">=3.9,<3.12"
+gymnasium = "^0.29.1"
+numpy = "<=1.25,>=1.18"
+pillow = ">=9.0.1"
+scipy = ">=1.7.3"
+numba = ">=0.55.2"
+PyYAML = ">=5.3.1"
+pygame = "^2.5.2"
+opencv-python = "^4.9.0.80"
+yamldataclassconfig = "^1.5.0"
+requests = "^2.31.0"
+shapely = "^2.0.2"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.4.4"
+black = "^23.12.1"
+ipykernel = "^6.29.0"
+isort = "^5.13.2"
+autoflake = "^2.2.1"
+matplotlib = "^3.8.2"
+flake8 = "^7.0.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
