@@ -448,6 +448,9 @@ class ScanSimulator2D(object):
         self.map_height = None
         self.map_width = None
         self.map_resolution = None
+        self.track = None
+        self.map_img = None
+        self.origin = None
         self.dt = None
 
         # precomputing corresponding cosines and sines of the angle array
