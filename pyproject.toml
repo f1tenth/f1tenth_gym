@@ -29,7 +29,7 @@ homepage = "https://f1tenth.org"
 repository = "https://github.com/f1tenth/f1tenth_gym"
 documentation = "https://f1tenth-gym.readthedocs.io/en/latest/"
 packages = [
-    { include = "f110_gym", from = "gym"},
+    { include = "f110_gym", from = "src"},
 ]
 
 [tool.poetry.dependencies]
