@@ -2,6 +2,7 @@
 Code from Cubic spline planner
 Author: Atsushi Sakai(@Atsushi_twi)
 """
+from __future__ import annotations
 import bisect
 import math
 
@@ -11,16 +12,43 @@ import numpy as np
 class CubicSpline1D:
     """
     1D Cubic Spline class
-    Parameters
+
+    Attributes
     ----------
     x : list
         x coordinates for data points. This x coordinates must be
         sorted in ascending order.
     y : list
         y coordinates for data points
+    a : list
+        coefficient a
+    b : list
+        coefficient b
+    c : list
+        coefficient c
+    d : list
+        coefficient d
+    nx : int
+        dimension of x
     """
 
-    def __init__(self, x, y):
+    def __init__(self, x: np.ndarray, y: np.ndarray):
+        """
+        Returns a 1D cubic spline object.
+
+        Parameters
+        ----------
+        x : list
+            x coordinates for data points. This x coordinates must be
+            sorted in ascending order.
+        y : list
+            y coordinates for data points
+
+        Raises
+        ------
+        ValueError
+            if x is not sorted in ascending order
+        """
         h = np.diff(x)
         if np.any(h < 0):
             raise ValueError("x coordinates must be sorted in ascending order")
@@ -30,12 +58,12 @@ class CubicSpline1D:
         self.y = y
         self.nx = len(x)  # dimension of x
 
-        # calc coefficient a
+        # Calc coefficient a
         self.a = [iy for iy in y]
 
-        # calc coefficient c
-        A = self.__calc_A(h)
-        B = self.__calc_B(h, self.a)
+        # Calc coefficient c
+        A = self.__calc_A(h=h)
+        B = self.__calc_B(h=h, a=self.a)
         self.c = np.linalg.solve(A, B)
 
         # calc spline coefficient b and d
@@ -47,14 +75,20 @@ class CubicSpline1D:
             self.d.append(d)
             self.b.append(b)
 
-    def calc_position(self, x):
+    def calc_position(self, x: float) -> float | None:
         """
         Calc `y` position for given `x`.
-        if `x` is outside the data point's `x` range, return None.
+        If `x` is outside the data point's `x` range, return None.
+
+        Parameters
+        ----------
+        x : float
+            position for which to calculate y.
+
         Returns
         -------
         y : float
-            y position for given x.
+            position along the spline for given x.
         """
         if x < self.x[0]:
             return None
@@ -64,15 +98,21 @@ class CubicSpline1D:
         i = self.__search_index(x)
         dx = x - self.x[i]
         position = (
-            self.a[i] + self.b[i] * dx + self.c[i] * dx**2.0 + self.d[i] * dx**3.0
+            self.a[i] + self.b[i] * dx + self.c[i] * dx ** 2.0 + self.d[i] * dx ** 3.0
         )
 
         return position
 
-    def calc_first_derivative(self, x):
+    def calc_first_derivative(self, x: float) -> float | None:
         """
         Calc first derivative at given x.
-        if x is outside the input x, return None
+        If x is outside the input x, return None
+
+        Parameters
+        ----------
+        x : float
+            position for which to calculate the first derivative.
+
         Returns
         -------
         dy : float
@@ -86,13 +126,19 @@ class CubicSpline1D:
 
         i = self.__search_index(x)
         dx = x - self.x[i]
-        dy = self.b[i] + 2.0 * self.c[i] * dx + 3.0 * self.d[i] * dx**2.0
+        dy = self.b[i] + 2.0 * self.c[i] * dx + 3.0 * self.d[i] * dx ** 2.0
         return dy
 
-    def calc_second_derivative(self, x):
+    def calc_second_derivative(self, x: float) -> float | None:
         """
         Calc second derivative at given x.
-        if x is outside the input x, return None
+        If x is outside the input x, return None
+
+        Parameters
+        ----------
+        x : float
+            position for which to calculate the second derivative.
+
         Returns
         -------
         ddy : float
@@ -109,15 +155,35 @@ class CubicSpline1D:
         ddy = 2.0 * self.c[i] + 6.0 * self.d[i] * dx
         return ddy
 
-    def __search_index(self, x):
+    def __search_index(self, x: float) -> int:
         """
-        search data segment index
+        Search data segment index.
+
+        Parameters
+        ----------
+        x : float
+            position for which to find the segment index.
+
+        Returns
+        -------
+        index : int
+            index of the segment.
         """
         return bisect.bisect(self.x[:-1], x) - 1
 
-    def __calc_A(self, h):
+    def __calc_A(self, h: np.ndarray) -> np.ndarray:
         """
-        calc matrix A for spline coefficient c
+        Calc matrix A for spline coefficient c.
+
+        Parameters
+        ----------
+        h : np.ndarray
+            difference of x coordinates.
+
+        Returns
+        -------
+        A : np.ndarray
+            matrix A.
         """
         A = np.zeros((self.nx, self.nx))
         A[0, 0] = 1.0
@@ -132,9 +198,21 @@ class CubicSpline1D:
         A[self.nx - 1, self.nx - 1] = 1.0
         return A
 
-    def __calc_B(self, h, a):
+    def __calc_B(self, h: np.ndarray, a: np.ndarray) -> np.ndarray:
         """
-        calc matrix B for spline coefficient c
+        Calc matrix B for spline coefficient c.
+
+        Parameters
+        ----------
+        h : np.ndarray
+            difference of x coordinates.
+        a : np.ndarray
+            y coordinates for data points.
+
+        Returns
+        -------
+        B : np.ndarray
+            matrix B.
         """
         B = np.zeros(self.nx)
         for i in range(self.nx - 2):
@@ -146,41 +224,71 @@ class CubicSpline1D:
 
 class CubicSpline2D:
     """
-    Cubic CubicSpline2D class
-    Parameters
+    Cubic CubicSpline2D class.
+
+    Attributes
     ----------
-    x : list
-        x coordinates for data points.
-    y : list
-        y coordinates for data points.
+    s : list
+        cumulative distance along the data points.
+    sx : CubicSpline1D
+        cubic spline for x coordinates.
+    sy : CubicSpline1D
+        cubic spline for y coordinates.
     """
 
-    def __init__(self, x, y):
-        self.s = self.__calc_s(x, y)
-        self.sx = CubicSpline1D(self.s, x)
-        self.sy = CubicSpline1D(self.s, y)
+    def __init__(self, x: np.ndarray, y: np.ndarray):
+        """
+        Returns a 2D cubic spline object.
 
-    def __calc_s(self, x, y):
+        Parameters
+        ----------
+        x : list
+            x coordinates for data points.
+        y : list
+            y coordinates for data points.
+        """
+        self.s = self.__calc_s(x, y)
+        self.sx = CubicSpline1D(x=self.s, y=x)
+        self.sy = CubicSpline1D(x=self.s, y=y)
+
+    def __calc_s(self, x: np.ndarray, y: np.ndarray) -> np.ndarray:
+        """
+        Calc cumulative distance.
+
+        Parameters
+        ----------
+        x : list
+            x coordinates for data points.
+        y : list
+            y coordinates for data points.
+
+        Returns
+        -------
+        s : np.ndarray
+            cumulative distance along the data points.
+        """
         dx = np.diff(x)
         dy = np.diff(y)
         self.ds = np.hypot(dx, dy)
         s = [0]
         s.extend(np.cumsum(self.ds))
-        return s
+        return np.array(s)
 
-    def calc_position(self, s):
+    def calc_position(self, s: float) -> tuple[float | None, float | None]:
         """
-        calc position
+        Calc position at the given s.
+
         Parameters
         ----------
         s : float
             distance from the start point. if `s` is outside the data point's
             range, return None.
+
         Returns
         -------
-        x : float
+        x : float | None
             x position for given s.
-        y : float
+        y : float | None
             y position for given s.
         """
         x = self.sx.calc_position(s)
@@ -188,14 +296,16 @@ class CubicSpline2D:
 
         return x, y
 
-    def calc_curvature(self, s):
+    def calc_curvature(self, s: float) -> float | None:
         """
-        calc curvature
+        Calc curvature at the given s.
+
         Parameters
         ----------
         s : float
             distance from the start point. if `s` is outside the data point's
             range, return None.
+
         Returns
         -------
         k : float
@@ -205,17 +315,18 @@ class CubicSpline2D:
         ddx = self.sx.calc_second_derivative(s)
         dy = self.sy.calc_first_derivative(s)
         ddy = self.sy.calc_second_derivative(s)
-        k = (ddy * dx - ddx * dy) / ((dx**2 + dy**2) ** (3 / 2))
+        k = (ddy * dx - ddx * dy) / ((dx ** 2 + dy ** 2) ** (3 / 2))
         return k
 
-    def calc_yaw(self, s):
+    def calc_yaw(self, s: float) -> float | None:
         """
-        calc yaw
+        Calc yaw angle at the given s.
+
         Parameters
         ----------
         s : float
-            distance from the start point. if `s` is outside the data point's
-            range, return None.
+            distance from the start point. If `s` is outside the data point's range, return None.
+
         Returns
         -------
         yaw : float

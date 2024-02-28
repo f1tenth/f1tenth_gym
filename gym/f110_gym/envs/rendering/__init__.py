@@ -1,6 +1,5 @@
-from __future__ import annotations
 import pathlib
-from typing import List, Tuple, Any
+from typing import Any, Optional
 
 from f110_gym.envs.rendering.renderer import RenderSpec, EnvRenderer
 from f110_gym.envs.track import Track
@@ -10,9 +9,25 @@ def make_renderer(
     params: dict[str, Any],
     track: Track,
     agent_ids: list[str],
-    render_mode: str = None,
-    render_fps: int = 100,
-) -> Tuple[EnvRenderer, RenderSpec]:
+    render_mode: Optional[str] = None,
+    render_fps: Optional[int] = 100,
+) -> tuple[EnvRenderer, RenderSpec]:
+    """
+    Return an instance of the renderer and the rendering specification.
+
+    Parameters
+    ----------
+    params : dict
+        dictionary of renderer parameters
+    track : Track
+        track object
+    agent_ids : list
+        list of agent ids to render
+    render_mode : str, optional
+        rendering mode, by default None
+    render_fps : int, optional
+        rendering frames per second, by default 100
+    """
     from f110_gym.envs.rendering.rendering_pygame import PygameEnvRenderer
 
     cfg_file = pathlib.Path(__file__).parent.absolute() / "rendering.yaml"
