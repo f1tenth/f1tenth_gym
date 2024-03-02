@@ -9,9 +9,9 @@ from PIL import Image
 from PIL.Image import Transpose
 from yamldataclassconfig.config import YamlDataClassConfig
 
-from f110_gym.envs.track import Raceline
-from f110_gym.envs.track.cubic_spline import CubicSpline2D
-from f110_gym.envs.track.utils import find_track_dir
+from . import Raceline
+from .cubic_spline import CubicSpline2D
+from .utils import find_track_dir
 
 
 @dataclass

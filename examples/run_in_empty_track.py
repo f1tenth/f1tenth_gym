@@ -1,7 +1,7 @@
 import numpy as np
 
 from waypoint_follow import PurePursuitPlanner
-from f110_gym.envs.track import Track
+from f1tenth_gym.envs.track import Track
 import gymnasium as gym
 
 

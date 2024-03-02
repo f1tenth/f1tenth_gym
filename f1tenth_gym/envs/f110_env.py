@@ -27,19 +27,19 @@ Author: Hongrui Zheng
 # gym imports
 import gymnasium as gym
 
-from f110_gym.envs.action import (CarAction,
+from .action import (CarAction,
                                   from_single_to_multi_action_space)
-from f110_gym.envs.integrator import IntegratorType
-from f110_gym.envs.rendering import make_renderer
+from .integrator import IntegratorType
+from .rendering import make_renderer
 
-from f110_gym.envs.track import Track
+from .track import Track
 
 # base classes
-from f110_gym.envs.base_classes import Simulator, DynamicModel
-from f110_gym.envs.observation import observation_factory
-from f110_gym.envs.reset import make_reset_fn
-from f110_gym.envs.track import Track
-from f110_gym.envs.utils import deep_update
+from .base_classes import Simulator, DynamicModel
+from .observation import observation_factory
+from .reset import make_reset_fn
+from .track import Track
+from .utils import deep_update
 
 
 # others

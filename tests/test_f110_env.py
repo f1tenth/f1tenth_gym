@@ -2,7 +2,7 @@ import unittest
 
 import gymnasium as gym
 import numpy as np
-from f110_gym.envs.utils import deep_update
+from f1tenth_gym.envs.utils import deep_update
 
 
 class TestEnvInterface(unittest.TestCase):
@@ -18,7 +18,7 @@ class TestEnvInterface(unittest.TestCase):
         conf = deep_update(conf, config)
 
         env = gym.make(
-            "f110_gym:f110-v0",
+            "f1tenth_gym:f1tenth-v0",
             config=conf,
         )
         return env
@@ -157,7 +157,7 @@ class TestEnvInterface(unittest.TestCase):
             "observation_config": {"type": "kinematic_state"},
         }
         vec_env = gym.vector.make(
-            "f110_gym:f110-v0", asynchronous=False, config=config, num_envs=num_envs
+            "f1tenth_gym:f1tenth-v0", asynchronous=False, config=config, num_envs=num_envs
         )
 
         rnd_poses = np.random.random((2, 3))
@@ -188,7 +188,7 @@ class TestEnvInterface(unittest.TestCase):
             "observation_config": {"type": "kinematic_state"},
         }
         vec_env = gym.make_vec(
-            "f110_gym:f110-v0", vectorization_mode="async", config=config, num_envs=num_envs
+            "f1tenth_gym:f1tenth-v0", vectorization_mode="async", config=config, num_envs=num_envs
         )
 
         rnd_poses = np.random.random((2, 3))
@@ -220,7 +220,7 @@ class TestEnvInterface(unittest.TestCase):
             "reset_config": {"type": "rl_random_random"},
         }
         vec_env = gym.make_vec(
-            "f110_gym:f110-v0", vectorization_mode="sync", config=config, num_envs=num_envs,
+            "f1tenth_gym:f1tenth-v0", vectorization_mode="sync", config=config, num_envs=num_envs,
         )
 
         obss, infos = vec_env.reset()
