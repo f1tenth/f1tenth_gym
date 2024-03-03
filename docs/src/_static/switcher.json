@@ -1,0 +1,10 @@
+[
+    {
+      "version": "dev",
+      "url": "https://pydata-sphinx-theme.readthedocs.io/en/latest/"
+    },
+    {
+        "version": "v1.0.0",
+        "url": "https://pydata-sphinx-theme.readthedocs.io/en/stable/"
+      }
+]

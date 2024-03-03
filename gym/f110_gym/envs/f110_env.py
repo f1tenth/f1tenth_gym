@@ -18,10 +18,7 @@ from f110_gym.envs.utils import deep_update
 
 # others
 import numpy as np
-
-
-class F110Env(gym.Env):
-    """
+"""
     OpenAI gym environment for F1TENTH
 
     Env should be initialized by calling gym.make('f110_gym:f110-v0', **kwargs)
@@ -58,10 +55,24 @@ class F110Env(gym.Env):
             ego_idx (int, default=0): ego's index in list of agents
     """
 
+class F110Env(gym.Env):
+    """
+    OpenAI gym environment for F1TENTH
+    """
+
     # NOTE: change matadata with default rendering-modes, add definition of render_fps
     metadata = {"render_modes": ["human", "human_fast", "rgb_array"], "render_fps": 100}
 
     def __init__(self, config: dict = None, render_mode=None, **kwargs):
+        """_summary_
+
+        Parameters
+        ----------
+        config : dict, optional
+            _description_, by default None
+        render_mode : _type_, optional
+            _description_, by default None
+        """
         super().__init__()
 
         # Configuration
@@ -164,15 +175,13 @@ class F110Env(gym.Env):
 
     @classmethod
     def default_config(cls) -> dict:
-        """
-        Default environment configuration.
+        """Default environment configuration.
 
         Can be overloaded in environment implementations, or by calling configure().
 
-        Args:
-            None
-
-        Returns:
+        Returns
+        -------
+        dict
             a configuration dict
         """
         return {
@@ -209,6 +218,21 @@ class F110Env(gym.Env):
         }
 
     def configure(self, config: dict) -> None:
+        """Update configuration of environment
+
+        Parameters
+        ----------
+        config : dict
+            a configuration dict
+
+        Examples
+        --------
+        >>> import gymnasium as gym
+        >>> env = gym.make("f1tenth_gym:f1tenth-v0")
+        >>> new_conf = {"params": {"mu": 1.5}}
+        >>> env.configure(config=new_conf)
+
+        """
         if config:
             self.config = deep_update(self.config, config)
             self.params = self.config["params"]
@@ -224,15 +248,14 @@ class F110Env(gym.Env):
                 )
 
     def _check_done(self):
-        """
-        Check if the current rollout is done
+        """Check if the current rollout is done
 
-        Args:
-            None
-
-        Returns:
-            done (bool): whether the rollout is done
-            toggle_list (list[int]): each agent's toggle list for crossing the finish zone
+        Returns
+        -------
+        done : bool
+            if simulation is done
+        tooggle : np.ndarray(bool)
+            if the indicator for crossing the starting zone for each agent has toggled for more than 4 times
         """
 
         # this is assuming 2 agents

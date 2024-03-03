@@ -1,1 +1,5 @@
-breathe
+sphinx>=4.5.0
+numpydoc==1.5.0
+pydata-sphinx-theme==0.13.3
+sphinx-design
+sphinx-copybutton
