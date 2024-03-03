@@ -1,7 +1,6 @@
 # flake8: noqa
 import os
 import sys
-# import f110_gym
 
 sys.path.insert(0, os.path.abspath("../../"))
 
@@ -48,39 +47,21 @@ coverage_show_missing_items = True
 # -- numpydoc -----------------------------------------------------------------
 numpydoc_show_class_members = False
 
-# -- versions ----------------------------------------------------------------
-version_match = os.environ.get("READTHEDOCS_VERSION")
-# release = f110_gym.__version__
-release = "1.0.0"
-json_url = "https://f1tenth-gym.readthedocs.io/en/latest/_static/switcher.json"
-if not version_match or version_match.isdigit() or version_match == "latest":
-    if "dev" in release or "rc" in release:
-        version_match = "dev"
-        json_url = "_static/switcher.json"
-    else:
-        version_match = f"v{release}"
-elif version_match == "stable":
-    version_match = f"v{release}"
-
 # -- Theme -------------------------------------------------------------------
 html_theme = "pydata_sphinx_theme"
 html_favicon = "assets/f1_stickers_02.png"
 html_theme_options = {
     "logo": {
-        "image_light": "src/assets/f1tenth_gym_color.svg",
-        "image_dark": "src/assets/f1tenth_gym.svg",
+        "image_light": "assets/f1tenth_gym_color.svg",
+        "image_dark": "assets/f1tenth_gym.svg",
     },
     "github_url": "https://github.com/f1tenth/f1tenth_gym",
     "collapse_navigation": True,
     "header_links_before_dropdown": 6,
     # Add light/dark mode and documentation version switcher:
-    "navbar_end": ["theme-switcher", "navbar-icon-links", "version-switcher"],
-    "switcher": {
-        "json_url": json_url,
-        "version_match": version_match,
-    }
+    "navbar_end": ["theme-switcher", "navbar-icon-links"],
 }
-html_sidebars = {
-    "**": ["search-field.html", "sidebar-nav-bs.html", "sidebar-ethical-ads.html"]
-}
+# html_sidebars = {
+#     "**": ["search-field.html", "sidebar-nav-bs.html", "sidebar-ethical-ads.html"]
+# }
 html_last_updated_fmt = "%b %d, %Y"
