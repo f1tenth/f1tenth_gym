@@ -8,9 +8,11 @@ API Overview
   env
   base_classes
   dynamic_models
+  integrators
   laser_models
   collision_models
   obv
   rendering
   track
   reset
+  utils
