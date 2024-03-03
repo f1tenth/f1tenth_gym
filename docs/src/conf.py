@@ -65,3 +65,4 @@ html_theme_options = {
 #     "**": ["search-field.html", "sidebar-nav-bs.html", "sidebar-ethical-ads.html"]
 # }
 html_last_updated_fmt = "%b %d, %Y"
+html_show_sourcelink = True
