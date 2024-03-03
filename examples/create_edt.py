@@ -29,7 +29,6 @@ DEFAULT_MAP_NAMES = [
 ]
 
 for track_name in DEFAULT_MAP_NAMES:
-    print("Loading a map without edt, a warning should appear")
     track = Track.from_track_name(track_name)
     occupancy_map = track.occupancy_map
     resolution = track.spec.resolution
@@ -39,5 +38,4 @@ for track_name in DEFAULT_MAP_NAMES:
     # saving
     np.save(track.filepath, dt)
 
-    print("Loading a map with edt, warning should no longer appear")
     track_wedt = Track.from_track_name(track_name)
