@@ -1,7 +1,7 @@
 # flake8: noqa
 import os
 import sys
-import f110_gym
+# import f110_gym
 
 sys.path.insert(0, os.path.abspath("../../"))
 
