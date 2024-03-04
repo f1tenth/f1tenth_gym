@@ -66,3 +66,5 @@ html_theme_options = {
 # }
 html_last_updated_fmt = "%b %d, %Y"
 html_show_sourcelink = True
+
+copybutton_prompt_text = ">>> "

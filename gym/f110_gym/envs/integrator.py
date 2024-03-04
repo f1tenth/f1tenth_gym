@@ -3,11 +3,35 @@ from enum import Enum
 
 
 class IntegratorType(Enum):
+    """Integrator enum
+
+    RK4: 1
+
+    Euler: 2
+    """
+
     RK4 = 1
     Euler = 2
 
     @staticmethod
     def from_string(integrator: str):
+        """Set integrator by string
+
+        Parameters
+        ----------
+        integrator : str
+            integrator type
+
+        Returns
+        -------
+        RK4Integrator | EulerIntegrator
+            integrator object
+
+        Raises
+        ------
+        ValueError
+            Unknown integrator type
+        """
         if integrator == "rk4":
             return RK4Integrator()
         elif integrator == "euler":
@@ -17,24 +41,74 @@ class IntegratorType(Enum):
 
 
 class Integrator:
+    """Integrator abstract class"""
+
     def __init__(self) -> None:
         self._integrator_type = None
 
     @abstractmethod
     def integrate(self, f, x, u, dt, params):
+        """Integrate dynamics
+
+        Parameters
+        ----------
+        f : np.ndarray
+            RHS of ODE
+        x : np.ndarray
+            state
+        u : np.ndarray
+            control input
+        dt : float
+            sampling time
+        params : dict
+            parameter dictionary
+
+        Raises
+        ------
+        NotImplementedError
+        """
         raise NotImplementedError("integrate method not implemented")
 
     @property
     def type(self) -> str:
+        """property, integrator type
+
+        Returns
+        -------
+        str
+            type
+        """
         return self._integrator_type
 
 
 class RK4Integrator(Integrator):
+    """Runge Kutta fourth order integrator"""
+
     def __init__(self) -> None:
         super().__init__()
         self._integrator_type = "rk4"
 
     def integrate(self, f, x, u, dt, params):
+        """Integrate dynamics
+
+        Parameters
+        ----------
+        f : np.ndarray
+            RHS of ODE
+        x : np.ndarray
+            state
+        u : np.ndarray
+            control input
+        dt : float
+            sampling time
+        params : dict
+            parameter dictionary
+
+        Returns
+        -------
+        np.ndarray:
+            integrated state
+        """
         k1 = f(
             x,
             u,
@@ -131,11 +205,33 @@ class RK4Integrator(Integrator):
 
 
 class EulerIntegrator(Integrator):
+    """Euler integrator"""
+
     def __init__(self) -> None:
         super().__init__()
         self._integrator_type = "euler"
 
     def integrate(self, f, x, u, dt, params):
+        """Integrate dynamics
+
+        Parameters
+        ----------
+        f : np.ndarray
+            RHS of ODE
+        x : np.ndarray
+            state
+        u : np.ndarray
+            control input
+        dt : float
+            sampling time
+        params : dict
+            parameter dictionary
+
+        Returns
+        -------
+        np.ndarray:
+            integrated state
+        """
         dstate = f(
             x,
             u,

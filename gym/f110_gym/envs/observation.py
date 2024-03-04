@@ -7,31 +7,62 @@ import numpy as np
 
 
 class Observation:
-    """
-    Abstract class for observations. Each observation must implement the space and observe methods.
+    """Observation abstract class
 
-    :param env: The environment.
-    :param vehicle_id: The id of the observer vehicle.
-    :param kwargs: Additional arguments.
+    Parameters
+    ----------
+    env : gym.Env
+        Gymnasium environment
     """
-
     def __init__(self, env):
         self.env = env
 
     @abstractmethod
     def space(self):
+        """Observation space
+
+        Raises
+        ------
+        NotImplementedError
+        """        
         raise NotImplementedError()
 
     @abstractmethod
     def observe(self):
+        """Observe
+
+        Raises
+        ------
+        NotImplementedError
+        """        
         raise NotImplementedError()
 
 
 class OriginalObservation(Observation):
+    """Original Observation class
+
+    Parameters
+    ----------
+    env : gym.Env
+        Gymnasium environment
+    """
     def __init__(self, env):
         super().__init__(env)
 
     def space(self):
+        """Return observation space
+
+        Original Observations is a dict with keys:
+
+        >>> [ego_idx, scans, poses_x, poses_y, poses_theta, linear_vels_x, linear_vels_y, ang_vels_z, collisions, lap_times, lap_counts]
+
+        Each value is a list of observations corresponding to the agents.
+
+        Returns
+        -------
+        gym.spaces.Space
+            observation space
+        """
         num_agents = self.env.num_agents
         scan_size = self.env.sim.agents[0].scan_simulator.num_beams
         scan_range = (
@@ -99,6 +130,13 @@ class OriginalObservation(Observation):
         return obs_space
 
     def observe(self):
+        """Observe function
+
+        Returns
+        -------
+        dict
+            Current observation
+        """        
         # state indices
         xi, yi, deltai, vxi, yawi, yaw_ratei, slipi = range(
             7
@@ -152,11 +190,31 @@ class OriginalObservation(Observation):
 
 
 class FeaturesObservation(Observation):
+    """Feature Observation class
+
+    Parameters
+    ----------
+    env : gym.Env
+        Gymnasium environment
+    """
     def __init__(self, env, features: List[str]):
         super().__init__(env)
         self.features = features
 
     def space(self):
+        """Return observation space
+
+        Feature Observations is a dict with agent_ids as keys
+        
+        And each value is a dict with keys:
+
+        >>> [scan, pose_x, pose_y, pose_theta, linear_vel_x, linear_vel_y, ang_vel_z, delta, beta, collision, lap_time, lap_count]
+
+        Returns
+        -------
+        gym.spaces.Space
+            observation space
+        """
         scan_size = self.env.sim.agents[0].scan_simulator.num_beams
         scan_range = self.env.sim.agents[0].scan_simulator.max_range
         large_num = 1e30  # large number to avoid unbounded obs space (ie., low=-inf or high=inf)
@@ -209,6 +267,13 @@ class FeaturesObservation(Observation):
         return obs_space
 
     def observe(self):
+        """Observe function
+
+        Returns
+        -------
+        dict
+            Current observation
+        """        
         # state indices
         xi, yi, deltai, vxi, yawi, yaw_ratei, slipi = range(
             7
@@ -264,6 +329,25 @@ class FeaturesObservation(Observation):
 
 
 def observation_factory(env, type: str | None, **kwargs) -> Observation:
+    """Decides which observation type and keys to include based on type string
+
+    Parameters
+    ----------
+    env : gym.Env
+        Gymnasium environment
+    type : str | None
+        Observation type
+
+    Returns
+    -------
+    Observation
+        Observation type
+
+    Raises
+    ------
+    ValueError
+        Invalid observation type
+    """    
     type = type or "original"
 
     if type == "original":
