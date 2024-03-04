@@ -24,7 +24,7 @@ def find_track_dir(track_name: str) -> pathlib.Path:
     FileNotFoundError
         if no map directory matching the track name is found
     """
-    map_dir = pathlib.Path(__file__).parent.parent.parent.parent / "maps"
+    map_dir = pathlib.Path(__file__).parent.parent.parent.parent.parent / "maps"
 
     if not (map_dir / track_name).exists():
         print("Downloading Files for: " + track_name)

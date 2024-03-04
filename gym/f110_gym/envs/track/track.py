@@ -31,6 +31,7 @@ class Track:
     filepath: str
     ext: str
     occupancy_map: np.ndarray
+    edt: np.ndarray
     centerline: Raceline
     raceline: Raceline
 
@@ -40,6 +41,7 @@ class Track:
         filepath: str,
         ext: str,
         occupancy_map: np.ndarray,
+        edt: Optional[np.ndarray] = None,
         centerline: Optional[Raceline] = None,
         raceline: Optional[Raceline] = None,
     ):
@@ -56,6 +58,8 @@ class Track:
             file extension of the track image file
         occupancy_map : np.ndarray
             occupancy grid map
+        edt : np.ndarray
+            distance transform of the map
         centerline : Raceline, optional
             centerline of the track, by default None
         raceline : Raceline, optional
@@ -65,6 +69,7 @@ class Track:
         self.filepath = filepath
         self.ext = ext
         self.occupancy_map = occupancy_map
+        self.edt = edt
         self.centerline = centerline
         self.raceline = raceline
 
@@ -125,6 +130,12 @@ class Track:
             occupancy_map[occupancy_map <= 128] = 0.0
             occupancy_map[occupancy_map > 128] = 255.0
 
+            # if exists, load edt
+            if (track_dir / f"{track}_map.npy").exists():
+                edt = np.load(track_dir / f"{track}_map.npy")
+            else:
+                edt = None
+
             # if exists, load centerline
             if (track_dir / f"{track}_centerline.csv").exists():
                 centerline = Raceline.from_centerline_file(
@@ -146,6 +157,7 @@ class Track:
                 filepath=str((track_dir / map_filename.stem).absolute()),
                 ext=map_filename.suffix,
                 occupancy_map=occupancy_map,
+                edt=edt,
                 centerline=centerline,
                 raceline=raceline,
             )

@@ -1,3 +1,5 @@
+import datetime
+import os
 import pathlib
 import time
 import unittest
@@ -138,3 +140,29 @@ class TestTrack(unittest.TestCase):
         # rename the backup track dir to its original name
         track_backup_dir = find_track_dir(tmp_dir.stem)
         track_backup_dir.rename(track_dir)
+
+    def test_edt_update(self):
+        """
+        Test the re-creation of the edt if the map modification time is more recent.
+        """
+        track = Track.from_track_name("Spielberg")
+
+        # set the map image modification/access time to now
+        now = datetime.datetime.now()
+        dt_epoch = now.timestamp()
+        map_filepath = pathlib.Path(track.filepath).parent / track.spec.image
+        os.utime(map_filepath, (dt_epoch, dt_epoch))
+
+        # check the edt modification time is now < the map image time
+        edt_filepath = map_filepath.with_suffix(".npy")
+        self.assertTrue(os.path.getmtime(map_filepath) > os.path.getmtime(edt_filepath),
+                         f"expected the map image modification time to be > the edt modification time")
+
+        # this should force the edt to be recomputed
+        # check the edt modification time is not > the map image time
+        track2 = Track.from_track_name("Spielberg")
+        self.assertTrue(os.path.getmtime(map_filepath) < os.path.getmtime(edt_filepath),
+                        f"expected the map image modification time to be > the edt modification time")
+
+        # check consistency in the maps edts
+        self.assertTrue(np.allclose(track.edt, track2.edt), f"expected the same edt transform for {track.spec.name}")

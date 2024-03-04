@@ -488,7 +488,10 @@ class ScanSimulator2D(object):
         self.orig_c = np.cos(self.origin[2])
 
         # get the distance transform
-        self.dt = get_dt(self.map_img, self.map_resolution)
+        if self.track.edt is not None:
+            self.dt = self.track.edt
+        else:
+            self.dt = get_dt(self.map_img, self.map_resolution)
 
         return True
 
