@@ -1,31 +1,3 @@
-# Copyright 2020 Technical University of Munich, Professorship of Cyber-Physical Systems, Matthew O'Kelly, Aman Sinha, Hongrui Zheng
-
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-
-# The above copyright notice and this permission notice shall be included in all
-# copies or substantial portions of the Software.
-
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-# SOFTWARE.
-
-
-"""
-Prototype of vehicle dynamics functions and classes for simulating 2D Single
-Track dynamic model
-Following the implementation of commanroad's Single Track Dynamics model
-Original implementation: https://gitlab.lrz.de/tum-cps/commonroad-vehicle-models/
-Author: Hongrui Zheng, Renukanandan Tumu
-"""
 import warnings
 from enum import Enum
 
@@ -34,11 +6,37 @@ from numba import njit
 
 
 class DynamicModel(Enum):
+    """Enum for specifying dynamic models
+
+    KS: 1 (kinematic single track)
+
+    ST: 2 (single track)
+
+    """
+
     KS = 1  # Kinematic Single Track
     ST = 2  # Single Track
 
     @staticmethod
     def from_string(model: str):
+        """Set dynamic models from string.
+
+        Parameters
+        ----------
+        model : str
+            dynamic model type
+
+        Returns
+        -------
+        int
+            dynamic model type
+
+
+        Raises
+        ------
+        ValueError
+            Unknown model type
+        """
         if model == "ks":
             warnings.warn(
                 "Chosen model is KS. This is different from previous versions of the gym."
@@ -50,6 +48,23 @@ class DynamicModel(Enum):
             raise ValueError(f"Unknown model type {model}")
 
     def get_initial_state(self, pose=None):
+        """Set initial dynamic state based on model
+
+        Parameters
+        ----------
+        pose : np.ndarray, optional
+            initial pose, by default None
+
+        Returns
+        -------
+        np.ndarray
+            initial state
+
+        Raises
+        ------
+        ValueError
+            Unknown model type
+        """
         # initialize zero state
         if self == DynamicModel.KS:
             # state is [x, y, steer_angle, vel, yaw_angle]
@@ -69,6 +84,18 @@ class DynamicModel(Enum):
 
     @property
     def f_dynamics(self):
+        """property, returns dynamics function
+
+        Returns
+        -------
+        Callable
+            dynamic function
+
+        Raises
+        ------
+        ValueError
+            Unknown model type
+        """
         if self == DynamicModel.KS:
             return vehicle_dynamics_ks
         elif self == DynamicModel.ST:
@@ -79,16 +106,21 @@ class DynamicModel(Enum):
 
 @njit(cache=True)
 def upper_accel_limit(vel, a_max, v_switch):
-    """
-    Upper acceleration limit, adjusts the acceleration based on constraints
+    """Upper acceleration limit, adjusts the acceleration based on constraints
 
-        Args:
-            vel (float): current velocity of the vehicle
-            a_max (float): maximum allowed acceleration, symmetrical
-            v_switch (float): switching velocity (velocity at which the acceleration is no longer able to create wheel spin)
+    Parameters
+    ----------
+    vel : float
+        current velocity of the vehicle
+    a_max : float
+        maximum allowed acceleration, symmetrical
+    v_switch : float
+        switching velocity (velocity at which the acceleration is no longer able to create wheel spin)
 
-        Returns:
-            positive_accel_limit (float): adjusted acceleration
+    Returns
+    -------
+    float
+        adjusted acceleration
     """
     if vel > v_switch:
         pos_limit = a_max * (v_switch / vel)
@@ -100,21 +132,28 @@ def upper_accel_limit(vel, a_max, v_switch):
 
 @njit(cache=True)
 def accl_constraints(vel, a_long_d, v_switch, a_max, v_min, v_max):
+    """Acceleration constraints, adjusts the acceleration based on constraints
+
+    Parameters
+    ----------
+    vel : float
+        current velocity of the vehicle
+    a_long_d : float
+        unconstrained desired acceleration in the direction of travel.
+    v_switch : float
+        switching velocity (velocity at which the acceleration is no longer able to create wheel spin)
+    a_max : float
+        maximum allowed acceleration, symmetrical
+    v_min : float
+        minimum allowed velocity
+    v_max : float
+        maximum allowed velocity
+
+    Returns
+    -------
+    float
+        adjusted acceleration
     """
-    Acceleration constraints, adjusts the acceleration based on constraints
-
-        Args:
-            vel (float): current velocity of the vehicle
-            a_long_d (float): unconstrained desired acceleration in the direction of travel.
-            v_switch (float): switching velocity (velocity at which the acceleration is no longer able to create wheel spin)
-            a_max (float): maximum allowed acceleration, symmetrical
-            v_min (float): minimum allowed velocity
-            v_max (float): maximum allowed velocity
-
-        Returns:
-            accl (float): adjusted acceleration
-    """
-
     uac = upper_accel_limit(vel, a_max, v_switch)
 
     if (vel <= v_min and a_long_d <= 0) or (vel >= v_max and a_long_d >= 0):
@@ -133,21 +172,28 @@ def accl_constraints(vel, a_long_d, v_switch, a_max, v_min, v_max):
 def steering_constraint(
     steering_angle, steering_velocity, s_min, s_max, sv_min, sv_max
 ):
+    """Steering constraints, adjusts the steering velocity based on constraints
+
+    Parameters
+    ----------
+    steering_angle : float
+        current steering_angle of the vehicle
+    steering_velocity : float
+        unconstraint desired steering_velocity
+    s_min : float
+        minimum steering angle
+    s_max : float
+        maximum steering angle
+    sv_min : float
+        minimum steering velocity
+    sv_max : float
+        maximum steering velocity
+
+    Returns
+    -------
+    float
+        adjusted steering velocity
     """
-    Steering constraints, adjusts the steering velocity based on constraints
-
-        Args:
-            steering_angle (float): current steering_angle of the vehicle
-            steering_velocity (float): unconstraint desired steering_velocity
-            s_min (float): minimum steering angle
-            s_max (float): maximum steering angle
-            sv_min (float): minimum steering velocity
-            sv_max (float): maximum steering velocity
-
-        Returns:
-            steering_velocity (float): adjusted steering velocity
-    """
-
     # constraint steering velocity
     if (steering_angle <= s_min and steering_velocity <= 0) or (
         steering_angle >= s_max and steering_velocity >= 0
@@ -182,39 +228,59 @@ def vehicle_dynamics_ks(
     v_min,
     v_max,
 ):
-    """
-    Single Track Kinematic Vehicle Dynamics.
+    """Kinematic Single Track Vehicle Dynamics.
     Follows https://gitlab.lrz.de/tum-cps/commonroad-vehicle-models/-/blob/master/vehicleModels_commonRoad.pdf, section 5
 
-        Args:
-            x (numpy.ndarray (5, )): vehicle state vector (x0, x1, x2, x3, x4)
-                x0: x position in global coordinates
-                x1: y position in global coordinates
-                x2: steering angle of front wheels
-                x3: velocity in x direction
-                x4: yaw angle
-            u (numpy.ndarray (2, )): control input vector (u1, u2)
-                u1: steering angle velocity of front wheels
-                u2: longitudinal acceleration
-            mu (float): friction coefficient
-            C_Sf (float): cornering stiffness of front wheels
-            C_Sr (float): cornering stiffness of rear wheels
-            lf (float): distance from center of gravity to front axle
-            lr (float): distance from center of gravity to rear axle
-            h (float): height of center of gravity
-            m (float): mass of vehicle
-            I (float): moment of inertia of vehicle, about Z axis
-            s_min (float): minimum steering angle
-            s_max (float): maximum steering angle
-            sv_min (float): minimum steering velocity
-            sv_max (float): maximum steering velocity
-            v_switch (float): velocity above which the acceleration is no longer able to create wheel slip
-            a_max (float): maximum allowed acceleration
-            v_min (float): minimum allowed velocity
-            v_max (float): maximum allowed velocity
+    Parameters
+    ----------
+    x : np.ndarray
+        vehicle state vector (x0, x1, x2, x3, x4)
+            x0: x position in global coordinates
+            x1: y position in global coordinates
+            x2: steering angle of front wheels
+            x3: velocity in x direction
+            x4: yaw angle
+    u_init : np.ndarray
+        control input vector (u1, u2)
+            u1: steering angle velocity of front wheels
+            u2: longitudinal acceleration
+    mu : float
+        friction coefficient
+    C_Sf : float
+        cornering stiffness of front wheels
+    C_Sr : float
+        cornering stiffness of rear wheels
+    lf : float
+        distance from center of gravity to front axle
+    lr : float
+        distance from center of gravity to rear axle
+    h : float
+        height of center of gravity
+    m : float
+        mass of vehicle
+    I : float
+        moment of inertia of vehicle, about Z axis
+    s_min : float
+        minimum steering angle
+    s_max : float
+        maximum steering angle
+    sv_min : float
+        minimum steering velocity
+    sv_max : float
+        maximum steering velocity
+    v_switch : float
+        velocity above which the acceleration is no longer able to create wheel slip
+    a_max : float
+        maximum allowed acceleration
+    v_min : float
+        minimum allowed velocity
+    v_max : float
+        maximum allowed velocity
 
-        Returns:
-            f (numpy.ndarray): right hand side of differential equations
+    Returns
+    -------
+    np.ndarray
+        right hand side of differential equations
     """
     # Controls
     X = x[0]
@@ -273,41 +339,61 @@ def vehicle_dynamics_st(
     v_min,
     v_max,
 ):
-    """
-    Single Track Vehicle Dynamics.
+    """Single Track Vehicle Dynamics.
     From https://gitlab.lrz.de/tum-cps/commonroad-vehicle-models/-/blob/master/vehicleModels_commonRoad.pdf, section 7
 
-        Args:
-            x (numpy.ndarray (7, )): vehicle state vector (x0, x1, x2, x3, x4, x5, x6)
-                x0: x position in global coordinates
-                x1: y position in global coordinates
-                x2: steering angle of front wheels
-                x3: velocity in x direction
-                x4:yaw angle
-                x5: yaw rate
-                x6: slip angle at vehicle center
-            u (numpy.ndarray (2, )): control input vector (u1, u2)
-                u1: steering angle velocity of front wheels
-                u2: longitudinal acceleration
-            mu (float): friction coefficient
-            C_Sf (float): cornering stiffness of front wheels
-            C_Sr (float): cornering stiffness of rear wheels
-            lf (float): distance from center of gravity to front axle
-            lr (float): distance from center of gravity to rear axle
-            h (float): height of center of gravity
-            m (float): mass of vehicle
-            I (float): moment of inertia of vehicle, about Z axis
-            s_min (float): minimum steering angle
-            s_max (float): maximum steering angle
-            sv_min (float): minimum steering velocity
-            sv_max (float): maximum steering velocity
-            v_switch (float): velocity above which the acceleration is no longer able to create wheel spin
-            a_max (float): maximum allowed acceleration
-            v_min (float): minimum allowed velocity
-            v_max (float): maximum allowed velocity
+    Parameters
+    ----------
+    x : np.ndarray
+        vehicle state vector (x0, x1, x2, x3, x4, x5, x6)
+            x0: x position in global coordinates
+            x1: y position in global coordinates
+            x2: steering angle of front wheels
+            x3: velocity in x direction
+            x4:yaw angle
+            x5: yaw rate
+            x6: slip angle at vehicle center
+    u_init : np.ndarray
+        control input vector (u1, u2)
+            u1: steering angle velocity of front wheels
+            u2: longitudinal acceleration
+    mu : float
+        friction coefficient
+    C_Sf : float
+        cornering stiffness of front wheels
+    C_Sr : float
+        cornering stiffness of rear wheels
+    lf : float
+        distance from center of gravity to front axle
+    lr : float
+        distance from center of gravity to rear axle
+    h : float
+        height of center of gravity
+    m : float
+        mass of vehicle
+    I : float
+        moment of inertia of vehicle, about Z axis
+    s_min : float
+        minimum steering angle
+    s_max : float
+        maximum steering angle
+    sv_min : float
+        minimum steering velocity
+    sv_max : float
+        maximum steering velocity
+    v_switch : float
+        velocity above which the acceleration is no longer able to create wheel slip
+    a_max : float
+        maximum allowed acceleration
+    v_min : float
+        minimum allowed velocity
+    v_max : float
+        maximum allowed velocity
 
-        Returns:
-            f (numpy.ndarray): right hand side of differential equations
+    Returns
+    -------
+    np.ndarray
+        right hand side of differential equations
     """
     # States
     X = x[0]
@@ -402,6 +488,22 @@ def vehicle_dynamics_st(
 
 @njit(cache=True)
 def pid_steer(steer, current_steer, max_sv):
+    """PID control for steering angle to steering velocity
+
+    Parameters
+    ----------
+    steer : float
+        requested steering angle
+    current_steer : float
+        current steering angle
+    max_sv : float
+        maximum steering velocity
+
+    Returns
+    -------
+    float
+        steering velocity
+    """
     # steering
     steer_diff = steer - current_steer
     if np.fabs(steer_diff) > 1e-4:
@@ -414,16 +516,25 @@ def pid_steer(steer, current_steer, max_sv):
 
 @njit(cache=True)
 def pid_accl(speed, current_speed, max_a, max_v, min_v):
-    """
-    Basic controller for speed/steer -> accl./steer vel.
+    """PID control for speed to acceleration
 
-        Args:
-            speed (float): desired input speed
-            steer (float): desired input steering angle
+    Parameters
+    ----------
+    speed : float
+        requested speed
+    current_speed : float
+        current speed
+    max_a : float
+        maximum acceleration
+    max_v : float
+        maximum velocity
+    min_v : float
+        minimum velocity
 
-        Returns:
-            accl (float): desired input acceleration
-            sv (float): desired input steering velocity
+    Returns
+    -------
+    float
+        acceleration
     """
     # accl
     vel_diff = speed - current_speed

@@ -1,0 +1,18 @@
+[
+    {
+      "version": "latest",
+      "url": "https://f1tenth-gym.readthedocs.io/en/latest/"
+    },
+    {
+        "version": "stable",
+        "url": "https://f1tenth-gym.readthedocs.io/en/stable/"
+    },
+    {
+        "version": "v1.0.0",
+        "url": "https://f1tenth-gym.readthedocs.io/en/v1.0.0/"
+    },
+    {
+      "version": "dev_docs",
+      "url": "https://f1tenth-gym.readthedocs.io/en/dev_docs/"
+  }
+]
