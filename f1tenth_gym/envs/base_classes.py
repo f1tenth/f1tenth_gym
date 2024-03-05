@@ -28,12 +28,12 @@ Author: Hongrui Zheng
 """
 from __future__ import annotations
 import numpy as np
-from f110_gym.envs.dynamic_models import DynamicModel
-from f110_gym.envs.action import CarAction
-from f110_gym.envs.collision_models import collision_multiple, get_vertices
-from f110_gym.envs.integrator import EulerIntegrator, IntegratorType
-from f110_gym.envs.laser_models import ScanSimulator2D, check_ttc_jit, ray_cast
-from f110_gym.envs.track import Track
+from .dynamic_models import DynamicModel
+from .action import CarAction
+from .collision_models import collision_multiple, get_vertices
+from .integrator import EulerIntegrator, IntegratorType
+from .laser_models import ScanSimulator2D, check_ttc_jit, ray_cast
+from .track import Track
 
 
 class RaceCar(object):

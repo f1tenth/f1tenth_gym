@@ -29,7 +29,7 @@ import os
 import unittest
 
 import numpy as np
-from f110_gym.envs.laser_models import ScanSimulator2D
+from f1tenth_gym.envs.laser_models import ScanSimulator2D
 
 
 class ScanTests(unittest.TestCase):

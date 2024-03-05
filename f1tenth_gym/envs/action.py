@@ -5,7 +5,7 @@ from typing import Any, Dict, Tuple
 import warnings
 import gymnasium as gym
 import numpy as np
-from f110_gym.envs.dynamic_models import pid_steer, pid_accl
+from .dynamic_models import pid_steer, pid_accl
 
 
 class LongitudinalActionEnum(Enum):

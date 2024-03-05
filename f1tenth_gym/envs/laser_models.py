@@ -29,7 +29,7 @@ from __future__ import annotations
 import unittest
 
 import numpy as np
-from f110_gym.envs.track import Track
+from .track import Track
 from numba import njit
 from scipy.ndimage import distance_transform_edt as edt
 

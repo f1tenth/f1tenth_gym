@@ -9,8 +9,8 @@ class TestUtilities(unittest.TestCase):
         """
         import gymnasium as gym
 
-        default_env = gym.make("f110_gym:f110-v0")
-        custom_env = gym.make("f110_gym:f110-v0", config={"params": {"mu": 1.0}})
+        default_env = gym.make("f1tenth_gym:f1tenth-v0")
+        custom_env = gym.make("f1tenth_gym:f1tenth-v0", config={"params": {"mu": 1.0}})
 
         # check all parameters are the same except for mu
         for par in default_env.sim.params:
