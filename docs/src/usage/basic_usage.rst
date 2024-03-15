@@ -5,46 +5,66 @@ Basic Usage Example
 
 The environment can work out of the box without too much customization.
 
-A gym env could be instantiated without any extra arguments. By default, it spawns two agents in the Vegas (IROS 2020) map. You can find the image of the map at  ``gym/f110_gym/envs/maps/vegas.png``. At instantiation, the index of the ego agent in the list of agents is 0.
+A gym env could be instantiated without any extra arguments using the ``gym.make()`` function.
+By default, it spawns two agents in the Spielberg racetrack.
 
-The agents can be reset by calling the ``reset()`` method using a numpy ndarray of size ``(num_agents, 2)``, where each row represents an agent, and the columns are the ``(x, y)`` coordinate of each agent.
-
-The ``reset()`` and ``step()`` method returns:
-    - An *observation* dictionary
-    - A *step reward*, which in the current release is the physics timestep used.
-    - A *done* boolean indicator, flips to true when either a collision happens or the ego agent finishes 2 laps.
-    - An *info* dictionary. Empty in the current release.
-
-The action taken by the ``step()`` function is a numpy ndarray of size ``(num_agents, 2)``, where each row represents an agent's action (indices corresponds to the list of agents), and the columns are control inputs (steering angle, velocity).
+The simulation can be reset by calling the ``reset()`` method
+and step forward in time by calling the ``step()`` method with a joint action for all agents.
 
 A working example can be found in ``examples/waypoint_follow.py``.
 
-The following pseudo code provides a skeleton for creating a simulation loop.
+
+Usage
+-----
 
 .. code:: python
 
-    import gym
-    import numpy as np
-    from your_custom_policy import planner # the policy/motion planner that you create
+    import gymnasium as gym
 
-    # instantiating the environment
-    racecar_env = gym.make('f110_gym:f110-v0')
-    obs, step_reward, done, info = racecar_env.reset(np.array([[0., 0., 0.], # pose of ego
-                                                               [2., 0., 0.]])) # pose of 2nd agent
-    # instantiating your policy
-    planner = planner()
+    env = gym.make("f110_gym:f110-v0", render_mode="human")
+    obs, infos = env.reset()
 
-    # simulation loop
-    lap_time = 0.
-
-    # loops when env not done
     while not done:
-        # get action based on the observation
-        actions = planner.plan(obs)
-
-        # stepping through the environment
+        # sample random action
+        actions = env.action_space.sample()
+        # step simulation
         obs, step_reward, done, info = racecar_env.step(actions)
+        env.render()
 
-        lap_time += step_reward
+Default configuration
+---------------------
 
-For a more in-depth example that provides more customization to the environment, see :ref:`custom_usage`.
+.. code:: python
+
+    {
+	"seed": 12345,
+	"map": "Spielberg",
+	"params": {
+		"mu": 1.0489,
+		"C_Sf": 4.718,
+		"C_Sr": 5.4562,
+		"lf": 0.15875,
+		"lr": 0.17145,
+		"h": 0.074,
+		"m": 3.74,
+		"I": 0.04712,
+		"s_min": -0.4189,
+		"s_max": 0.4189,
+		"sv_min": -3.2,
+		"sv_max": 3.2,
+		"v_switch": 7.319,
+		"a_max": 9.51,
+		"v_min": -5.0,
+		"v_max": 20.0,
+		"width": 0.31,
+		"length": 0.58,
+	},
+	"num_agents": 2,
+	"timestep": 0.01,
+	"ego_idx": 0,
+	"integrator": "rk4",
+	"model": "st",
+	"control_input": ["speed", "steering_angle"],
+	"observation_config": {"type": None},
+	"reset_config": {"type": None},
+    }

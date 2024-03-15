@@ -49,15 +49,17 @@ def main(args):
     outdir.mkdir(parents=True, exist_ok=True)
 
     for i in range(n_maps):
-        try:
-            print(f"[info] creating track {i}")
-            track, track_int, track_ext = create_track()
-            convert_track(track, track_int, track_ext, i, outdir)
-            print(f"[info] saved track {i} in {outdir}/")
-        except Exception as _:  # noqa: F841
-            print("[error] failed to create track. Retrying...")
-            continue
-        print()
+        while True:
+            try:
+                print(f"[info] creating track {i}")
+                track, track_int, track_ext = create_track()
+                convert_track(track, track_int, track_ext, i, outdir)
+                print(f"[info] saved track {i} in {outdir}/")
+                break
+            except Exception as _:  # noqa: F841
+                print("[error] failed to create track. Retrying...")
+                continue
+            print()
 
 
 def create_track():
@@ -250,7 +252,7 @@ if __name__ == "__main__":
         "--seed", type=int, default=123, help="The seed for the numpy rng"
     )
     parser.add_argument(
-        "--n_maps", type=int, default=3, help="Number of maps to create"
+        "--n-maps", type=int, default=3, help="Number of maps to create"
     )
     parser.add_argument(
         "--outdir", type=pathlib.Path, default="./maps", help="Out directory"
