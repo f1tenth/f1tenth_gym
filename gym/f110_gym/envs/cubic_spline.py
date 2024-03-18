@@ -6,6 +6,8 @@ import bisect
 import math
 
 import numpy as np
+from scipy.spatial import distance as ssd
+import scipy.optimize as so
 
 
 class CubicSpline1D:
@@ -225,3 +227,28 @@ class CubicSpline2D:
         dy = self.sy.calc_first_derivative(s)
         yaw = math.atan2(dy, dx)
         return yaw
+
+    def calc_arclength(self, x, y):
+        """
+        calc arclength
+        Parameters
+        ----------
+        x : float
+            x position.
+        y : float
+            y position.
+        Returns
+        -------
+        s : float
+            distance from the start point for given x, y.
+        ey : float
+            lateral deviation for given x, y.
+        """
+
+        def distance_to_spline(s):
+            x_eval = self.sx.calc_position(s)
+            y_eval = self.sy.calc_position(s)
+            return ssd.euclidean([x_eval, y_eval], [x, y])
+        
+        closest_s = so.fminbound(distance_to_spline, 0, self.s[-1])
+        return closest_s, distance_to_spline(closest_s)
