@@ -242,7 +242,50 @@ class Track:
             print(ex)
             raise FileNotFoundError(f"could not load track {track}") from ex
 
+    def frenet_to_cartesian(self, s, ey, ephi):
+        """
+        Convert Frenet coordinates to Cartesian coordinates.
+        
+        s: distance along the raceline
+        ey: lateral deviation
+        ephi: heading deviation
 
+        returns:
+            x: x-coordinate
+            y: y-coordinate
+            psi: yaw angle
+        """
+        x, y = self.raceline.spline.calc_position(s)
+        psi = self.raceline.spline.calc_yaw(s)
+
+        # Adjust x,y by shifting along the normal vector
+        x -= ey * np.sin(psi)
+        y += ey * np.cos(psi)
+
+        # Adjust psi by adding the heading deviation
+        psi += ephi
+
+        return x, y, psi
+    
+    def cartesian_to_frenet(self, x, y, phi):
+        """
+        Convert Cartesian coordinates to Frenet coordinates.
+        
+        x: x-coordinate
+        y: y-coordinate
+        phi: yaw angle
+
+        returns:
+            s: distance along the raceline
+            ey: lateral deviation
+            ephi: heading deviation
+        """
+        s, ey = self.raceline.spline.calc_arclength(x, y)
+        phi = phi - self.raceline.spline.calc_yaw(s)
+
+        return s, ey, phi
+
+    
 if __name__ == "__main__":
     track = Track.from_track_name("Example")
     print("[Result] map loaded successfully")
