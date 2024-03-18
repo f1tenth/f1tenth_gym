@@ -276,12 +276,22 @@ class Track:
         phi: yaw angle
 
         returns:
-            s: distance along the raceline
+            s: distance along the centerline
             ey: lateral deviation
             ephi: heading deviation
         """
-        s, ey = self.raceline.spline.calc_arclength(x, y)
-        phi = phi - self.raceline.spline.calc_yaw(s)
+        s, ey = self.centerline.spline.calc_arclength(x, y)
+        
+        # Use the normal to calculate the signed lateral deviation
+        normal = self.centerline.spline._calc_normal(s)
+        x_eval = self.centerline.spline.sx.calc_position(s)
+        y_eval = self.centerline.spline.sy.calc_position(s)
+        dx = x - x_eval
+        dy = y - y_eval
+        distance_sign = np.sign(np.dot([dx, dy], normal))
+        ey = ey * distance_sign
+
+        phi = phi - self.centerline.spline.calc_yaw(s)
 
         return s, ey, phi
 
