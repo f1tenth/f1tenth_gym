@@ -246,12 +246,20 @@ class CubicSpline2D:
         """
 
         def distance_to_spline(s):
-            x_eval = self.sx.calc_position(s)
-            y_eval = self.sy.calc_position(s)
-            return ssd.euclidean([x_eval, y_eval], [x, y])
+            if s < 0:
+                x_eval = self.sx.calc_position(0)
+                y_eval = self.sy.calc_position(0)
+            elif s > self.s[-1]:
+                x_eval = self.sx.calc_position(self.s[-1])
+                y_eval = self.sy.calc_position(self.s[-1])
+            else:
+                x_eval = self.sx.calc_position(s)
+                y_eval = self.sy.calc_position(s)
+            return np.sqrt((x - x_eval)**2 + (y - y_eval)**2)
         
-        closest_s = so.fminbound(distance_to_spline, 0, self.s[-1])
-        absolute_distance = distance_to_spline(closest_s)
+        output = so.fmin(distance_to_spline, 0, full_output=True, disp=False)
+        closest_s = output[0][0]
+        absolute_distance = output[1]
         return closest_s, absolute_distance
     
     def _calc_tangent(self, s):
