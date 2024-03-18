@@ -251,4 +251,44 @@ class CubicSpline2D:
             return ssd.euclidean([x_eval, y_eval], [x, y])
         
         closest_s = so.fminbound(distance_to_spline, 0, self.s[-1])
-        return closest_s, distance_to_spline(closest_s)
+        absolute_distance = distance_to_spline(closest_s)
+        return closest_s, absolute_distance
+    
+    def _calc_tangent(self, s):
+        '''
+        calculates the tangent to the curve at a given point
+        Parameters
+        ----------
+        s : float
+            distance from the start point. if `s` is outside the data point's
+            range, return None.
+        Returns
+        -------
+        tangent : float
+            tangent vector for given s.
+        '''
+        if s < 0:
+            return None
+        elif s > self.s[-1]:
+            return None
+        dx = self.sx.calc_first_derivative(s)
+        dy = self.sy.calc_first_derivative(s)
+        tangent = np.array([dx, dy])
+        return tangent
+    
+    def _calc_normal(self, s):
+        '''
+        calculates the normal to the curve at a given point
+        Parameters
+        ----------
+        s : float
+            distance from the start point. if `s` is outside the data point's
+            range, return None.
+        Returns
+        -------
+        normal : float
+            normal vector for given s.
+        '''
+        tangent = self._calc_tangent(s)
+        normal = np.array([-tangent[1], tangent[0]])
+        return normal
