@@ -20,7 +20,7 @@ def main():
 
     # env and planner
     env = gym.make(
-        "f110_gym:f110-v0",
+        "f1tenth_gym:f1tenth-v0",
         config={
             "map": track,
             "num_agents": 1,
