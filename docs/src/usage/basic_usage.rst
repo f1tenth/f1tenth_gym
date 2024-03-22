@@ -1,6 +1,6 @@
 .. _basic_usage:
 
-Basic Usage Example
+Basic example
 =====================
 
 The environment can work out of the box without too much customization.
