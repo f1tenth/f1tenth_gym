@@ -1,151 +1,13 @@
 """
-Code from Cubic spline planner
-Author: Atsushi Sakai(@Atsushi_twi)
+Cubic Spline interpolation using scipy.interpolate
+Provides utilities for position, curvature, yaw, and arclength calculation
 """
-import bisect
+
 import math
 
 import numpy as np
-from scipy.spatial import distance as ssd
 import scipy.optimize as so
-
-
-class CubicSpline1D:
-    """
-    1D Cubic Spline class
-    Parameters
-    ----------
-    x : list
-        x coordinates for data points. This x coordinates must be
-        sorted in ascending order.
-    y : list
-        y coordinates for data points
-    """
-
-    def __init__(self, x, y):
-        h = np.diff(x)
-        if np.any(h < 0):
-            raise ValueError("x coordinates must be sorted in ascending order")
-
-        self.a, self.b, self.c, self.d = [], [], [], []
-        self.x = x
-        self.y = y
-        self.nx = len(x)  # dimension of x
-
-        # calc coefficient a
-        self.a = [iy for iy in y]
-
-        # calc coefficient c
-        A = self.__calc_A(h)
-        B = self.__calc_B(h, self.a)
-        self.c = np.linalg.solve(A, B)
-
-        # calc spline coefficient b and d
-        for i in range(self.nx - 1):
-            d = (self.c[i + 1] - self.c[i]) / (3.0 * h[i])
-            b = 1.0 / h[i] * (self.a[i + 1] - self.a[i]) - h[i] / 3.0 * (
-                2.0 * self.c[i] + self.c[i + 1]
-            )
-            self.d.append(d)
-            self.b.append(b)
-
-    def calc_position(self, x):
-        """
-        Calc `y` position for given `x`.
-        if `x` is outside the data point's `x` range, return None.
-        Returns
-        -------
-        y : float
-            y position for given x.
-        """
-        if x < self.x[0]:
-            return None
-        elif x > self.x[-1]:
-            return None
-
-        i = self.__search_index(x)
-        dx = x - self.x[i]
-        position = (
-            self.a[i] + self.b[i] * dx + self.c[i] * dx**2.0 + self.d[i] * dx**3.0
-        )
-
-        return position
-
-    def calc_first_derivative(self, x):
-        """
-        Calc first derivative at given x.
-        if x is outside the input x, return None
-        Returns
-        -------
-        dy : float
-            first derivative for given x.
-        """
-
-        if x < self.x[0]:
-            return None
-        elif x > self.x[-1]:
-            return None
-
-        i = self.__search_index(x)
-        dx = x - self.x[i]
-        dy = self.b[i] + 2.0 * self.c[i] * dx + 3.0 * self.d[i] * dx**2.0
-        return dy
-
-    def calc_second_derivative(self, x):
-        """
-        Calc second derivative at given x.
-        if x is outside the input x, return None
-        Returns
-        -------
-        ddy : float
-            second derivative for given x.
-        """
-
-        if x < self.x[0]:
-            return None
-        elif x > self.x[-1]:
-            return None
-
-        i = self.__search_index(x)
-        dx = x - self.x[i]
-        ddy = 2.0 * self.c[i] + 6.0 * self.d[i] * dx
-        return ddy
-
-    def __search_index(self, x):
-        """
-        search data segment index
-        """
-        return bisect.bisect(self.x[:-1], x) - 1
-
-    def __calc_A(self, h):
-        """
-        calc matrix A for spline coefficient c
-        """
-        A = np.zeros((self.nx, self.nx))
-        A[0, 0] = 1.0
-        for i in range(self.nx - 1):
-            if i != (self.nx - 2):
-                A[i + 1, i + 1] = 2.0 * (h[i] + h[i + 1])
-            A[i + 1, i] = h[i]
-            A[i, i + 1] = h[i]
-
-        A[0, 1] = 0.0
-        A[self.nx - 1, self.nx - 2] = 0.0
-        A[self.nx - 1, self.nx - 1] = 1.0
-        return A
-
-    def __calc_B(self, h, a):
-        """
-        calc matrix B for spline coefficient c
-        """
-        B = np.zeros(self.nx)
-        for i in range(self.nx - 2):
-            B[i + 1] = (
-                3.0 * (a[i + 2] - a[i + 1]) / h[i + 1] - 3.0 * (a[i + 1] - a[i]) / h[i]
-            )
-        return B
-
-
+from scipy import interpolate
 class CubicSpline2D:
     """
     Cubic CubicSpline2D class
@@ -158,9 +20,13 @@ class CubicSpline2D:
     """
 
     def __init__(self, x, y):
-        self.s = self.__calc_s(x, y)
-        self.sx = CubicSpline1D(self.s, x)
-        self.sy = CubicSpline1D(self.s, y)
+        points = np.c_[x, y]
+        if not np.all(points[-1] == points[0]):
+            points = np.vstack((points, points[0]))  # Ensure the path is closed
+        self.s = self.__calc_s(points[:, 0], points[:, 1])
+        # Use scipy CubicSpline to interpolate the points with periodic boundary conditions
+        # This is necessary to ensure the path is continuous
+        self.spline = interpolate.CubicSpline(self.s, points, bc_type='periodic')
 
     def __calc_s(self, x, y):
         dx = np.diff(x)
@@ -185,10 +51,7 @@ class CubicSpline2D:
         y : float
             y position for given s.
         """
-        x = self.sx.calc_position(s)
-        y = self.sy.calc_position(s)
-
-        return x, y
+        return self.spline(s)
 
     def calc_curvature(self, s):
         """
@@ -203,10 +66,8 @@ class CubicSpline2D:
         k : float
             curvature for given s.
         """
-        dx = self.sx.calc_first_derivative(s)
-        ddx = self.sx.calc_second_derivative(s)
-        dy = self.sy.calc_first_derivative(s)
-        ddy = self.sy.calc_second_derivative(s)
+        dx, dy = self.spline(s, 1)
+        ddx, ddy = self.spline(s, 2)
         k = (ddy * dx - ddx * dy) / ((dx**2 + dy**2) ** (3 / 2))
         return k
 
@@ -223,12 +84,11 @@ class CubicSpline2D:
         yaw : float
             yaw angle (tangent vector) for given s.
         """
-        dx = self.sx.calc_first_derivative(s)
-        dy = self.sy.calc_first_derivative(s)
+        dx, dy = self.spline(s, 1)
         yaw = math.atan2(dy, dx)
         return yaw
 
-    def calc_arclength(self, x, y):
+    def calc_arclength(self, x, y, s_guess=0.0):
         """
         calc arclength
         Parameters
@@ -246,18 +106,10 @@ class CubicSpline2D:
         """
 
         def distance_to_spline(s):
-            if s < 0:
-                x_eval = self.sx.calc_position(0)
-                y_eval = self.sy.calc_position(0)
-            elif s > self.s[-1]:
-                x_eval = self.sx.calc_position(self.s[-1])
-                y_eval = self.sy.calc_position(self.s[-1])
-            else:
-                x_eval = self.sx.calc_position(s)
-                y_eval = self.sy.calc_position(s)
+            x_eval, y_eval = self.spline(s)[0]
             return np.sqrt((x - x_eval)**2 + (y - y_eval)**2)
         
-        output = so.fmin(distance_to_spline, 0, full_output=True, disp=False)
+        output = so.fmin(distance_to_spline, s_guess, full_output=True, disp=False)
         closest_s = output[0][0]
         absolute_distance = output[1]
         return closest_s, absolute_distance
@@ -275,12 +127,7 @@ class CubicSpline2D:
         tangent : float
             tangent vector for given s.
         '''
-        if s < 0:
-            return None
-        elif s > self.s[-1]:
-            return None
-        dx = self.sx.calc_first_derivative(s)
-        dy = self.sy.calc_first_derivative(s)
+        dx, dy = self.spline(s, 1)
         tangent = np.array([dx, dy])
         return tangent
     
@@ -297,6 +144,6 @@ class CubicSpline2D:
         normal : float
             normal vector for given s.
         '''
-        tangent = self._calc_tangent(s)
-        normal = np.array([-tangent[1], tangent[0]])
+        dx, dy = self.spline(s, 1)
+        normal = np.array([-dy, dx])
         return normal

@@ -255,8 +255,8 @@ class Track:
             y: y-coordinate
             psi: yaw angle
         """
-        x, y = self.raceline.spline.calc_position(s)
-        psi = self.raceline.spline.calc_yaw(s)
+        x, y = self.centerline.spline.calc_position(s)
+        psi = self.centerline.spline.calc_yaw(s)
 
         # Adjust x,y by shifting along the normal vector
         x -= ey * np.sin(psi)
@@ -267,7 +267,7 @@ class Track:
 
         return x, y, psi
     
-    def cartesian_to_frenet(self, x, y, phi):
+    def cartesian_to_frenet(self, x, y, phi, s_guess=0):
         """
         Convert Cartesian coordinates to Frenet coordinates.
         
@@ -280,12 +280,15 @@ class Track:
             ey: lateral deviation
             ephi: heading deviation
         """
-        s, ey = self.centerline.spline.calc_arclength(x, y)
-        
+        s, ey = self.centerline.spline.calc_arclength(x, y, s_guess)
+        if abs(s - self.centerline.spline.s[-1]) < 1e-6 or s > self.centerline.spline.s[-1]:
+            s = 0
+        if s < 0:
+            s = self.centerline.spline.s[-1]
+
         # Use the normal to calculate the signed lateral deviation
         normal = self.centerline.spline._calc_normal(s)
-        x_eval = self.centerline.spline.sx.calc_position(s)
-        y_eval = self.centerline.spline.sy.calc_position(s)
+        x_eval, y_eval = self.centerline.spline.calc_position(s)
         dx = x - x_eval
         dy = y - y_eval
         distance_sign = np.sign(np.dot([dx, dy], normal))
