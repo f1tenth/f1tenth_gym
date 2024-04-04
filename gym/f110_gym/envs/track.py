@@ -281,10 +281,12 @@ class Track:
             ephi: heading deviation
         """
         s, ey = self.centerline.spline.calc_arclength(x, y, s_guess)
-        if abs(s - self.centerline.spline.s[-1]) < 1e-6 or s > self.centerline.spline.s[-1]:
-            s = 0
+        if s > self.centerline.spline.s[-1]:
+            # Wrap around
+            s = s - self.centerline.spline.s[-1]
         if s < 0:
-            s = self.centerline.spline.s[-1]
+            # Negative s means we are behind the start point
+            s = s + self.centerline.spline.s[-1]
 
         # Use the normal to calculate the signed lateral deviation
         normal = self.centerline.spline._calc_normal(s)
