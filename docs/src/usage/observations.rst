@@ -32,6 +32,7 @@ Observations can be configured at the environment creation:
 			},
 		})
     obs, infos = env.reset()
+
 or after the environment creation:
 
 .. code:: python

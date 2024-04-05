@@ -1,8 +1,8 @@
 Getting Started
-==============
+===============
 
 Making an environment
-----------------------
+---------------------
 
 This is a quick example of how to make a simple environment:
 

@@ -35,6 +35,7 @@ Actions can be configured at the environment creation:
 			"control_input": ["accl", "steering_speed"]
 		})
     obs, infos = env.reset()
+
 or after the environment creation:
 
 .. code:: python
