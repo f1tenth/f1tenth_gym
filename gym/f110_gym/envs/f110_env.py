@@ -268,6 +268,12 @@ class F110Env(gym.Env):
                     self.action_type.space, self.num_agents
                 )
 
+            if hasattr(self, "observation_space"):
+                self.observation_type = observation_factory(
+                    env=self, **self.config["observation_config"]
+                )
+                self.observation_space = self.observation_type.space()
+
     def _check_done(self):
         """Check if the current rollout is done
 
