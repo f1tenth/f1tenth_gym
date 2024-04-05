@@ -42,5 +42,7 @@ or after the environment creation:
     import gymnasium as gym
 
     env = gym.make("f110_gym:f110-v0")
-	env.configure({"control_input": ["speed", "steering_angle"]})
+    env.configure({
+        "control_input": ["speed", "steering_angle"]
+    })
     obs, infos = env.reset()
