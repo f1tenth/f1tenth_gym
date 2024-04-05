@@ -7,10 +7,6 @@ For a basic usage example, see :ref:`basic_usage`.
 
 The environment also provides options for customization.
 
-Custom Map
-------------
-Work in progress on how to add a custom map.
-
 Random Track Generator
 -----------------------
 
@@ -35,6 +31,10 @@ For example, to generate 3 random maps and store them in the directory `custom_m
 	python examples/random_trackgen.py --seed 42 --n-maps 3 --outdir custom_maps
 
 
-.. image:: ../../../../src/assets/random_trackgen.png
+.. image:: /assets/random_trackgen.png
 	:width: 800
 	:align: center
+
+Custom Map
+------------
+Work in progress on how to add a custom map.
