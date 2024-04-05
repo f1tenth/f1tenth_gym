@@ -6,7 +6,9 @@ Vehicle Dynamics
 The vehicle dynamics are modeled using a single-track model, as in [AlKM17]_.
 
 We support two vehicle dynamics models:
+
 - Kinematic Single-Track Model (`ks`): Simpler model that considers only the kinematics of the vehicle, i.e., the position, orientation, and velocity, ignoring the forces that act on the vehicle.
+
 - Single-Track Model (`st`): More complex model that considers the forces that act on the vehicle, such as the tire forces.
 
 Despite the fact that the single-track model is a simplified model, it is able to capture the
@@ -27,7 +29,7 @@ The dynamics model can be configured at the environment creation:
     env = gym.make(
 		"f110_gym:f110-v0",
 		config={
-			"model": "ks"
+            "model": "ks"
 		})
     obs, infos = env.reset()
 
