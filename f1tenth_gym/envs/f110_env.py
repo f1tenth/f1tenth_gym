@@ -27,19 +27,19 @@ Author: Hongrui Zheng
 # gym imports
 import gymnasium as gym
 
-from f110_gym.envs.action import (CarAction,
+from .action import (CarAction,
                                   from_single_to_multi_action_space)
-from f110_gym.envs.integrator import IntegratorType
-from f110_gym.envs.rendering import make_renderer
+from .integrator import IntegratorType
+from .rendering import make_renderer
 
-from f110_gym.envs.track import Track
+from .track import Track
 
 # base classes
-from f110_gym.envs.base_classes import Simulator, DynamicModel
-from f110_gym.envs.observation import observation_factory
-from f110_gym.envs.reset import make_reset_fn
-from f110_gym.envs.track import Track
-from f110_gym.envs.utils import deep_update
+from .base_classes import Simulator, DynamicModel
+from .observation import observation_factory
+from .reset import make_reset_fn
+from .track import Track
+from .utils import deep_update
 
 
 # others
@@ -95,7 +95,7 @@ class F110Env(gym.Env):
         self.configure(config)
 
         self.seed = self.config["seed"]
-        self.map_name = self.config["map"]
+        self.map = self.config["map"]
         self.params = self.config["params"]
         self.num_agents = self.config["num_agents"]
         self.timestep = self.config["timestep"]
@@ -143,10 +143,14 @@ class F110Env(gym.Env):
             model=self.model,
             action_type=self.action_type,
         )
-        self.sim.set_map(self.map_name)
-        self.track = Track.from_track_name(
-            self.map_name
-        )  # load track in gym env for convenience
+        self.sim.set_map(self.map)
+
+        if isinstance(self.map, Track):
+            self.track = self.map
+        else:
+            self.track = Track.from_track_name(
+                self.map
+            )  # load track in gym env for convenience
 
         # observations
         self.agent_ids = [f"agent_{i}" for i in range(self.num_agents)]
@@ -226,8 +230,8 @@ class F110Env(gym.Env):
             "integrator": "rk4",
             "model": "st",
             "control_input": ["speed", "steering_angle"],
-            "observation_config": {"type": "original"},
-            "reset_config": {"type": "grid_static"},
+            "observation_config": {"type": None},
+            "reset_config": {"type": None},
         }
 
     def configure(self, config: dict) -> None:

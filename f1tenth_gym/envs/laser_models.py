@@ -25,11 +25,11 @@
 Prototype of Utility functions and classes for simulating 2D LIDAR scans
 Author: Hongrui Zheng
 """
-
+from __future__ import annotations
 import unittest
 
 import numpy as np
-from f110_gym.envs.track import Track
+from .track import Track
 from numba import njit
 from scipy.ndimage import distance_transform_edt as edt
 
@@ -448,6 +448,9 @@ class ScanSimulator2D(object):
         self.map_height = None
         self.map_width = None
         self.map_resolution = None
+        self.track = None
+        self.map_img = None
+        self.origin = None
         self.dt = None
 
         # precomputing corresponding cosines and sines of the angle array
@@ -455,17 +458,20 @@ class ScanSimulator2D(object):
         self.sines = np.sin(theta_arr)
         self.cosines = np.cos(theta_arr)
 
-    def set_map(self, map_name: str):
+    def set_map(self, map: str | Track):
         """
         Set the bitmap of the scan simulator by path
 
             Args:
-                map_name (str): name of the racetrack in the map dir, e.g. "Levine"
+                map (str | Track): path to the map file, or Track object
 
             Returns:
                 flag (bool): if image reading and loading is successful
         """
-        self.track = Track.from_track_name(map_name)
+        if isinstance(map, str):
+            self.track = Track.from_track_name(map)
+        elif isinstance(map, Track):
+            self.track = map
 
         # load map image
         self.map_img = self.track.occupancy_map

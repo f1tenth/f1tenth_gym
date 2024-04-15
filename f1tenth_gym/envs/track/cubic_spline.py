@@ -2,7 +2,6 @@
 Cubic Spline interpolation using scipy.interpolate
 Provides utilities for position, curvature, yaw, and arclength calculation
 """
-
 import math
 
 import numpy as np
@@ -51,13 +50,16 @@ def nearest_point_on_trajectory(point, trajectory):
 
 class CubicSpline2D:
     """
-    Cubic CubicSpline2D class
-    Parameters
+    Cubic CubicSpline2D class.
+
+    Attributes
     ----------
-    x : list
-        x coordinates for data points.
-    y : list
-        y coordinates for data points.
+    s : list
+        cumulative distance along the data points.
+    sx : CubicSpline1D
+        cubic spline for x coordinates.
+    sy : CubicSpline1D
+        cubic spline for y coordinates.
     """
 
     def __init__(self, x, y):
@@ -69,39 +71,58 @@ class CubicSpline2D:
         # This is necessary to ensure the path is continuous
         self.spline = interpolate.CubicSpline(self.s, self.points, bc_type='periodic')
 
-    def __calc_s(self, x, y):
+    def __calc_s(self, x: np.ndarray, y: np.ndarray) -> np.ndarray:
+        """
+        Calc cumulative distance.
+
+        Parameters
+        ----------
+        x : list
+            x coordinates for data points.
+        y : list
+            y coordinates for data points.
+
+        Returns
+        -------
+        s : np.ndarray
+            cumulative distance along the data points.
+        """
         dx = np.diff(x)
         dy = np.diff(y)
         self.ds = np.hypot(dx, dy)
         s = [0]
         s.extend(np.cumsum(self.ds))
-        return s
+        return np.array(s)
 
-    def calc_position(self, s):
+    def calc_position(self, s: float) -> tuple[float | None, float | None]:
         """
-        calc position
+        Calc position at the given s.
+
         Parameters
         ----------
         s : float
             distance from the start point. if `s` is outside the data point's
             range, return None.
+
         Returns
         -------
-        x : float
+        x : float | None
             x position for given s.
-        y : float
+        y : float | None
             y position for given s.
         """
         return self.spline(s)
 
-    def calc_curvature(self, s):
+    def calc_curvature(self, s: float) -> float | None:
         """
-        calc curvature
+        Calc curvature at the given s.
+
         Parameters
         ----------
         s : float
             distance from the start point. if `s` is outside the data point's
             range, return None.
+
         Returns
         -------
         k : float
@@ -112,14 +133,15 @@ class CubicSpline2D:
         k = (ddy * dx - ddx * dy) / ((dx**2 + dy**2) ** (3 / 2))
         return k
 
-    def calc_yaw(self, s):
+    def calc_yaw(self, s: float) -> float | None:
         """
-        calc yaw
+        Calc yaw angle at the given s.
+
         Parameters
         ----------
         s : float
-            distance from the start point. if `s` is outside the data point's
-            range, return None.
+            distance from the start point. If `s` is outside the data point's range, return None.
+
         Returns
         -------
         yaw : float
