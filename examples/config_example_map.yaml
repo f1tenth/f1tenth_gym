@@ -5,6 +5,7 @@ perf_num: 6
 
 # map paths
 map_path: './example_map'
+# map_path: '/home/twilightrush/code/f1tenth_gym/gym/f110_gym/unittest/maps/map0'
 map_ext: '.png'
 
 # starting pose for map
@@ -41,4 +42,4 @@ budget: 1000
 optim_method: 'CMA'
 
 # seed
-seed: 12345
+seed: 23456

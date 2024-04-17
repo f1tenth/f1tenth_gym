@@ -4,6 +4,7 @@ import yaml
 import gym
 import numpy as np
 from argparse import Namespace
+import pickle
 
 from numba import njit
 
@@ -236,6 +237,63 @@ class FlippyPlanner:
             self.counter = 0
             self.steer *= -1
         return self.speed, self.steer
+    
+    
+    
+import numpy as np
+import pickle
+
+class QLearningPlanner:
+    def __init__(self, state_space, action_space, alpha=0.1, gamma=0.95, epsilon=0.1, load_file=None):
+        self.state_space = state_space
+        self.action_space = action_space
+        self.alpha = alpha
+        self.gamma = gamma
+        self.epsilon = epsilon
+        self.action_map = [
+            (0.5, -10),  # Speed 0.5, Steer -10 degrees
+            (0.5, 10),   # Speed 0.5, Steer 10 degrees
+            (1.0, -10),  # Speed 1.0, Steer -10 degrees
+            (1.0, 10),   # Speed 1.0, Steer 10 degrees
+            (0.75, 0)    # Speed 0.75, Steer straight
+        ]
+        if load_file:
+            self.load_q_table(load_file)
+        else:
+            self.q_table = np.zeros((state_space, action_space))
+
+    def choose_action(self, state):
+        if np.random.rand() < self.epsilon:
+            return np.random.choice(self.action_space)
+        else:
+            return np.argmax(self.q_table[state])
+
+    def update_q_table(self, state, action, reward, next_state):
+        best_next_action = np.argmax(self.q_table[next_state])
+        td_target = reward + self.gamma * self.q_table[next_state][best_next_action]
+        td_error = td_target - self.q_table[state][action]
+        self.q_table[state][action] += self.alpha * td_error
+
+    def save_q_table(self, filename):
+        with open(filename, 'wb') as file:
+            pickle.dump(self.q_table, file)
+
+    def load_q_table(self, filename):
+        with open(filename, 'rb') as file:
+            self.q_table = pickle.load(file)
+
+    def plan(self, poses_x, poses_y, poses_theta, tlad, vgain):
+        state = self.compute_state(poses_x, poses_y, poses_theta, tlad, vgain)
+        action_index = self.choose_action(state)
+        return self.action_map[action_index]
+
+    def compute_state(self, poses_x, poses_y, poses_theta, tlad, vgain):
+        state = int(poses_x + poses_y + poses_theta) % self.state_space
+        return state
+
+    def render_waypoints(self, *args, **kwargs):
+        pass
+
 
 
 def main():
@@ -249,7 +307,12 @@ def main():
         conf_dict = yaml.load(file, Loader=yaml.FullLoader)
     conf = Namespace(**conf_dict)
 
-    planner = PurePursuitPlanner(conf, (0.17145+0.15875)) #FlippyPlanner(speed=0.2, flip_every=1, steer=10)
+    # planner = PurePursuitPlanner(conf, (0.17145+0.15875)) #FlippyPlanner(speed=0.2, flip_every=1, steer=10)
+    # planner = FlippyPlanner(speed=1, flip_every=3, steer=30)
+    
+    
+    
+    planner = QLearningPlanner(state_space=100, action_space=5)
 
     def render_callback(env_renderer):
         # custom extra drawing function
