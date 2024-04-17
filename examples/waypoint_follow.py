@@ -312,7 +312,7 @@ def main():
     
     
     
-    planner = QLearningPlanner(state_space=100, action_space=5)
+    planner = QLearningPlanner(state_space=100, action_space=5, load_file="final_q_table.pkl")
 
     def render_callback(env_renderer):
         # custom extra drawing function
@@ -340,6 +340,9 @@ def main():
 
     laptime = 0.0
     start = time.time()
+    
+    save_interval = 100
+    step_count = 0 
 
     while not done:
         speed, steer = planner.plan(obs['poses_x'][0], obs['poses_y'][0], obs['poses_theta'][0], work['tlad'], work['vgain'])
@@ -347,7 +350,12 @@ def main():
         laptime += step_reward
         env.render(mode='human')
         
+        # if step_count % save_interval == 0:
+        #     planner.save_q_table('q_table.pkl')  # Save the Q-table
+        # step_count += 1
+        
     print('Sim elapsed time:', laptime, 'Real elapsed time:', time.time()-start)
+    planner.save_q_table('final_q_table.pkl')
 
 if __name__ == '__main__':
     main()
