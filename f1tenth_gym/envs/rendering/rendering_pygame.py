@@ -13,6 +13,7 @@ from .objects import (
     Car,
     TextObject,
 )
+from .utils import to_pygame
 from ..track import Track
 from .renderer import EnvRenderer, RenderSpec
 
@@ -212,6 +213,7 @@ class PygameEnvRenderer(EnvRenderer):
                 ego_x, ego_y = self.cars[self.agent_to_follow].pose[:2]
                 cx = (ego_x - origin[0]) / resolution
                 cy = (ego_y - origin[1]) / resolution
+                cx, cy = to_pygame(np.array([cx, cy]), height=self.map_canvas.get_height())
             else:
                 cx = self.map_canvas.get_width() / 2
                 cy = self.map_canvas.get_height() / 2
@@ -330,6 +332,7 @@ class PygameEnvRenderer(EnvRenderer):
         ppu = self.ppus[self.active_map_renderer]
         resolution = self.map_resolution * ppu
         points = ((points - origin[:2]) / resolution).astype(int)
+        points = to_pygame(points, height=self.map_canvas.get_height())
         size = math.ceil(size / ppu)
 
         for point in points:
@@ -357,6 +360,7 @@ class PygameEnvRenderer(EnvRenderer):
         ppu = self.ppus[self.active_map_renderer]
         resolution = self.map_resolution * ppu
         points = ((points - origin[:2]) / resolution).astype(int)
+        points = to_pygame(points, height=self.map_canvas.get_height())
         size = math.ceil(size / ppu)
 
         pygame.draw.lines(
@@ -385,6 +389,7 @@ class PygameEnvRenderer(EnvRenderer):
         ppu = self.ppus[self.active_map_renderer]
         resolution = self.map_resolution * ppu
         points = ((points - origin[:2]) / resolution).astype(int)
+        points = to_pygame(points, height=self.map_canvas.get_height())
         size = math.ceil(size / ppu)
 
         pygame.draw.lines(

@@ -118,9 +118,7 @@ class Track:
 
             # load occupancy grid
             map_filename = pathlib.Path(track_spec.image)
-            image = Image.open(track_dir / str(map_filename)).transpose(
-                Transpose.FLIP_TOP_BOTTOM
-            )
+            image = Image.open(track_dir / str(map_filename))
             occupancy_map = np.array(image).astype(np.float32)
             occupancy_map[occupancy_map <= 128] = 0.0
             occupancy_map[occupancy_map > 128] = 255.0
