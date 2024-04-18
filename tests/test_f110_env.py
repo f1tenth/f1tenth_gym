@@ -121,6 +121,24 @@ class TestEnvInterface(unittest.TestCase):
             f"Speed action high should be {new_v_max}",
         )
 
+    def test_configure_observation_space(self):
+        """
+        Try to change the observed features and check if the observation space is correctly updated.
+        """
+        base_env = self._make_env()
+        new_obs_cfg = {"type": "features", "features": ["pose_x", "pose_y", "pose_theta"]}
+
+        base_env.configure(config={"observation_config": new_obs_cfg})
+
+        agent_id = base_env.agent_ids[0]
+        ego_space = base_env.observation_space.spaces[agent_id].spaces
+        self.assertTrue(
+            all([k in ego_space for k in new_obs_cfg["features"]]),
+        )
+        self.assertTrue(
+            all([k in new_obs_cfg["features"] for k in ego_space]),
+        )
+
     def test_acceleration_action_space(self):
         """
         Test that the acceleration action space is correctly configured.
