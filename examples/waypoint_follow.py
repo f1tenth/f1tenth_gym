@@ -345,10 +345,26 @@ def main():
     step_count = 0 
 
     while not done:
-        speed, steer = planner.plan(obs['poses_x'][0], obs['poses_y'][0], obs['poses_theta'][0], work['tlad'], work['vgain'])
-        obs, step_reward, done, info = env.step(np.array([[steer, speed]]))
-        laptime += step_reward
+        current_state = planner.compute_state(obs['poses_x'][0], obs['poses_y'][0], obs['poses_theta'][0], work['tlad'], work['vgain'])
+        action_output = planner.plan(obs['poses_x'][0], obs['poses_y'][0], obs['poses_theta'][0], work['tlad'], work['vgain'])
+        action_index = planner.action_map.index(action_output)
+        
+        obs, step_reward, done, info = env.step(np.array([[action_output[1], action_output[0]]]))  # Note: the order might need to be adjusted based on your env
+        
+        ###TODO - reward should be modified here
+
+        
+        next_state = planner.compute_state(obs['poses_x'][0], obs['poses_y'][0], obs['poses_theta'][0], work['tlad'], work['vgain'])
+        
+        planner.update_q_table(current_state, action_index, step_reward, next_state)
+        
         env.render(mode='human')
+        
+        if step_count % save_interval == 0:
+            planner.save_q_table('final_q_table.pkl')  # Save the Q-table
+        step_count += 1
+        
+        print(step_reward)
         
         # if step_count % save_interval == 0:
         #     planner.save_q_table('q_table.pkl')  # Save the Q-table
