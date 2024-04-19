@@ -295,6 +295,37 @@ class QLearningPlanner:
         pass
 
 
+class MyRewardWrapper(gym.RewardWrapper):
+    # def step(self, action):
+    #     obs, reward, done, info = self.env.step(action)
+    #     reward = self.reward(obs)
+    #     return obs, reward, done, info
+    def reset(self, *args, **kwargs):
+        return self.env.reset(*args, **kwargs)
+    
+    def step(self, action):
+        observation, reward, done, info = self.env.step(action)
+        return observation, self.reward(observation), done, info
+    
+    def reward(self, obs):
+        reward = -0.01
+        # return reward
+        scans = obs['scans']
+        poses_x = obs['poses_x']
+        poses_y = obs['poses_y']
+        poses_theta = obs['poses_theta']
+        linear_vels_x = obs['linear_vels_x'][0]
+        linear_vels_y = obs['linear_vels_y'][0]
+        ang_vels_z = obs['ang_vels_z']
+        collisions = obs['collisions']
+        
+        if collisions:
+            reward -= 100
+        velocity = np.sqrt(linear_vels_x**2 + linear_vels_y**2)
+        reward += velocity * 0.02
+        
+        return reward 
+
 
 def main():
     """
@@ -309,7 +340,6 @@ def main():
 
     # planner = PurePursuitPlanner(conf, (0.17145+0.15875)) #FlippyPlanner(speed=0.2, flip_every=1, steer=10)
     # planner = FlippyPlanner(speed=1, flip_every=3, steer=30)
-    
     
     
     planner = QLearningPlanner(state_space=100, action_space=5, load_file="final_q_table.pkl")
@@ -333,6 +363,7 @@ def main():
         planner.render_waypoints(env_renderer)
 
     env = gym.make('f110_gym:f110-v0', map=conf.map_path, map_ext=conf.map_ext, num_agents=1, timestep=0.01, integrator=Integrator.RK4)
+    env = MyRewardWrapper(env)
     env.add_render_callback(render_callback)
     
     obs, step_reward, done, info = env.reset(np.array([[conf.sx, conf.sy, conf.stheta]]))
@@ -349,7 +380,13 @@ def main():
         action_output = planner.plan(obs['poses_x'][0], obs['poses_y'][0], obs['poses_theta'][0], work['tlad'], work['vgain'])
         action_index = planner.action_map.index(action_output)
         
+        # should be (steer, speed)
         obs, step_reward, done, info = env.step(np.array([[action_output[1], action_output[0]]]))  # Note: the order might need to be adjusted based on your env
+        
+        
+        ### check step function       
+        # print(f"obs = {obs}, step_reward = {step_reward}")
+        print(f"step_reward = {step_reward}")
         
         ###TODO - reward should be modified here
 
@@ -363,8 +400,7 @@ def main():
         if step_count % save_interval == 0:
             planner.save_q_table('final_q_table.pkl')  # Save the Q-table
         step_count += 1
-        
-        print(step_reward)
+
         
         # if step_count % save_interval == 0:
         #     planner.save_q_table('q_table.pkl')  # Save the Q-table

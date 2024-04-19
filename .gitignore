@@ -11,5 +11,4 @@ docs/_build/
 flycheck_*
 
 venv/
-examples/
 get-pip.py
