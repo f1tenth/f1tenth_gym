@@ -282,13 +282,13 @@ class QLearningPlanner:
         with open(filename, 'rb') as file:
             self.q_table = pickle.load(file)
 
-    def plan(self, poses_x, poses_y, poses_theta, tlad, vgain):
-        state = self.compute_state(poses_x, poses_y, poses_theta, tlad, vgain)
+    def plan(self, poses_x, poses_y, poses_theta):
+        state = self.compute_state(poses_x, poses_y, poses_theta)
         action_index = self.choose_action(state)
         return self.action_map[action_index]
 
-    def compute_state(self, poses_x, poses_y, poses_theta, tlad, vgain):
-        state = int(poses_x + poses_y + poses_theta) % self.state_space
+    def compute_state(self, poses_x, poses_y, poses_theta):
+        state = hash((poses_x, poses_y, poses_theta)) % self.state_space
         return state
 
     def render_waypoints(self, *args, **kwargs):
@@ -308,7 +308,7 @@ class MyRewardWrapper(gym.RewardWrapper):
         return observation, self.reward(observation), done, info
     
     def reward(self, obs):
-        reward = -0.01
+        reward = -0.1
         # return reward
         scans = obs['scans']
         poses_x = obs['poses_x']
@@ -320,9 +320,10 @@ class MyRewardWrapper(gym.RewardWrapper):
         collisions = obs['collisions']
         
         if collisions:
-            reward -= 100
+            reward -= 300
         velocity = np.sqrt(linear_vels_x**2 + linear_vels_y**2)
-        reward += velocity * 0.02
+        reward += velocity * 0.1
+        reward += (min(scans) - 5) * 0.1
         
         return reward 
 
@@ -376,8 +377,8 @@ def main():
     step_count = 0 
 
     while not done:
-        current_state = planner.compute_state(obs['poses_x'][0], obs['poses_y'][0], obs['poses_theta'][0], work['tlad'], work['vgain'])
-        action_output = planner.plan(obs['poses_x'][0], obs['poses_y'][0], obs['poses_theta'][0], work['tlad'], work['vgain'])
+        current_state = planner.compute_state(obs['poses_x'][0], obs['poses_y'][0], obs['poses_theta'][0])
+        action_output = planner.plan(obs['poses_x'][0], obs['poses_y'][0], obs['poses_theta'][0])
         action_index = planner.action_map.index(action_output)
         
         # should be (steer, speed)
@@ -387,11 +388,12 @@ def main():
         ### check step function       
         # print(f"obs = {obs}, step_reward = {step_reward}")
         print(f"step_reward = {step_reward}")
+        print(f"obs = {obs}")
         
         ###TODO - reward should be modified here
 
         
-        next_state = planner.compute_state(obs['poses_x'][0], obs['poses_y'][0], obs['poses_theta'][0], work['tlad'], work['vgain'])
+        next_state = planner.compute_state(obs['poses_x'][0], obs['poses_y'][0], obs['poses_theta'][0])
         
         planner.update_q_table(current_state, action_index, step_reward, next_state)
         
@@ -410,4 +412,7 @@ def main():
     planner.save_q_table('final_q_table.pkl')
 
 if __name__ == '__main__':
-    main()
+    iterations = 1
+    for i in range(iterations):
+        print(f"iteration = {i}")
+        main()

@@ -12,3 +12,4 @@ flycheck_*
 
 venv/
 get-pip.py
+*.pkl
