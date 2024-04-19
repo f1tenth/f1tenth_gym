@@ -1,18 +1,46 @@
+# MIT License
+
+# Copyright (c) 2020 Joseph Auckley, Matthew O'Kelly, Aman Sinha, Hongrui Zheng
+
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+"""
+Author: Hongrui Zheng
+"""
+
 # gym imports
 import gymnasium as gym
 
-from f110_gym.envs.action import CarAction, from_single_to_multi_action_space
-from f110_gym.envs.integrator import IntegratorType
-from f110_gym.envs.rendering import make_renderer
+from .action import (CarAction,
+                                  from_single_to_multi_action_space)
+from .integrator import IntegratorType
+from .rendering import make_renderer
 
-from f110_gym.envs.track import Track
+from .track import Track
 
 # base classes
-from f110_gym.envs.base_classes import Simulator, DynamicModel
-from f110_gym.envs.observation import observation_factory
-from f110_gym.envs.reset import make_reset_fn
-from f110_gym.envs.track import Track
-from f110_gym.envs.utils import deep_update
+from .base_classes import Simulator, DynamicModel
+from .observation import observation_factory
+from .reset import make_reset_fn
+from .track import Track
+from .utils import deep_update
+
 
 # others
 import numpy as np
@@ -20,38 +48,40 @@ import numpy as np
 
 class F110Env(gym.Env):
     """
-    Gymnasium environment for F1TENTH
+    OpenAI gym environment for F1TENTH
 
-    Parameters
-    ----------
-    config : dict, optional
-        parameter dict, by default None
-    render_mode : _type_, optional
-        rendering mode, by default None
+    Env should be initialized by calling gym.make('f110_gym:f110-v0', **kwargs)
 
-    Examples
-    --------
-    Using default params:
+    Args:
+        kwargs:
+            seed (int, default=12345): seed for random state and reproducibility
+            map (str, default='vegas'): name of the map used for the environment.
 
-    >>> import gymnasium as gym
-    >>> env = gym.make("f1tenth_gym:f1tenth-v0")
-    >>> obs, info = env.reset()
-    >>> while not done:
-    >>>     action = env.action_space.sample()
-    >>>     obs, step_reward, done, truncated, info = env.step(action)
-    >>> env.close()
+            params (dict, default={'mu': 1.0489, 'C_Sf':, 'C_Sr':, 'lf': 0.15875, 'lr': 0.17145, 'h': 0.074, 'm': 3.74, 'I': 0.04712, 's_min': -0.4189, 's_max': 0.4189, 'sv_min': -3.2, 'sv_max': 3.2, 'v_switch':7.319, 'a_max': 9.51, 'v_min':-5.0, 'v_max': 20.0, 'width': 0.31, 'length': 0.58}): dictionary of vehicle parameters.
+            mu: surface friction coefficient
+            C_Sf: Cornering stiffness coefficient, front
+            C_Sr: Cornering stiffness coefficient, rear
+            lf: Distance from center of gravity to front axle
+            lr: Distance from center of gravity to rear axle
+            h: Height of center of gravity
+            m: Total mass of the vehicle
+            I: Moment of inertial of the entire vehicle about the z axis
+            s_min: Minimum steering angle constraint
+            s_max: Maximum steering angle constraint
+            sv_min: Minimum steering velocity constraint
+            sv_max: Maximum steering velocity constraint
+            v_switch: Switching velocity (velocity at which the acceleration is no longer able to create wheel spin)
+            a_max: Maximum longitudinal acceleration
+            v_min: Minimum longitudinal velocity
+            v_max: Maximum longitudinal velocity
+            width: width of the vehicle in meters
+            length: length of the vehicle in meters
 
-    Using custom params:
+            num_agents (int, default=2): number of agents in the environment
 
-    >>> import gymnasium as gym
-    >>> env = gym.make("f1tenth_gym:f1tenth-v0")
-    >>> new_conf = {"params": {"mu": 1.5}}
-    >>> env.configure(config=new_conf)
+            timestep (float, default=0.01): physics timestep
 
-    Using different maps:
-
-    >>> import gymnasium as gym
-    >>> env = gym.make("f1tenth_gym:f1tenth-v0", config={"map": "Shanghai",})
+            ego_idx (int, default=0): ego's index in list of agents
     """
 
     # NOTE: change matadata with default rendering-modes, add definition of render_fps
@@ -160,47 +190,15 @@ class F110Env(gym.Env):
 
     @classmethod
     def default_config(cls) -> dict:
-        """Default environment configuration:
-
-        >>> {
-        >>>     "seed": 12345,
-        >>>     "map": "Spielberg",
-        >>>     "params": {
-        >>>         "mu": 1.0489,
-        >>>         "C_Sf": 4.718,
-        >>>         "C_Sr": 5.4562,
-        >>>         "lf": 0.15875,
-        >>>         "lr": 0.17145,
-        >>>         "h": 0.074,
-        >>>         "m": 3.74,
-        >>>         "I": 0.04712,
-        >>>         "s_min": -0.4189,
-        >>>         "s_max": 0.4189,
-        >>>         "sv_min": -3.2,
-        >>>         "sv_max": 3.2,
-        >>>         "v_switch": 7.319,
-        >>>         "a_max": 9.51,
-        >>>         "v_min": -5.0,
-        >>>         "v_max": 20.0,
-        >>>         "width": 0.31,
-        >>>         "length": 0.58,
-        >>>     },
-        >>>     "num_agents": 2,
-        >>>     "timestep": 0.01,
-        >>>     "ego_idx": 0,
-        >>>     "integrator": "rk4",
-        >>>     "model": "st",
-        >>>     "control_input": ["speed", "steering_angle"],
-        >>>     "observation_config": {"type": None},
-        >>>     "reset_config": {"type": None},
-        >>> }
-
+        """
+        Default environment configuration.
 
         Can be overloaded in environment implementations, or by calling configure().
 
-        Returns
-        -------
-        dict
+        Args:
+            None
+
+        Returns:
             a configuration dict
         """
         return {
@@ -237,21 +235,6 @@ class F110Env(gym.Env):
         }
 
     def configure(self, config: dict) -> None:
-        """Update configuration of environment
-
-        Parameters
-        ----------
-        config : dict
-            a configuration dict
-
-        Examples
-        --------
-        >>> import gymnasium as gym
-        >>> env = gym.make("f1tenth_gym:f1tenth-v0")
-        >>> new_conf = {"params": {"mu": 1.5}}
-        >>> env.configure(config=new_conf)
-
-        """
         if config:
             self.config = deep_update(self.config, config)
             self.params = self.config["params"]
@@ -261,28 +244,21 @@ class F110Env(gym.Env):
 
             if hasattr(self, "action_space"):
                 # if some parameters changed, recompute action space
-                self.action_type = CarAction(
-                    self.config["control_input"], params=self.params
-                )
+                self.action_type = CarAction(self.config["control_input"], params=self.params)
                 self.action_space = from_single_to_multi_action_space(
                     self.action_type.space, self.num_agents
                 )
 
-            if hasattr(self, "observation_space"):
-                self.observation_type = observation_factory(
-                    env=self, **self.config["observation_config"]
-                )
-                self.observation_space = self.observation_type.space()
-
     def _check_done(self):
-        """Check if the current rollout is done
+        """
+        Check if the current rollout is done
 
-        Returns
-        -------
-        done : bool
-            if simulation is done
-        tooggle : np.ndarray(bool)
-            if the indicator for crossing the starting zone for each agent has toggled for more than 4 times
+        Args:
+            None
+
+        Returns:
+            done (bool): whether the rollout is done
+            toggle_list (list[int]): each agent's toggle list for crossing the finish zone
         """
 
         # this is assuming 2 agents
@@ -327,24 +303,19 @@ class F110Env(gym.Env):
         self.collisions = self.sim.collisions
 
     def step(self, action):
-        """Step function for the gym env
-
-        Parameters
-        ----------
-        action : np.ndarray
-            control input for all agents
-
-        Returns
-        -------
-        obs : dict
-            observation of the current step
-        reward : float
-            step reward, by default self.timestep
-        done : bool
-            if the simulation is done
-        info : dict
-            auxillary information dictionary
         """
+        Step function for the gym env
+
+        Args:
+            action (np.ndarray(num_agents, 2))
+
+        Returns:
+            obs (dict): observation of the current step
+            reward (float, default=self.timestep): step reward, currently is physics timestep
+            done (bool): if the simulation is done
+            info (dict): auxillary information dictionary
+        """
+
         # call simulation step
         self.sim.step(action)
 
@@ -379,25 +350,18 @@ class F110Env(gym.Env):
         return obs, reward, done, truncated, info
 
     def reset(self, seed=None, options=None):
-        """Reset the gym environment by given poses
+        """
+        Reset the gym environment by given poses
 
-        Parameters
-        ----------
-        seed : int, optional
-            random seed for the reset, by default None
-        options : dict, optional
-            dictionary of options for the reset containing initial poses of the agents, by default None
+        Args:
+            seed: random seed for the reset
+            options: dictionary of options for the reset containing initial poses of the agents
 
-        Returns
-        -------
-        obs : dict
-            observation of the current step
-        reward : float
-            step reward, by default self.timestep
-        done : bool
-            if the simulation is done
-        info : dict
-            auxillary information dictionary
+        Returns:
+            obs (dict): observation of the current step
+            reward (float, default=self.timestep): step reward, currently is physics timestep
+            done (bool): if the simulation is done
+            info (dict): auxillary information dictionary
         """
         if seed is not None:
             np.random.seed(seed=self.seed)
@@ -448,46 +412,52 @@ class F110Env(gym.Env):
         return obs, info
 
     def update_map(self, map_name: str):
-        """Updates the map used by simulation
+        """
+        Updates the map used by simulation
 
-        Parameters
-        ----------
-        map_name : str
-            name of the map
+        Args:
+            map_name (str): name of the map
+
+        Returns:
+            None
         """
         self.sim.set_map(map_name)
         self.track = Track.from_track_name(map_name)
 
     def update_params(self, params, index=-1):
-        """Updates the parameters used by simulation for vehicles
+        """
+        Updates the parameters used by simulation for vehicles
 
-        Parameters
-        ----------
-        params : dict
-            dictionary of parameters
-        index : int, optional
-            if >= 0 then only update a specific agent's params, by default -1
+        Args:
+            params (dict): dictionary of parameters
+            index (int, default=-1): if >= 0 then only update a specific agent's params
+
+        Returns:
+            None
         """
         self.sim.update_params(params, agent_idx=index)
 
     def add_render_callback(self, callback_func):
-        """Add extra drawing function to call during rendering.
-
-        Parameters
-        ----------
-        callback_func : Callable(EnvRenderer) -> None
-            custom function to called during render()
         """
+        Add extra drawing function to call during rendering.
+
+        Args:
+            callback_func (function (EnvRenderer) -> None): custom function to called during render()
+        """
+
         self.renderer.add_renderer_callback(callback_func)
 
     def render(self, mode="human"):
-        """Renders the environment with pygame
+        """
+        Renders the environment with pyglet. Use mouse scroll in the window to zoom in/out, use mouse click drag to pan. Shows the agents, the map, current fps (bottom left corner), and the race information near as text.
 
-        Parameters
-        ----------
-        mode : str, optional
-            rendering mode, by default "human"
+        Args:
+            mode (str, default='human'): rendering mode, currently supports:
+                'human': slowed down rendering such that the env is rendered in a way that sim time elapsed is close to real time elapsed
+                'human_fast': render as fast as possible
 
+        Returns:
+            None
         """
         # NOTE: separate render (manage render-mode) from render_frame (actual rendering with pyglet)
 

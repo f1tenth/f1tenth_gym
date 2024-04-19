@@ -1,8 +1,8 @@
 import pathlib
 from typing import Any, Optional
 
-from f110_gym.envs.rendering.renderer import RenderSpec, EnvRenderer
-from f110_gym.envs.track import Track
+from .renderer import RenderSpec, EnvRenderer
+from ..track import Track
 
 
 def make_renderer(
@@ -28,7 +28,7 @@ def make_renderer(
     render_fps : int, optional
         rendering frames per second, by default 100
     """
-    from f110_gym.envs.rendering.rendering_pygame import PygameEnvRenderer
+    from .rendering_pygame import PygameEnvRenderer
 
     cfg_file = pathlib.Path(__file__).parent.absolute() / "rendering.yaml"
     render_spec = RenderSpec.from_yaml(cfg_file)

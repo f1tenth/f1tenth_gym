@@ -8,13 +8,13 @@ import numpy as np
 import pygame
 from PIL import ImageColor
 
-from f110_gym.envs.rendering.objects import (
+from .objects import (
     Map,
     Car,
     TextObject,
 )
-from f110_gym.envs.track import Track
-from f110_gym.envs.rendering.renderer import EnvRenderer, RenderSpec
+from ..track import Track
+from .renderer import EnvRenderer, RenderSpec
 
 # one-line instructions visualized at the top of the screen (if show_info=True)
 INSTRUCTION_TEXT = "Mouse click (L/M/R): Change POV - 'S' key: On/Off"

@@ -2,9 +2,9 @@ import unittest
 
 import gymnasium as gym
 import numpy as np
-from f110_gym.envs import F110Env
-from f110_gym.envs.observation import observation_factory
-from f110_gym.envs.utils import deep_update
+from f1tenth_gym.envs import F110Env
+from f1tenth_gym.envs.observation import observation_factory
+from f1tenth_gym.envs.utils import deep_update
 from gymnasium.spaces import Box
 
 
@@ -21,7 +21,7 @@ class TestObservationInterface(unittest.TestCase):
         }
         conf = deep_update(conf, config)
 
-        env = gym.make("f110_gym:f110-v0", config=conf)
+        env = gym.make("f1tenth_gym:f1tenth-v0", config=conf)
         return env
 
     def test_original_obs_space(self):

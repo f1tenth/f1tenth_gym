@@ -4,8 +4,8 @@ from typing import Optional
 
 import numpy as np
 
-from f110_gym.envs.rendering import EnvRenderer
-from f110_gym.envs.track.cubic_spline import CubicSpline2D
+from ..rendering import EnvRenderer
+from .cubic_spline import CubicSpline2D
 
 
 class Raceline:

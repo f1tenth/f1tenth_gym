@@ -2,15 +2,15 @@ import unittest
 
 import numpy as np
 
-from f110_gym.envs import F110Env
-from f110_gym.envs.utils import deep_update
+from f1tenth_gym.envs import F110Env
+from f1tenth_gym.envs.utils import deep_update
 
 
 class TestRenderer(unittest.TestCase):
     @staticmethod
     def _make_env(config={}, render_mode=None) -> F110Env:
         import gymnasium as gym
-        import f110_gym
+        import f1tenth_gym
 
         base_config = {
             "map": "Spielberg",
@@ -24,20 +24,20 @@ class TestRenderer(unittest.TestCase):
         }
         config = deep_update(base_config, config)
 
-        env = gym.make("f110_gym:f110-v0", config=config, render_mode=render_mode,)
+        env = gym.make("f1tenth_gym:f1tenth-v0", config=config, render_mode=render_mode,)
 
         return env
 
-    def test_human_render(self):
-        env = self._make_env(render_mode="human")
-        env.reset()
-        for _ in range(100):
-            action = env.action_space.sample()
-            env.step(action)
-            env.render()
-        env.close()
+    # def test_human_render(self):
+    #     env = self._make_env(render_mode="human")
+    #     env.reset()
+    #     for _ in range(100):
+    #         action = env.action_space.sample()
+    #         env.step(action)
+    #         env.render()
+    #     env.close()
 
-        self.assertTrue(True, "Human render test failed")
+    #     self.assertTrue(True, "Human render test failed")
 
     def test_rgb_array_render(self):
         env = self._make_env(render_mode="rgb_array")

@@ -23,7 +23,7 @@ import time
 import unittest
 
 import numpy as np
-from f110_gym.envs.dynamic_models import (
+from f1tenth_gym.envs.dynamic_models import (
     vehicle_dynamics_ks,
     vehicle_dynamics_st,
     func_KS,
