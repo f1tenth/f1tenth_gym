@@ -8,263 +8,31 @@ import pickle
 import os
 import logging
 
-from numba import njit
-
-from pyglet.gl import GL_POINTS
 
 """
 Planner Helpers
 """
-@njit(fastmath=False, cache=True)
-def nearest_point_on_trajectory(point, trajectory):
-    """
-    Return the nearest point along the given piecewise linear trajectory.
-
-    Same as nearest_point_on_line_segment, but vectorized. This method is quite fast, time constraints should
-    not be an issue so long as trajectories are not insanely long.
-
-        Order of magnitude: trajectory length: 1000 --> 0.0002 second computation (5000fps)
-
-    point: size 2 numpy array
-    trajectory: Nx2 matrix of (x,y) trajectory waypoints
-        - these must be unique. If they are not unique, a divide by 0 error will destroy the world
-    """
-    diffs = trajectory[1:,:] - trajectory[:-1,:]
-    l2s   = diffs[:,0]**2 + diffs[:,1]**2
-    # this is equivalent to the elementwise dot product
-    # dots = np.sum((point - trajectory[:-1,:]) * diffs[:,:], axis=1)
-    dots = np.empty((trajectory.shape[0]-1, ))
-    for i in range(dots.shape[0]):
-        dots[i] = np.dot((point - trajectory[i, :]), diffs[i, :])
-    t = dots / l2s
-    t[t<0.0] = 0.0
-    t[t>1.0] = 1.0
-    # t = np.clip(dots / l2s, 0.0, 1.0)
-    projections = trajectory[:-1,:] + (t*diffs.T).T
-    # dists = np.linalg.norm(point - projections, axis=1)
-    dists = np.empty((projections.shape[0],))
-    for i in range(dists.shape[0]):
-        temp = point - projections[i]
-        dists[i] = np.sqrt(np.sum(temp*temp))
-    min_dist_segment = np.argmin(dists)
-    return projections[min_dist_segment], dists[min_dist_segment], t[min_dist_segment], min_dist_segment
-
-@njit(fastmath=False, cache=True)
-def first_point_on_trajectory_intersecting_circle(point, radius, trajectory, t=0.0, wrap=False):
-    """
-    starts at beginning of trajectory, and find the first point one radius away from the given point along the trajectory.
-
-    Assumes that the first segment passes within a single radius of the point
-
-    http://codereview.stackexchange.com/questions/86421/line-segment-to-circle-collision-algorithm
-    """
-    start_i = int(t)
-    start_t = t % 1.0
-    first_t = None
-    first_i = None
-    first_p = None
-    trajectory = np.ascontiguousarray(trajectory)
-    for i in range(start_i, trajectory.shape[0]-1):
-        start = trajectory[i,:]
-        end = trajectory[i+1,:]+1e-6
-        V = np.ascontiguousarray(end - start)
-
-        a = np.dot(V,V)
-        b = 2.0*np.dot(V, start - point)
-        c = np.dot(start, start) + np.dot(point,point) - 2.0*np.dot(start, point) - radius*radius
-        discriminant = b*b-4*a*c
-
-        if discriminant < 0:
-            continue
-        #   print "NO INTERSECTION"
-        # else:
-        # if discriminant >= 0.0:
-        discriminant = np.sqrt(discriminant)
-        t1 = (-b - discriminant) / (2.0*a)
-        t2 = (-b + discriminant) / (2.0*a)
-        if i == start_i:
-            if t1 >= 0.0 and t1 <= 1.0 and t1 >= start_t:
-                first_t = t1
-                first_i = i
-                first_p = start + t1 * V
-                break
-            if t2 >= 0.0 and t2 <= 1.0 and t2 >= start_t:
-                first_t = t2
-                first_i = i
-                first_p = start + t2 * V
-                break
-        elif t1 >= 0.0 and t1 <= 1.0:
-            first_t = t1
-            first_i = i
-            first_p = start + t1 * V
-            break
-        elif t2 >= 0.0 and t2 <= 1.0:
-            first_t = t2
-            first_i = i
-            first_p = start + t2 * V
-            break
-    # wrap around to the beginning of the trajectory if no intersection is found1
-    if wrap and first_p is None:
-        for i in range(-1, start_i):
-            start = trajectory[i % trajectory.shape[0],:]
-            end = trajectory[(i+1) % trajectory.shape[0],:]+1e-6
-            V = end - start
-
-            a = np.dot(V,V)
-            b = 2.0*np.dot(V, start - point)
-            c = np.dot(start, start) + np.dot(point,point) - 2.0*np.dot(start, point) - radius*radius
-            discriminant = b*b-4*a*c
-
-            if discriminant < 0:
-                continue
-            discriminant = np.sqrt(discriminant)
-            t1 = (-b - discriminant) / (2.0*a)
-            t2 = (-b + discriminant) / (2.0*a)
-            if t1 >= 0.0 and t1 <= 1.0:
-                first_t = t1
-                first_i = i
-                first_p = start + t1 * V
-                break
-            elif t2 >= 0.0 and t2 <= 1.0:
-                first_t = t2
-                first_i = i
-                first_p = start + t2 * V
-                break
-
-    return first_p, first_i, first_t
-
-@njit(fastmath=False, cache=True)
-def get_actuation(pose_theta, lookahead_point, position, lookahead_distance, wheelbase):
-    """
-    Returns actuation
-    """
-    waypoint_y = np.dot(np.array([np.sin(-pose_theta), np.cos(-pose_theta)]), lookahead_point[0:2]-position)
-    speed = lookahead_point[2]
-    if np.abs(waypoint_y) < 1e-6:
-        return speed, 0.
-    radius = 1/(2.0*waypoint_y/lookahead_distance**2)
-    steering_angle = np.arctan(wheelbase/radius)
-    return speed, steering_angle
-
-class PurePursuitPlanner:
-    """
-    Example Planner
-    """
-    def __init__(self, conf, wb):
-        self.wheelbase = wb
-        self.conf = conf
-        self.load_waypoints(conf)
-        self.max_reacquire = 20.
-
-        self.drawn_waypoints = []
-
-    def load_waypoints(self, conf):
-        """
-        loads waypoints
-        """
-        self.waypoints = np.loadtxt(conf.wpt_path, delimiter=conf.wpt_delim, skiprows=conf.wpt_rowskip)
-
-    def render_waypoints(self, e):
-        """
-        update waypoints being drawn by EnvRenderer
-        """
-
-        #points = self.waypoints
-
-        points = np.vstack((self.waypoints[:, self.conf.wpt_xind], self.waypoints[:, self.conf.wpt_yind])).T
-        
-        scaled_points = 50.*points
-
-        for i in range(points.shape[0]):
-            if len(self.drawn_waypoints) < points.shape[0]:
-                b = e.batch.add(1, GL_POINTS, None, ('v3f/stream', [scaled_points[i, 0], scaled_points[i, 1], 0.]),
-                                ('c3B/stream', [183, 193, 222]))
-                self.drawn_waypoints.append(b)
-            else:
-                self.drawn_waypoints[i].vertices = [scaled_points[i, 0], scaled_points[i, 1], 0.]
-        
-    def _get_current_waypoint(self, waypoints, lookahead_distance, position, theta):
-        """
-        gets the current waypoint to follow
-        """
-        wpts = np.vstack((self.waypoints[:, self.conf.wpt_xind], self.waypoints[:, self.conf.wpt_yind])).T
-        nearest_point, nearest_dist, t, i = nearest_point_on_trajectory(position, wpts)
-        if nearest_dist < lookahead_distance:
-            lookahead_point, i2, t2 = first_point_on_trajectory_intersecting_circle(position, lookahead_distance, wpts, i+t, wrap=True)
-            if i2 == None:
-                return None
-            current_waypoint = np.empty((3, ))
-            # x, y
-            current_waypoint[0:2] = wpts[i2, :]
-            # speed
-            current_waypoint[2] = waypoints[i, self.conf.wpt_vind]
-            return current_waypoint
-        elif nearest_dist < self.max_reacquire:
-            return np.append(wpts[i, :], waypoints[i, self.conf.wpt_vind])
-        else:
-            return None
-
-    def plan(self, pose_x, pose_y, pose_theta, lookahead_distance, vgain):
-        """
-        gives actuation given observation
-        """
-        position = np.array([pose_x, pose_y])
-        lookahead_point = self._get_current_waypoint(self.waypoints, lookahead_distance, position, pose_theta)
-
-        if lookahead_point is None:
-            return 4.0, 0.0
-
-        speed, steering_angle = get_actuation(pose_theta, lookahead_point, position, lookahead_distance, self.wheelbase)
-        speed = vgain * speed
-
-        return speed, steering_angle
-
-
-class FlippyPlanner:
-    """
-    Planner designed to exploit integration methods and dynamics.
-    For testing only. To observe this error, use single track dynamics for all velocities >0.1
-    """
-    def __init__(self, speed=1, flip_every=1, steer=2):
-        self.speed = speed
-        self.flip_every = flip_every
-        self.counter = 0
-        self.steer = steer
-    
-    def render_waypoints(self, *args, **kwargs):
-        pass
-
-    def plan(self, *args, **kwargs):
-        if self.counter%self.flip_every == 0:
-            self.counter = 0
-            self.steer *= -1
-        return self.speed, self.steer
-    
-    
-    
-import numpy as np
-import pickle
 
 class QLearningPlanner:
-    def __init__(self, state_space, action_space, alpha=0.1, gamma=0.95, epsilon=0.1, load_file=None):
+    def __init__(self, state_space, action_space, alpha=0.25, gamma=0.95, epsilon=0.1, load_file=None):
         self.state_space = state_space
         self.action_space = action_space
         self.alpha = alpha
         self.gamma = gamma
         self.epsilon = epsilon
         self.action_map = [
-            (0.9, -45),   # Speed 0.9, Steer -45 degrees
-            (0.9, 0),     # Speed 0.9, Steer straight
-            (0.9, 45),    # Speed 0.9, Steer 45 degrees
-            (1.5, -45),   # Speed 1.5, Steer -45 degrees
-            (1.5, 0),     # Speed 1.5, Steer straight
-            (1.5, 45),    # Speed 1.5, Steer 45 degrees
-            (2.1, -30),   # Speed 2.1, Steer -30 degrees
-            (2.1, 0),     # Speed 2.1, Steer straight
-            (2.1, 30),    # Speed 2.1, Steer 30 degrees
-            (3.0, -10),   # Speed 3.0, Steer -10 degrees
-            (3.0, 0),    # Speed 3.0, Steer straight
-            (3.0, 10),   # Speed 3.0, Steer 10 degrees
+            (0.9, -45 * np.pi / 180),   # Speed 0.9, Steer -45 degrees
+            (0.9, 0),                   # Speed 0.9, Steer straight
+            (0.9, 45 * np.pi / 180),    # Speed 0.9, Steer 45 degrees
+            (1.5, -45 * np.pi / 180),   # Speed 1.5, Steer -45 degrees
+            (1.5, 0),                   # Speed 1.5, Steer straight
+            (1.5, 45 * np.pi / 180),    # Speed 1.5, Steer 45 degrees
+            (2.1, -30 * np.pi / 180),   # Speed 2.1, Steer -30 degrees
+            (2.1, 0),                   # Speed 2.1, Steer straight
+            (2.1, 30 * np.pi / 180),    # Speed 2.1, Steer 30 degrees
+            (3.0, -10 * np.pi / 180),   # Speed 3.0, Steer -10 degrees
+            (3.0, 0),                   # Speed 3.0, Steer straight
+            (3.0, 10 * np.pi / 180),    # Speed 3.0, Steer 10 degrees
         ]
         if load_file:
             self.load_q_table(load_file)
@@ -291,16 +59,36 @@ class QLearningPlanner:
         with open(filename, 'rb') as file:
             self.q_table = pickle.load(file)
 
-    def plan(self, poses_x, poses_y, poses_theta):
-        state = self.compute_state(poses_x, poses_y, poses_theta)
+    def plan(self, scans, linear_vels_x, poses_x, poses_y):
+        state = self.compute_state(scans, linear_vels_x, poses_x, poses_y)
         action_index = self.choose_action(state)
         action = self.action_map[action_index]
         print(f"action = {action}")
         return action
 
-    def compute_state(self, poses_x, poses_y, poses_theta):
-        state = hash((poses_x, poses_y, poses_theta)) % self.state_space
-        return state
+    def compute_state(self, scans, linear_vels_x, poses_x, poses_y):
+        # Select 12 points from the scan array
+        selected_points = np.linspace(0, len(scans)-1, num=7, dtype=int)
+        selected_scans = scans[selected_points]
+
+        # convert selected_scans to a low - <0.4, high - >2.0, mid 0.4-2.0
+        for i in range(len(selected_scans)):
+            if selected_scans[i] < 0.5:
+                selected_scans[i] = 0
+            elif selected_scans[i] > 2.0:
+                selected_scans[i] = 2
+            else:
+                selected_scans[i] = 1
+                
+        linear_vels_x = linear_vels_x // 0.2
+
+        # Combine the normalized scans and poses_theta into a single state array
+        state = np.concatenate((selected_scans, [linear_vels_x, poses_x, poses_y]))
+
+        # Hash the state array to get the state index
+        state_index = hash(tuple(state)) % self.state_space
+
+        return state_index
 
     def render_waypoints(self, *args, **kwargs):
         pass
@@ -319,11 +107,11 @@ class MyRewardWrapper(gym.RewardWrapper):
         return observation, self.reward(observation), done, info
     
     def reward(self, obs):
-        reward = -0.1
+        reward = -0.001
         # return reward
         scans = obs['scans'][0]
-        poses_x = obs['poses_x']
-        poses_y = obs['poses_y']
+        poses_x = obs['poses_x'][0]
+        poses_y = obs['poses_y'][0]
         poses_theta = obs['poses_theta']
         linear_vels_x = obs['linear_vels_x'][0]
         linear_vels_y = obs['linear_vels_y'][0]
@@ -331,10 +119,12 @@ class MyRewardWrapper(gym.RewardWrapper):
         collisions = obs['collisions']
         
         if collisions:
-            reward -= 100
+            reward -= 1000
         velocity = np.sqrt(linear_vels_x**2 + linear_vels_y**2)
-        reward += velocity * 0.5
-        reward += (min(scans) - 3) * 0.7
+        reward += velocity * 2.0
+
+        if min(scans) < 0.5:      
+            reward -= 1 /(np.min(scans)-0.1) * 1
         
         return float(reward) 
 
@@ -344,7 +134,7 @@ def main(i):
     main entry point
     """
     iteration_count = i
-    state_space_size = 1000
+    state_space_size = 2000
     action_space_size = 12
     starting_epsilon = 0.8
     epsilon_decay = 0.01
@@ -394,6 +184,11 @@ def main(i):
     env.add_render_callback(render_callback)
     
     obs, step_reward, done, info = env.reset(np.array([[conf.sx, conf.sy, conf.stheta]]))
+    scans = obs['scans'][0]
+    poses_x = obs['poses_x'][0]
+    poses_y = obs['poses_y'][0]
+    poses_theta = obs['poses_theta']
+    linear_vels_x = obs['linear_vels_x'][0]
     env.render()
 
     laptime = 0.0
@@ -405,12 +200,17 @@ def main(i):
     tt_reward = 0
 
     while not done:
-        current_state = planner.compute_state(obs['poses_x'][0], obs['poses_y'][0], obs['poses_theta'][0])
-        action_output = planner.plan(obs['poses_x'][0], obs['poses_y'][0], obs['poses_theta'][0])
+        current_state = planner.compute_state(scans, linear_vels_x, poses_x, poses_y)
+        action_output = planner.plan(scans, linear_vels_x, poses_x, poses_y)
         action_index = planner.action_map.index(action_output)
         
         # should be (steer, speed)
         obs, step_reward, done, info = env.step(np.array([[action_output[1], action_output[0]]]))  # Note: the order might need to be adjusted based on your env
+        scans = obs['scans'][0]
+        poses_x = obs['poses_x'][0]
+        poses_y = obs['poses_y'][0]
+        poses_theta = obs['poses_theta']
+        linear_vels_x = obs['linear_vels_x'][0]
         
         tt_reward += step_reward
         
@@ -419,8 +219,8 @@ def main(i):
         print(f"step_reward = {step_reward}")
         # print(f"scans = {obs['scans']}, len scans = {len(obs['scans'][0])}")
 
-        
-        next_state = planner.compute_state(obs['poses_x'][0], obs['poses_y'][0], obs['poses_theta'][0])
+        # obatin the next_state
+        next_state = planner.compute_state(scans, linear_vels_x, poses_x, poses_y)
         
         planner.update_q_table(current_state, action_index, step_reward, next_state)
         
@@ -430,7 +230,10 @@ def main(i):
             planner.save_q_table('final_q_table.pkl')  # Save the Q-table
         step_count += 1
 
-        
+    selected_points = np.linspace(0, len(scans)-1, num=11, dtype=int)
+    selected_scans = scans[selected_points]
+    logging.info(f"selected_scans = {selected_scans}")
+    logging.info(f"min selected_scans = {np.min(selected_scans)}")
     print('Sim elapsed time:', laptime, 'Real elapsed time:', time.time()-start)
     logging.info(f'Sim elapsed time: {laptime}, Real elapsed time: {time.time()-start}')
     print(f"Total reward = {tt_reward}")
@@ -440,11 +243,11 @@ def main(i):
 
 if __name__ == '__main__':
     # initiate logging file
-    logging.basicConfig(filename='waypoint_follow.log', level=logging.DEBUG)
+    logging.basicConfig(filename=f'waypoint_follow_{time.ctime()}.log', level=logging.DEBUG)
     logging.getLogger('PIL').setLevel(logging.WARNING)
     logging.info(f'Logging initiated {time.ctime()}')
     
-    iterations = 100
+    iterations = 500
     for i in range(iterations):
         print(f"iteration = {i}")
         main(i)

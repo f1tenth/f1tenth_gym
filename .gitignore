@@ -14,3 +14,4 @@ venv/
 get-pip.py
 *.pkl
 *.log
+examples/old_logs/
