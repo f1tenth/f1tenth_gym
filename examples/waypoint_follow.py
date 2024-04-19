@@ -5,6 +5,8 @@ import gym
 import numpy as np
 from argparse import Namespace
 import pickle
+import os
+import logging
 
 from numba import njit
 
@@ -251,11 +253,18 @@ class QLearningPlanner:
         self.gamma = gamma
         self.epsilon = epsilon
         self.action_map = [
-            (0.5, -10),  # Speed 0.5, Steer -10 degrees
-            (0.5, 10),   # Speed 0.5, Steer 10 degrees
-            (1.0, -10),  # Speed 1.0, Steer -10 degrees
-            (1.0, 10),   # Speed 1.0, Steer 10 degrees
-            (0.75, 0)    # Speed 0.75, Steer straight
+            (0.9, -45),   # Speed 0.9, Steer -45 degrees
+            (0.9, 0),     # Speed 0.9, Steer straight
+            (0.9, 45),    # Speed 0.9, Steer 45 degrees
+            (1.5, -45),   # Speed 1.5, Steer -45 degrees
+            (1.5, 0),     # Speed 1.5, Steer straight
+            (1.5, 45),    # Speed 1.5, Steer 45 degrees
+            (2.1, -30),   # Speed 2.1, Steer -30 degrees
+            (2.1, 0),     # Speed 2.1, Steer straight
+            (2.1, 30),    # Speed 2.1, Steer 30 degrees
+            (3.0, -10),   # Speed 3.0, Steer -10 degrees
+            (3.0, 0),    # Speed 3.0, Steer straight
+            (3.0, 10),   # Speed 3.0, Steer 10 degrees
         ]
         if load_file:
             self.load_q_table(load_file)
@@ -285,7 +294,9 @@ class QLearningPlanner:
     def plan(self, poses_x, poses_y, poses_theta):
         state = self.compute_state(poses_x, poses_y, poses_theta)
         action_index = self.choose_action(state)
-        return self.action_map[action_index]
+        action = self.action_map[action_index]
+        print(f"action = {action}")
+        return action
 
     def compute_state(self, poses_x, poses_y, poses_theta):
         state = hash((poses_x, poses_y, poses_theta)) % self.state_space
@@ -310,7 +321,7 @@ class MyRewardWrapper(gym.RewardWrapper):
     def reward(self, obs):
         reward = -0.1
         # return reward
-        scans = obs['scans']
+        scans = obs['scans'][0]
         poses_x = obs['poses_x']
         poses_y = obs['poses_y']
         poses_theta = obs['poses_theta']
@@ -320,30 +331,44 @@ class MyRewardWrapper(gym.RewardWrapper):
         collisions = obs['collisions']
         
         if collisions:
-            reward -= 300
+            reward -= 100
         velocity = np.sqrt(linear_vels_x**2 + linear_vels_y**2)
-        reward += velocity * 0.1
-        reward += (min(scans) - 5) * 0.1
+        reward += velocity * 0.5
+        reward += (min(scans) - 3) * 0.7
         
-        return reward 
+        return float(reward) 
 
 
-def main():
+def main(i):
     """
     main entry point
     """
-
-    work = {'mass': 3.463388126201571, 'lf': 0.15597534362552312, 'tlad': 0.82461887897713965, 'vgain': 1.375}#0.90338203837889}
+    iteration_count = i
+    state_space_size = 1000
+    action_space_size = 12
+    starting_epsilon = 0.8
+    epsilon_decay = 0.01
+    epsilon = starting_epsilon / np.exp(epsilon_decay * iteration_count)
     
     with open('config_example_map.yaml') as file:
         conf_dict = yaml.load(file, Loader=yaml.FullLoader)
     conf = Namespace(**conf_dict)
+    
+    logging.info(f"Starting iteration {iteration_count} with epsilon = {epsilon}")
+    
+    if os.path.exists('final_q_table.pkl'): 
+        logging.info(f"Loading final_q_table.pkl")
+        planner = QLearningPlanner(state_space=state_space_size, 
+                                   action_space=action_space_size, 
+                                   epsilon=epsilon,
+                                   load_file="final_q_table.pkl")
+    else:
+        logging.info(f"Creating new QLearningPlanner")
+        planner = QLearningPlanner(state_space=state_space_size, 
+                                   action_space=action_space_size,
+                                   epsilon=epsilon)
+        
 
-    # planner = PurePursuitPlanner(conf, (0.17145+0.15875)) #FlippyPlanner(speed=0.2, flip_every=1, steer=10)
-    # planner = FlippyPlanner(speed=1, flip_every=3, steer=30)
-    
-    
-    planner = QLearningPlanner(state_space=100, action_space=5, load_file="final_q_table.pkl")
 
     def render_callback(env_renderer):
         # custom extra drawing function
@@ -363,7 +388,8 @@ def main():
 
         planner.render_waypoints(env_renderer)
 
-    env = gym.make('f110_gym:f110-v0', map=conf.map_path, map_ext=conf.map_ext, num_agents=1, timestep=0.01, integrator=Integrator.RK4)
+    env = gym.make('f110_gym:f110-v0', map=conf.map_path, map_ext=conf.map_ext, 
+                   num_agents=1, timestep=0.01, integrator=Integrator.RK4)
     env = MyRewardWrapper(env)
     env.add_render_callback(render_callback)
     
@@ -375,6 +401,8 @@ def main():
     
     save_interval = 100
     step_count = 0 
+    
+    tt_reward = 0
 
     while not done:
         current_state = planner.compute_state(obs['poses_x'][0], obs['poses_y'][0], obs['poses_theta'][0])
@@ -384,13 +412,12 @@ def main():
         # should be (steer, speed)
         obs, step_reward, done, info = env.step(np.array([[action_output[1], action_output[0]]]))  # Note: the order might need to be adjusted based on your env
         
+        tt_reward += step_reward
         
         ### check step function       
         # print(f"obs = {obs}, step_reward = {step_reward}")
         print(f"step_reward = {step_reward}")
-        print(f"obs = {obs}")
-        
-        ###TODO - reward should be modified here
+        # print(f"scans = {obs['scans']}, len scans = {len(obs['scans'][0])}")
 
         
         next_state = planner.compute_state(obs['poses_x'][0], obs['poses_y'][0], obs['poses_theta'][0])
@@ -404,15 +431,20 @@ def main():
         step_count += 1
 
         
-        # if step_count % save_interval == 0:
-        #     planner.save_q_table('q_table.pkl')  # Save the Q-table
-        # step_count += 1
-        
     print('Sim elapsed time:', laptime, 'Real elapsed time:', time.time()-start)
+    logging.info(f'Sim elapsed time: {laptime}, Real elapsed time: {time.time()-start}')
+    print(f"Total reward = {tt_reward}")
+    logging.info(f"Total reward = {tt_reward}")
+    
     planner.save_q_table('final_q_table.pkl')
 
 if __name__ == '__main__':
-    iterations = 1
+    # initiate logging file
+    logging.basicConfig(filename='waypoint_follow.log', level=logging.DEBUG)
+    logging.getLogger('PIL').setLevel(logging.WARNING)
+    logging.info(f'Logging initiated {time.ctime()}')
+    
+    iterations = 100
     for i in range(iterations):
         print(f"iteration = {i}")
-        main()
+        main(i)
