@@ -226,9 +226,8 @@ def main(i):
         
         env.render(mode='human')
         
-        if step_count % save_interval == 0:
-            planner.save_q_table('final_q_table.pkl')  # Save the Q-table
-        step_count += 1
+        if iteration_count % save_interval == 0:
+            planner.save_q_table(f'q_table_iter{iteration_count}.pkl')  # Save the Q-table
 
     selected_points = np.linspace(0, len(scans)-1, num=11, dtype=int)
     selected_scans = scans[selected_points]
@@ -247,7 +246,7 @@ if __name__ == '__main__':
     logging.getLogger('PIL').setLevel(logging.WARNING)
     logging.info(f'Logging initiated {time.ctime()}')
     
-    iterations = 500
+    iterations = 1000
     for i in range(iterations):
         print(f"iteration = {i}")
         main(i)
