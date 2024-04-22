@@ -16,3 +16,4 @@ get-pip.py
 *.log
 examples/old_logs/
 *.h5
+*.out

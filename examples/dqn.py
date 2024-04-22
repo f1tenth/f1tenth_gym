@@ -23,87 +23,6 @@ import re
 Planner Helpers
 """
 
-class QLearningPlanner:
-    def __init__(self, state_space, action_space, alpha=0.25, gamma=0.95, epsilon=0.1, load_file=None):
-        self.state_space = state_space
-        self.action_space = action_space
-        self.alpha = alpha
-        self.gamma = gamma
-        self.epsilon = epsilon
-        self.action_map = [
-            (0.9, -45 * np.pi / 180),   # Speed 0.9, Steer -45 degrees
-            (0.9, 0),                   # Speed 0.9, Steer straight
-            (0.9, 45 * np.pi / 180),    # Speed 0.9, Steer 45 degrees
-            (1.5, -45 * np.pi / 180),   # Speed 1.5, Steer -45 degrees
-            (1.5, 0),                   # Speed 1.5, Steer straight
-            (1.5, 45 * np.pi / 180),    # Speed 1.5, Steer 45 degrees
-            (2.1, -30 * np.pi / 180),   # Speed 2.1, Steer -30 degrees
-            (2.1, 0),                   # Speed 2.1, Steer straight
-            (2.1, 30 * np.pi / 180),    # Speed 2.1, Steer 30 degrees
-            (3.0, -10 * np.pi / 180),   # Speed 3.0, Steer -10 degrees
-            (3.0, 0),                   # Speed 3.0, Steer straight
-            (3.0, 10 * np.pi / 180),    # Speed 3.0, Steer 10 degrees
-        ]
-        if load_file:
-            self.load_q_table(load_file)
-        else:
-            self.q_table = np.zeros((state_space, action_space))
-
-    def choose_action(self, state):
-        if np.random.rand() < self.epsilon:
-            return np.random.choice(self.action_space)
-        else:
-            return np.argmax(self.q_table[state])
-
-    def update_q_table(self, state, action, reward, next_state):
-        best_next_action = np.argmax(self.q_table[next_state])
-        td_target = reward + self.gamma * self.q_table[next_state][best_next_action]
-        td_error = td_target - self.q_table[state][action]
-        self.q_table[state][action] += self.alpha * td_error
-
-    def save_q_table(self, filename):
-        with open(filename, 'wb') as file:
-            pickle.dump(self.q_table, file)
-
-    def load_q_table(self, filename):
-        with open(filename, 'rb') as file:
-            self.q_table = pickle.load(file)
-
-    def plan(self, scans, linear_vels_x, poses_x, poses_y):
-        state = self.compute_state(scans, linear_vels_x, poses_x, poses_y)
-        action_index = self.choose_action(state)
-        action = self.action_map[action_index]
-        print(f"action = {action}")
-        return action
-
-    def compute_state(self, scans, linear_vels_x, poses_x, poses_y):
-        # Select 12 points from the scan array
-        selected_points = np.linspace(0, len(scans)-1, num=7, dtype=int)
-        selected_scans = scans[selected_points]
-
-        # convert selected_scans to a low - <0.4, high - >2.0, mid 0.4-2.0
-        for i in range(len(selected_scans)):
-            if selected_scans[i] < 0.5:
-                selected_scans[i] = 0
-            elif selected_scans[i] > 2.0:
-                selected_scans[i] = 2
-            else:
-                selected_scans[i] = 1
-                
-        linear_vels_x = linear_vels_x // 0.2
-
-        # Combine the normalized scans and poses_theta into a single state array
-        state = np.concatenate((selected_scans, [linear_vels_x, poses_x, poses_y]))
-
-        # Hash the state array to get the state index
-        state_index = hash(tuple(state)) % self.state_space
-
-        return state_index
-
-    def render_waypoints(self, *args, **kwargs):
-        pass
-
-
 class DQNAgent:
     def __init__(self, state_space, action_space, alpha=0.001, gamma=0.95, epsilon=0.1, memory_size=10000):
         self.state_space = state_space
@@ -211,20 +130,17 @@ class MyRewardWrapper(gym.RewardWrapper):
     
     def reward(self, obs):
         reward = -1
-        # return reward
+
         scans = obs['scans'][0]
-        poses_x = obs['poses_x'][0]
-        poses_y = obs['poses_y'][0]
-        poses_theta = obs['poses_theta']
         linear_vels_x = obs['linear_vels_x'][0]
-        linear_vels_y = obs['linear_vels_y'][0]
         ang_vels_z = obs['ang_vels_z']
         collisions = obs['collisions']
         
         if collisions:
             reward -= 1000
-        velocity = np.sqrt(linear_vels_x**2 + linear_vels_y**2)
+        velocity = linear_vels_x
         reward += velocity * 3.0
+        reward -= ang_vels_z * 1.0
 
         if min(scans) < 0.5:      
             reward -= 1 /(np.min(scans)-0.1) * 1

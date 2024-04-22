@@ -189,7 +189,7 @@ def main(i):
     poses_y = obs['poses_y'][0]
     poses_theta = obs['poses_theta']
     linear_vels_x = obs['linear_vels_x'][0]
-    env.render()
+    # env.render()
 
     laptime = 0.0
     start = time.time()
@@ -224,7 +224,7 @@ def main(i):
         
         planner.update_q_table(current_state, action_index, step_reward, next_state)
         
-        env.render(mode='human')
+        # env.render(mode='human')
         
         if iteration_count % save_interval == 0:
             planner.save_q_table(f'q_table_iter{iteration_count}.pkl')  # Save the Q-table
