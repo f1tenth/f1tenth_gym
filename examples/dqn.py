@@ -49,12 +49,13 @@ class DQNAgent:
         ]
 
     def build_model(self):
+        optimizer = Adam(learning_rate=self.alpha)
         model = Sequential([
             Dense(24, input_dim=self.state_space, activation='relu'),
             Dense(24, activation='relu'),
             Dense(self.action_space, activation='linear')
         ])
-        model.compile(loss='mse', optimizer=Adam(lr=self.alpha))
+        model.compile(loss='mse', optimizer=optimizer)
         return model
     
     def choose_action_index(self, state):
@@ -133,7 +134,7 @@ class MyRewardWrapper(gym.RewardWrapper):
 
         scans = obs['scans'][0]
         linear_vels_x = obs['linear_vels_x'][0]
-        ang_vels_z = obs['ang_vels_z']
+        ang_vels_z = obs['ang_vels_z'][0]
         collisions = obs['collisions']
         
         if collisions:
@@ -205,17 +206,14 @@ def main(i):
     env = gym.make('f110_gym:f110-v0', map=conf.map_path, map_ext=conf.map_ext, 
                    num_agents=1, timestep=0.01, integrator=Integrator.RK4)
     env = MyRewardWrapper(env)
-    env.add_render_callback(render_callback)
+    # env.add_render_callback(render_callback)
     
     obs, step_reward, done, info = env.reset(np.array([[conf.sx, conf.sy, conf.stheta]]))
     scans = obs['scans'][0]
-    poses_x = obs['poses_x'][0]
-    poses_y = obs['poses_y'][0]
-    poses_theta = obs['poses_theta']
     linear_vels_x = obs['linear_vels_x'][0]
     collision = obs['collisions']
     ang_vels_z = obs['ang_vels_z'][0]
-    env.render()
+    # env.render()
 
     laptime = 0.0
     start = time.time()
@@ -229,7 +227,7 @@ def main(i):
         current_state = agent.compute_state(scans, linear_vels_x, ang_vels_z, collision)
         action_index = agent.choose_action_index(current_state)
         action_output = agent.action_map[action_index]
-        print(f"action_output = {action_output}")
+        # print(f"action_output = {action_output}")
         
         # should be (steer, speed)
         obs, step_reward, done, info = env.step(np.array([[action_output[1], action_output[0]]]))  # Note: the order might need to be adjusted based on your env
@@ -243,16 +241,16 @@ def main(i):
         
         ### check step function       
         # print(f"obs = {obs}, step_reward = {step_reward}")
-        print(f"step_reward = {step_reward}")
+        # print(f"step_reward = {step_reward}")
         # print(f"scans = {obs['scans']}, len scans = {len(obs['scans'][0])}")
 
         # obatin the next_state
         next_state = agent.compute_state(scans, linear_vels_x, ang_vels_z, collision)
         
         agent.remember(current_state, action_index, step_reward, next_state, done)
-        agent.replay(batch_size=16)
+        agent.replay(batch_size=256)
         
-        env.render(mode='human')
+        # env.render(mode='human')
         
         if iteration_count % save_interval == 0:
             agent.save(f'q_table_iter{iteration_count}.h5')  # Save the Q-table
@@ -278,3 +276,6 @@ if __name__ == '__main__':
     for i in range(iterations):
         print(f"iteration = {i}")
         main(i)
+        
+    
+    logging.info(f'Logging finished {time.ctime()}')

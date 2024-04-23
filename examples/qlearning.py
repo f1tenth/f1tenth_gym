@@ -63,7 +63,7 @@ class QLearningPlanner:
         state = self.compute_state(scans, linear_vels_x, poses_x, poses_y)
         action_index = self.choose_action(state)
         action = self.action_map[action_index]
-        print(f"action = {action}")
+        # print(f"action = {action}")
         return action
 
     def compute_state(self, scans, linear_vels_x, poses_x, poses_y):
@@ -216,7 +216,7 @@ def main(i):
         
         ### check step function       
         # print(f"obs = {obs}, step_reward = {step_reward}")
-        print(f"step_reward = {step_reward}")
+        # print(f"step_reward = {step_reward}")
         # print(f"scans = {obs['scans']}, len scans = {len(obs['scans'][0])}")
 
         # obatin the next_state
@@ -242,7 +242,7 @@ def main(i):
 
 if __name__ == '__main__':
     # initiate logging file
-    logging.basicConfig(filename=f'waypoint_follow_{time.ctime()}.log', level=logging.DEBUG)
+    logging.basicConfig(filename=f'q_learning_{time.ctime()}.log', level=logging.DEBUG)
     logging.getLogger('PIL').setLevel(logging.WARNING)
     logging.info(f'Logging initiated {time.ctime()}')
     
