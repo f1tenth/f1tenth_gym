@@ -105,8 +105,9 @@ class PygameEnvRenderer(EnvRenderer):
             window_shape=(width, height), position="top_center"
         )
 
-        # load map image
+        # load map image (flip it vertically to match the pygame coordinate system)
         original_img = track.occupancy_map
+        original_img = np.flipud(original_img)
 
         self.map_renderers = {
             "map": Map(map_img=original_img, zoom_level=0.4),
