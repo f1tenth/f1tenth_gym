@@ -241,8 +241,7 @@ class PygameEnvRenderer(EnvRenderer):
                 text=f"FPS: {self.clock.get_fps():.2f}", display=self.canvas
             )
 
-            self.window.blit(self.canvas, self.canvas.get_rect())
-            self.window.blit(pygame.transform.flip(self.canvas, False, True), (0, 0))
+            self.window.blit(pygame.transform.flip(self.canvas, False, True), self.canvas.get_rect())
 
             pygame.event.pump()
             pygame.display.update()
