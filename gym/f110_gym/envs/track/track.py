@@ -2,6 +2,7 @@ from __future__ import annotations
 import pathlib
 from dataclasses import dataclass
 from typing import Tuple, Optional
+import os
 
 import numpy as np
 import yaml
@@ -130,11 +131,17 @@ class Track:
             occupancy_map[occupancy_map <= 128] = 0.0
             occupancy_map[occupancy_map > 128] = 255.0
 
-            # if exists, load edt
-            if (track_dir / f"{track}_map.npy").exists():
+            # if exists and it has been created for the current map image, load edt
+            map_filepath = (track_dir / map_filename).absolute()
+            track_filepath = map_filepath.with_suffix("")
+            edt_filepath = track_dir / f"{track}_map.npy"
+            if edt_filepath.exists() and os.path.getmtime(edt_filepath) >= os.path.getmtime(map_filepath):
                 edt = np.load(track_dir / f"{track}_map.npy")
             else:
-                edt = None
+                from scipy.ndimage import distance_transform_edt as edt
+                resolution = track_spec.resolution
+                edt = resolution * edt(occupancy_map)
+                np.save(track_filepath, edt)
 
             # if exists, load centerline
             if (track_dir / f"{track}_centerline.csv").exists():
