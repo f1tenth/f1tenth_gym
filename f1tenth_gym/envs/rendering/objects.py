@@ -134,11 +134,11 @@ class TextObject:
         text : str
             text to be displayed
         display : pygame.Surface
-            display surface                    
+            display surface
         """
         self.text = self.font.render(text, True, (125, 125, 125))
         position_tuple = self._position_resolver(self.position, display)
-        display.blit(self.text, position_tuple)
+        display.blit(pygame.transform.flip(self.text, False, True), position_tuple)
 
 
 class Map:
