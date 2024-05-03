@@ -1,6 +1,6 @@
 import numpy as np
 
-from f110_gym.envs.track import Raceline
+from ..track import Raceline
 
 
 def sample_around_waypoint(

@@ -1,6 +1,6 @@
 [tool.pytest.ini_options]
 minversion = 6.0
-addopts = "-ra -q"
+addopts = "-ra"
 testpaths =[
     "tests",
     "integration",
@@ -8,8 +8,8 @@ testpaths =[
 
 
 [tool.poetry]
-name = "f1tenth-gym"
-version = "0.2.1"
+name = "f1tenth_gym"
+version = "1.0.0dev"
 description = "Gym environment for F1TENTH"
 license = "MIT"
 authors = [
@@ -29,7 +29,7 @@ homepage = "https://f1tenth.org"
 repository = "https://github.com/f1tenth/f1tenth_gym"
 documentation = "https://f1tenth-gym.readthedocs.io/en/latest/"
 packages = [
-    { include = "f110_gym", from = "gym"},
+    {include = "f1tenth_gym"},
 ]
 
 [tool.poetry.dependencies]

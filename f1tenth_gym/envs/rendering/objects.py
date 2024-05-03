@@ -3,8 +3,8 @@ import cv2
 import numpy as np
 import pygame
 
-from f110_gym.envs.collision_models import get_vertices
-from f110_gym.envs.rendering import RenderSpec
+from ..collision_models import get_vertices
+from . import RenderSpec
 
 
 class TextObject:
