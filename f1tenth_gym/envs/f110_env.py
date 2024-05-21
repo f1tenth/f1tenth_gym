@@ -364,7 +364,7 @@ class F110Env(gym.Env):
             info (dict): auxillary information dictionary
         """
         if seed is not None:
-            np.random.seed(seed=self.seed)
+            np.random.seed(seed=seed)
         super().reset(seed=seed)
 
         # reset counters and data members
