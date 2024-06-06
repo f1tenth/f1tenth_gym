@@ -2,6 +2,7 @@ from __future__ import annotations
 import pathlib
 from dataclasses import dataclass
 from typing import Tuple, Optional
+import os
 
 import numpy as np
 import yaml
@@ -31,6 +32,7 @@ class Track:
     filepath: str
     ext: str
     occupancy_map: np.ndarray
+    edt: np.ndarray
     centerline: Raceline
     raceline: Raceline
 
@@ -40,6 +42,7 @@ class Track:
         filepath: str,
         ext: str,
         occupancy_map: np.ndarray,
+        edt: Optional[np.ndarray] = None,
         centerline: Optional[Raceline] = None,
         raceline: Optional[Raceline] = None,
     ):
@@ -56,6 +59,8 @@ class Track:
             file extension of the track image file
         occupancy_map : np.ndarray
             occupancy grid map
+        edt : np.ndarray
+            distance transform of the map
         centerline : Raceline, optional
             centerline of the track, by default None
         raceline : Raceline, optional
@@ -65,6 +70,7 @@ class Track:
         self.filepath = filepath
         self.ext = ext
         self.occupancy_map = occupancy_map
+        self.edt = edt
         self.centerline = centerline
         self.raceline = raceline
 
@@ -125,6 +131,18 @@ class Track:
             occupancy_map[occupancy_map <= 128] = 0.0
             occupancy_map[occupancy_map > 128] = 255.0
 
+            # if exists and it has been created for the current map image, load edt
+            map_filepath = (track_dir / map_filename).absolute()
+            track_filepath = map_filepath.with_suffix("")
+            edt_filepath = track_dir / f"{track}_map.npy"
+            if edt_filepath.exists() and os.path.getmtime(edt_filepath) >= os.path.getmtime(map_filepath):
+                edt = np.load(track_dir / f"{track}_map.npy")
+            else:
+                from scipy.ndimage import distance_transform_edt as edt
+                resolution = track_spec.resolution
+                edt = resolution * edt(occupancy_map)
+                np.save(track_filepath, edt)
+
             # if exists, load centerline
             if (track_dir / f"{track}_centerline.csv").exists():
                 centerline = Raceline.from_centerline_file(
@@ -146,6 +164,7 @@ class Track:
                 filepath=str((track_dir / map_filename.stem).absolute()),
                 ext=map_filename.suffix,
                 occupancy_map=occupancy_map,
+                edt=edt,
                 centerline=centerline,
                 raceline=raceline,
             )
