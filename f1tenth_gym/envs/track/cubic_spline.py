@@ -8,6 +8,7 @@ import numpy as np
 import scipy.optimize as so
 from scipy import interpolate
 from numba import njit
+from typing import Union
 
 @njit(fastmath=False, cache=True)
 def nearest_point_on_trajectory(point, trajectory):
@@ -94,7 +95,7 @@ class CubicSpline2D:
         s.extend(np.cumsum(self.ds))
         return np.array(s)
 
-    def calc_position(self, s: float) -> tuple[float | None, float | None]:
+    def calc_position(self, s: float) -> tuple[Union[float, None], Union[float, None]]:
         """
         Calc position at the given s.
 
