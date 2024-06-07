@@ -114,7 +114,7 @@ class CubicSpline2D:
         """
         return self.spline(s)
 
-    def calc_curvature(self, s: float) -> float | None:
+    def calc_curvature(self, s: float) -> Union[float , None]:
         """
         Calc curvature at the given s.
 
@@ -134,7 +134,7 @@ class CubicSpline2D:
         k = (ddy * dx - ddx * dy) / ((dx**2 + dy**2) ** (3 / 2))
         return k
 
-    def calc_yaw(self, s: float) -> float | None:
+    def calc_yaw(self, s: float) -> Union[float, None]:
         """
         Calc yaw angle at the given s.
 
