@@ -31,6 +31,18 @@ class TestFrenet(unittest.TestCase):
         self.assertAlmostEqual(track.calc_yaw(np.pi), 3 * np.pi / 2, places=2)
         self.assertAlmostEqual(track.calc_yaw(3 * np.pi / 2), 0, places=2)
     
+    def test_calc_position(self):
+        circle_x = np.cos(np.linspace(0, 2 * np.pi, 100))[:-1]
+        circle_y = np.sin(np.linspace(0, 2 * np.pi, 100))[:-1]
+        track = cubic_spline.CubicSpline2D(circle_x, circle_y)
+        # Test the position at the four corners of the circle
+        # The position of a circle is (x, y) = (cos(s), sin(s))
+        self.assertTrue(np.allclose(track.calc_position(0), np.array([1, 0]), atol=1e-3))
+        self.assertTrue(np.allclose(track.calc_position(np.pi / 2), np.array([0, 1]), atol=1e-3))
+        self.assertTrue(np.allclose(track.calc_position(np.pi), np.array([-1, 0]), atol=1e-3))
+        self.assertTrue(np.allclose(track.calc_position(3 * np.pi / 2), np.array([0, -1]), atol=1e-3))
+
 if __name__ == "__main__":
     TestFrenet().test_calc_curvature()
     TestFrenet().test_calc_yaw()
+    TestFrenet().test_calc_position()
