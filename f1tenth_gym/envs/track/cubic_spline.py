@@ -149,6 +149,9 @@ class CubicSpline2D:
         """
         dx, dy = self.spline(s, 1)
         yaw = math.atan2(dy, dx)
+        # Convert yaw to [0, 2pi]
+        yaw = yaw % (2 * math.pi)
+        
         return yaw
 
     def calc_arclength(self, x, y, s_guess=0.0):
