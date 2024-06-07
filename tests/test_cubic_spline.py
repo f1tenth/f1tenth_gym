@@ -1,11 +1,6 @@
-import pathlib
-import time
 import unittest
 
 import numpy as np
-import os
-import sys
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from f1tenth_gym.envs.track import cubic_spline
 
 class TestCubicSpline(unittest.TestCase):
