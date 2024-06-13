@@ -37,6 +37,7 @@ import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 import shapely.geometry as shp
+from f1tenth_gym.envs.track import Track
 
 
 def main(args):
@@ -238,11 +239,16 @@ def convert_track(track, track_int, track_ext, track_width, track_id, outdir):
 
     # Saving centerline as a csv
     centerline_filepath = outdir / f"map{track_id}_centerline.csv"
+    x_m, y_m = xy_pixels[:, 0] * 0.05, xy_pixels[:, 1] * 0.05
     with open(centerline_filepath, "w") as waypoints_csv:
         waypoints_csv.write("# x_m, y_m, w_tr_right_m, w_tr_left_m\n")
         for row in xy_pixels:
             waypoints_csv.write(f"{0.05 * row[0]}, {0.05 * row[1]}, {track_width}, {track_width}\n")
 
+    raceline_format = Track.from_refline(x=x_m, y=y_m, velx=np.ones_like(x_m) * 4.0)
+    raceline_format.spec.name = f"map{track_id}"
+    raceline_format.save_raceline(outdir)
+    print(f"[info] saved centerline in {centerline_filepath}")
 
 if __name__ == "__main__":
     import argparse
