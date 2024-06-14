@@ -145,7 +145,9 @@ class TestTrack(unittest.TestCase):
 
         # Check frenet to cartesian conversion
         # using the track's xs, ys
-        for s, x, y in zip(track.centerline.ss, track.centerline.xs, track.centerline.ys):
+        for s, x, y in zip(
+            track.centerline.ss, track.centerline.xs, track.centerline.ys
+        ):
             x_, y_, _ = track.frenet_to_cartesian(s, 0, 0)
             self.assertAlmostEqual(x, x_, places=2)
             self.assertAlmostEqual(y, y_, places=2)
@@ -161,3 +163,13 @@ class TestTrack(unittest.TestCase):
             s_, d, _ = track.cartesian_to_frenet(x, y, psi, s_guess=s_)
             self.assertAlmostEqual(s, s_, places=2)
             self.assertAlmostEqual(d, 0, places=2)
+
+        # check frenet to cartesian conversion
+        # with non-zero lateral offset
+        s_ = 0
+        for s in np.linspace(0, 1, 10):
+            d = np.random.uniform(-1.0, 1.0)
+            x, y, psi = track.frenet_to_cartesian(s, d, 0)
+            s_, d_, _ = track.cartesian_to_frenet(x, y, psi, s_guess=s_)
+            self.assertAlmostEqual(s, s_, places=2)
+            self.assertAlmostEqual(d, d_, places=2)
