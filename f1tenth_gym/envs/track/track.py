@@ -16,8 +16,8 @@ from .utils import find_track_dir
 
 @dataclass
 class TrackSpec(YamlDataClassConfig):
-    name: str
-    image: str
+    name: Optional[str]
+    image: Optional[str]
     resolution: float
     origin: Tuple[float, float, float]
     negate: int
@@ -28,8 +28,8 @@ class TrackSpec(YamlDataClassConfig):
 @dataclass
 class Track:
     spec: TrackSpec
-    filepath: str
-    ext: str
+    filepath: Optional[str]
+    ext: Optional[str]
     occupancy_map: np.ndarray
     centerline: Raceline
     raceline: Raceline
@@ -37,9 +37,9 @@ class Track:
     def __init__(
         self,
         spec: TrackSpec,
-        filepath: str,
-        ext: str,
         occupancy_map: np.ndarray,
+        filepath: Optional[str] = None,
+        ext: Optional[str] = None,
         centerline: Optional[Raceline] = None,
         raceline: Optional[Raceline] = None,
     ):
@@ -154,7 +154,7 @@ class Track:
             raise FileNotFoundError(f"It could not load track {track}") from ex
 
     @staticmethod
-    def from_refline(x: np.ndarray, y: np.ndarray, velx: np.ndarray,):
+    def from_refline(x: np.ndarray, y: np.ndarray, velx: np.ndarray):
         """
         Create an empty track reference line.
 
@@ -169,7 +169,7 @@ class Track:
 
         Returns
         -------
-        Track
+        track: Track
             track object
         """
         ds = 0.1
@@ -237,3 +237,61 @@ class Track:
             raceline=refline,
             centerline=refline,
         )
+
+    def frenet_to_cartesian(self, s, ey, ephi):
+        """
+        Convert Frenet coordinates to Cartesian coordinates.
+
+        s: distance along the raceline
+        ey: lateral deviation
+        ephi: heading deviation
+
+        returns:
+            x: x-coordinate
+            y: y-coordinate
+            psi: yaw angle
+        """
+        x, y = self.centerline.spline.calc_position(s)
+        psi = self.centerline.spline.calc_yaw(s)
+
+        # Adjust x,y by shifting along the normal vector
+        x -= ey * np.sin(psi)
+        y += ey * np.cos(psi)
+
+        # Adjust psi by adding the heading deviation
+        psi += ephi
+
+        return x, y, psi
+
+    def cartesian_to_frenet(self, x, y, phi, s_guess=0):
+        """
+        Convert Cartesian coordinates to Frenet coordinates.
+
+        x: x-coordinate
+        y: y-coordinate
+        phi: yaw angle
+
+        returns:
+            s: distance along the centerline
+            ey: lateral deviation
+            ephi: heading deviation
+        """
+        s, ey = self.centerline.spline.calc_arclength(x, y, s_guess)
+        if s > self.centerline.spline.s[-1]:
+            # Wrap around
+            s = s - self.centerline.spline.s[-1]
+        if s < 0:
+            # Negative s means we are behind the start point
+            s = s + self.centerline.spline.s[-1]
+
+        # Use the normal to calculate the signed lateral deviation
+        normal = self.centerline.spline._calc_normal(s)
+        x_eval, y_eval = self.centerline.spline.calc_position(s)
+        dx = x - x_eval
+        dy = y - y_eval
+        distance_sign = np.sign(np.dot([dx, dy], normal))
+        ey = ey * distance_sign
+
+        phi = phi - self.centerline.spline.calc_yaw(s)
+
+        return s, ey, phi
