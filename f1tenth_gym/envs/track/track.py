@@ -16,8 +16,8 @@ from .utils import find_track_dir
 
 @dataclass
 class TrackSpec(YamlDataClassConfig):
-    name: str
-    image: str
+    name: Optional[str]
+    image: Optional[str]
     resolution: float
     origin: Tuple[float, float, float]
     negate: int
@@ -28,8 +28,8 @@ class TrackSpec(YamlDataClassConfig):
 @dataclass
 class Track:
     spec: TrackSpec
-    filepath: str
-    ext: str
+    filepath: Optional[str]
+    ext: Optional[str]
     occupancy_map: np.ndarray
     centerline: Raceline
     raceline: Raceline
@@ -37,9 +37,9 @@ class Track:
     def __init__(
         self,
         spec: TrackSpec,
-        filepath: str,
-        ext: str,
         occupancy_map: np.ndarray,
+        filepath: Optional[str] = None,
+        ext: Optional[str] = None,
         centerline: Optional[Raceline] = None,
         raceline: Optional[Raceline] = None,
     ):
@@ -154,7 +154,7 @@ class Track:
             raise FileNotFoundError(f"It could not load track {track}") from ex
 
     @staticmethod
-    def from_refline(x: np.ndarray, y: np.ndarray, velx: np.ndarray,):
+    def from_refline(x: np.ndarray, y: np.ndarray, velx: np.ndarray):
         """
         Create an empty track reference line.
 
@@ -169,7 +169,7 @@ class Track:
 
         Returns
         -------
-        Track
+        track: Track
             track object
         """
         ds = 0.1
@@ -241,7 +241,7 @@ class Track:
     def frenet_to_cartesian(self, s, ey, ephi):
         """
         Convert Frenet coordinates to Cartesian coordinates.
-        
+
         s: distance along the raceline
         ey: lateral deviation
         ephi: heading deviation
@@ -262,11 +262,11 @@ class Track:
         psi += ephi
 
         return x, y, psi
-    
+
     def cartesian_to_frenet(self, x, y, phi, s_guess=0):
         """
         Convert Cartesian coordinates to Frenet coordinates.
-        
+
         x: x-coordinate
         y: y-coordinate
         phi: yaw angle
