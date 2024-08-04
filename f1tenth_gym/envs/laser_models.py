@@ -458,18 +458,19 @@ class ScanSimulator2D(object):
         self.sines = np.sin(theta_arr)
         self.cosines = np.cos(theta_arr)
 
-    def set_map(self, map: str | Track):
+    def set_map(self, map: str | Track, map_scale: float = 1.0) -> bool:
         """
         Set the bitmap of the scan simulator by path
 
             Args:
                 map (str | Track): path to the map file, or Track object
+                map_scale (float, default=1.0): scale of the map, larger scale means larger map
 
             Returns:
                 flag (bool): if image reading and loading is successful
         """
         if isinstance(map, str):
-            self.track = Track.from_track_name(map)
+            self.track = Track.from_track_name(map, map_scale)
         elif isinstance(map, Track):
             self.track = map
 
@@ -479,7 +480,7 @@ class ScanSimulator2D(object):
         self.map_width = self.map_img.shape[1]
 
         # load map specification
-        self.map_resolution = self.track.spec.resolution
+        self.map_resolution = self.track.spec.resolution * map_scale
         self.origin = self.track.spec.origin
 
         self.orig_x = self.origin[0]

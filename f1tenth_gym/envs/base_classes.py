@@ -178,14 +178,15 @@ class RaceCar(object):
         """
         self.params = params
 
-    def set_map(self, map: str | Track):
+    def set_map(self, map: str | Track, map_scale: float = 1.0):
         """
         Sets the map for scan simulator
 
         Args:
             map (str | Track): name of the map, or Track object
+            map_scale (float, default=1.0): scale of the map, larger scale means larger map
         """
-        RaceCar.scan_simulator.set_map(map)
+        RaceCar.scan_simulator.set_map(map, map_scale)
 
     def reset(self, pose):
         """
@@ -431,18 +432,19 @@ class Simulator(object):
         num_beams = self.agents[0].scan_simulator.num_beams
         self.agent_scans = np.empty((self.num_agents, num_beams))
 
-    def set_map(self, map: str | Track):
+    def set_map(self, map: str | Track, map_scale: float = 1.0):
         """
         Sets the map of the environment and sets the map for scan simulator of each agent
 
         Args:
             map (str | Track): name of the map, or Track object
+            map_scale (float, default=1.0): scale of the map, larger scale means larger map
 
         Returns:
             None
         """
         for agent in self.agents:
-            agent.set_map(map)
+            agent.set_map(map, map_scale)
 
     def update_params(self, params, agent_idx=-1):
         """
