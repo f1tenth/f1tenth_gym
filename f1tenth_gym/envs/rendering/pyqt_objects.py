@@ -5,7 +5,7 @@ import pyqtgraph as pg
 from PyQt6.QtWidgets import QGraphicsRectItem
 from PyQt6.QtGui import QTransform
 
-from . import RenderSpec
+from renderer import RenderSpec
 
 
 class TextObject:
@@ -24,9 +24,8 @@ class TextObject:
 
     def __init__(
         self,
-        window_shape: tuple[int, int],
         position: str | tuple,
-        relative_font_size: int = 32,
+        relative_font_size: int = 16,
         font_name: str = "Arial",
         parent: pg.PlotWidget = None,
     ) -> None:
@@ -35,8 +34,6 @@ class TextObject:
 
         Parameters
         ----------
-        window_shape : tuple
-            shape of the window (width, height) in pixels
         position : str | tuple
             position of the text on the screen
         relative_font_size : int, optional
@@ -44,14 +41,9 @@ class TextObject:
         font_name : str, optional
             font name, by default "Arial"
         """
-        font_size = int(relative_font_size * window_shape[0] / 1000)
-        # self.font = pygame.font.SysFont(font_name, font_size)
         self.position = position
 
-        self.text = self.font.render("", True, (125, 125, 125))
-
-        self.text_label = pg.LabelItem(self.text, color=(125, 125, 125)) # create text label
-        self.text_label.setParentItem(parent) # set parent to the plot widget
+        self.text_label = pg.LabelItem("", parent=parent, size=str(relative_font_size) + 'pt', family=font_name, color=(125, 125, 125)) # create text label
         # Get the position and offset of the text
         position_tuple = self._position_resolver(self.position)
         offset_tuple = self._offset_resolver(self.position, self.text_label)
