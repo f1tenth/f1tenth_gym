@@ -125,7 +125,7 @@ class PyQtEnvRenderer(EnvRenderer):
 
         # # update time
         # self.sim_time = state["sim_time"]
-        raise NotImplementedError
+        raise NotImplementedErrorw
 
     def add_renderer_callback(self, callback_fn: Callable[[EnvRenderer], None]) -> None:
         """
@@ -320,9 +320,10 @@ class PyQtEnvRenderer(EnvRenderer):
         points = ((points - origin[:2]) / resolution).astype(int)
         size = math.ceil(size / ppu)
 
-        pygame.draw.lines(
-            self.map_canvas, color, closed=False, points=points, width=size
-        )
+        pen = pg.mkPen(color=pg.mkColor(*color), width=size)
+        self.canvas.plot(
+            points[:, 0], points[:, 1], pen=pen, fillLevel=None, antialias=True
+        )  ## setting pen=None disables line drawing
 
     def render_closed_lines(
         self,
@@ -342,15 +343,18 @@ class PyQtEnvRenderer(EnvRenderer):
         size : Optional[int], optional
             size of the line, by default 1
         """
-        origin = (0, 0, 0)
-        ppu = 1
-        resolution = 1
+        origin = self.map_origin
+        ppu = self.ppus[self.active_map_renderer]
+        resolution = self.map_resolution * ppu
         points = ((points - origin[:2]) / resolution).astype(int)
         size = math.ceil(size / ppu)
 
+        # Append the first point to the end to close the loop
+        points = np.vstack([points, points[0]])
+        
         pen = pg.mkPen(color=pg.mkColor(*color), width=size)
         self.canvas.plot(
-            points[:, 0], points[:, 1], pen=pen, connect="all", fillLevel=None, antialias=True
+            points[:, 0], points[:, 1], pen=pen, fillLevel=None, antialias=True
         )  ## setting pen=None disables line drawing
 
 
