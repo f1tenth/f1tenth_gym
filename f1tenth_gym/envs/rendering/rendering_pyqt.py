@@ -140,7 +140,6 @@ class PyQtEnvRenderer(EnvRenderer):
             self.agent_to_follow: int = None
 
         self.window.show()
-        self.app.exec()
 
     def update(self, state: dict) -> None:
         """
@@ -159,6 +158,7 @@ class PyQtEnvRenderer(EnvRenderer):
                     render_spec=self.render_spec,
                     map_origin=self.map_origin[:2],
                     resolution=self.map_resolution,
+                    parent=self.canvas,
                 )
                 for ic in range(len(self.agent_ids))
             ]
@@ -196,7 +196,7 @@ class PyQtEnvRenderer(EnvRenderer):
 
             # draw cars
             for i in range(len(self.agent_ids)):
-                self.cars[i].render(self.map_canvas)
+                self.cars[i].render()
 
             # call callbacks
             for callback_fn in self.callbacks:
@@ -204,7 +204,7 @@ class PyQtEnvRenderer(EnvRenderer):
 
             if self.follow_agent_flag:
                 origin = self.map_origin
-                resolution = self.map_resolution * self.ppus[self.active_map_renderer]
+                resolution = self.map_resolution
                 ego_x, ego_y = self.cars[self.agent_to_follow].pose[:2]
                 cx = (ego_x - origin[0]) / resolution
                 cy = (ego_y - origin[1]) / resolution
@@ -218,12 +218,14 @@ class PyQtEnvRenderer(EnvRenderer):
                 else None
             )
             self.bottom_info_renderer.render(
-                text=f"Focus on: {agent_to_follow_id}", display=self.canvas
+                text=f"Focus on: {agent_to_follow_id}"
             )
 
         if self.render_spec.show_info:
-            self.top_info_renderer.render(text=INSTRUCTION_TEXT, display=self.canvas)
-        self.time_renderer.render(text=f"{self.sim_time:.2f}", display=self.canvas)
+            self.top_info_renderer.render(text=INSTRUCTION_TEXT)
+        self.time_renderer.render(text=f"{self.sim_time:.2f}")
+        self.clock.update()
+        self.app.processEvents()
 
         if self.render_mode in ["human", "human_fast"]:
             assert self.window is not None
@@ -302,17 +304,16 @@ class PyQtEnvRenderer(EnvRenderer):
             size of the points in pixels, by default 1
         """
         origin = self.map_origin
-        ppu = self.ppus[self.active_map_renderer]
-        resolution = self.map_resolution * ppu
+        resolution = self.map_resolution
         points = ((points - origin[:2]) / resolution).astype(int)
-        size = math.ceil(size / ppu)
+        size = math.ceil(size)
 
     def render_lines(
         self,
         points: list | np.ndarray,
         color: Optional[tuple[int, int, int]] = (0, 0, 255),
         size: Optional[int] = 1,
-    ) -> None:
+    ) -> pg.PlotDataItem:
         """
         Render a sequence of lines segments.
 
@@ -326,13 +327,12 @@ class PyQtEnvRenderer(EnvRenderer):
             size of the line, by default 1
         """
         origin = self.map_origin
-        ppu = self.ppus[self.active_map_renderer]
-        resolution = self.map_resolution * ppu
+        resolution = self.map_resolution
         points = ((points - origin[:2]) / resolution).astype(int)
-        size = math.ceil(size / ppu)
+        size = math.ceil(size)
 
         pen = pg.mkPen(color=pg.mkColor(*color), width=size)
-        self.canvas.plot(
+        return self.canvas.plot(
             points[:, 0], points[:, 1], pen=pen, fillLevel=None, antialias=True
         )  ## setting pen=None disables line drawing
 
@@ -341,7 +341,7 @@ class PyQtEnvRenderer(EnvRenderer):
         points: list | np.ndarray,
         color: Optional[tuple[int, int, int]] = (0, 0, 255),
         size: Optional[int] = 1,
-    ) -> None:
+    ) -> pg.PlotDataItem:
         """
         Render a sequence of lines segments forming a closed loop (draw a line between the last and the first point).
 
@@ -355,16 +355,15 @@ class PyQtEnvRenderer(EnvRenderer):
             size of the line, by default 1
         """
         origin = self.map_origin
-        ppu = self.ppus[self.active_map_renderer]
-        resolution = self.map_resolution * ppu
+        resolution = self.map_resolution
         points = ((points - origin[:2]) / resolution).astype(int)
-        size = math.ceil(size / ppu)
+        size = math.ceil(size)
 
         # Append the first point to the end to close the loop
         points = np.vstack([points, points[0]])
         
         pen = pg.mkPen(color=pg.mkColor(*color), width=size)
-        self.canvas.plot(
+        return self.canvas.plot(
             points[:, 0], points[:, 1], pen=pen, fillLevel=None, antialias=True
         )  ## setting pen=None disables line drawing
 

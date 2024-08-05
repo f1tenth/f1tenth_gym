@@ -193,7 +193,8 @@ class Car:
         # Create a QGraphicsRectItem
         self.chassis = QGraphicsRectItem(0, 0, self.car_length, self.car_width) # x, y, width, height
         self.chassis.setBrush(pg.mkBrush(self.color))
-        self.chassis.setPen(pg.mkPen((0, 0, 0), self.car_thickness))
+        self.chassis.setPen(pg.mkPen((0, 0, 0), width=self.car_thickness))
+        self.chassis.setParentItem(parent)
         
         # Apply rotation transformation
         transform = QTransform()
@@ -207,11 +208,11 @@ class Car:
             # Create two rectangles, one top left and one top right
             self.left_wheel = QGraphicsRectItem(0, 0, self.tire_length, self.tire_width)
             self.left_wheel.setBrush(pg.mkBrush((0, 0, 0)))
-            self.left_wheel.setPen(pg.mkPen((0, 0, 0), 1))
+            self.left_wheel.setPen(pg.mkPen((0, 0, 0), width=1))
             
             self.right_wheel = QGraphicsRectItem(0, 0, self.tire_length, self.tire_width)
             self.right_wheel.setBrush(pg.mkBrush((0, 0, 0)))
-            self.right_wheel.setPen(pg.mkPen((0, 0, 0), 1))
+            self.right_wheel.setPen(pg.mkPen((0, 0, 0), width=1))
 
             # Apply rotation transformation
             transform = QTransform()
