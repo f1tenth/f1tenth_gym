@@ -10,7 +10,6 @@ import pyqtgraph as pg
 from PIL import ImageColor
 
 from .pyqt_objects import (
-    Map,
     Car,
     TextObject,
 )

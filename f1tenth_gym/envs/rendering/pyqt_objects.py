@@ -161,34 +161,6 @@ class TextObject:
         # Set the position and offset of the text
         text_label.anchor(itemPos=position_tuple, parentPos=position_tuple, offset=offset_tuple)
 
-
-class Map:
-    """
-    Class to display the track map according to the desired zoom level.
-    """
-
-    def __init__(self, map_img: np.ndarray, zoom_level: float):
-        orig_width, orig_height = map_img.shape
-        scaled_width = int(orig_width * zoom_level)
-        scaled_height = int(orig_height * zoom_level)
-        map_img = cv2.resize(
-            map_img, dsize=(scaled_width, scaled_height), interpolation=cv2.INTER_AREA
-        )
-
-        # convert shape from (W, H) to (W, H, 3)
-        track_map = np.stack([map_img, map_img, map_img], axis=-1)
-
-        # rotate and flip to match the track orientation
-        track_map = np.rot90(track_map, k=1)  # rotate clockwise
-        track_map = np.flip(track_map, axis=0)  # flip vertically
-
-        self.track_map = track_map
-        # self.map_surface = pygame.surfarray.make_surface(self.track_map)
-
-    # def render(self, display: pygame.Surface):
-    #     display.blit(self.map_surface, (0, 0))
-
-
 class Car:
     """
     Class to display the car.
