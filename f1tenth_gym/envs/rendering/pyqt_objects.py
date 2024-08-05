@@ -48,97 +48,118 @@ class TextObject:
 
         self.text = self.font.render("", True, (125, 125, 125))
 
-    # def _position_resolver(
-    #     self, position: str | tuple[int, int], display: pygame.Surface
-    # ) -> tuple[int, int]:
-    #     """
-    #     This function takes strings like "bottom center" and converts them into a location for the text to be displayed.
-    #     If position is tuple, then passthrough.
+    def _position_resolver(
+        self, position: str | tuple[int, int]
+    ) -> tuple[int, int]:
+        """
+        This function takes strings like "bottom center" and converts them into a location for the text to be displayed.
+        If position is tuple, then passthrough.
 
-    #     Parameters
-    #     ----------
-    #     position : str | tuple
-    #         position of the text on the screen
-    #     display : pygame.Surface
-    #         display surface
+        Parameters
+        ----------
+        position : str | tuple
+            position of the text on the screen
 
-    #     Returns
-    #     -------
-    #     tuple
-    #         position of the text on the screen
+        Returns
+        -------
+        tuple
+            position of the text on the screen
 
-    #     Raises
-    #     ------
-    #     ValueError
-    #         if position is not a tuple or a string
-    #     NotImplementedError
-    #         if position is a string but not implemented
-    #     """
-    #     if isinstance(position, tuple) and len(position) == 2:
-    #         return int(position[0]), int(position[1])
-    #     elif isinstance(position, str):
-    #         position = position.lower()
-    #         if position == "bottom_right":
-    #             display_width, display_height = (
-    #                 display.get_width(),
-    #                 display.get_height(),
-    #             )
-    #             text_width, text_height = self.text.get_width(), self.text.get_height()
-    #             bottom_right = (
-    #                 display_width - text_width,
-    #                 display_height - text_height,
-    #             )
-    #             return bottom_right
-    #         elif position == "bottom_left":
-    #             display_height = display.get_height()
-    #             text_height = self.text.get_height()
-    #             bottom_left = (0, display_height - text_height)
-    #             return bottom_left
-    #         elif position == "bottom_center":
-    #             display_width, display_height = (
-    #                 display.get_width(),
-    #                 display.get_height(),
-    #             )
-    #             text_width, text_height = self.text.get_width(), self.text.get_height()
-    #             bottom_center = (
-    #                 (display_width - text_width) // 2,
-    #                 display_height - text_height,
-    #             )
-    #             return bottom_center
-    #         elif position == "top_right":
-    #             display_width = display.get_width()
-    #             text_width = self.text.get_width()
-    #             top_right = (display_width - text_width, 0)
-    #             return top_right
-    #         elif position == "top_left":
-    #             top_left = (0, 0)
-    #             return top_left
-    #         elif position == "top_center":
-    #             display_width = display.get_width()
-    #             text_width = self.text.get_width()
-    #             top_center = ((display_width - text_width) // 2, 0)
-    #             return top_center
-    #         else:
-    #             raise NotImplementedError(f"Position {position} not implemented.")
-    #     else:
-    #         raise ValueError(
-    #             f"Position expected to be a tuple[int, int] or a string. Got {position}."
-    #         )
+        Raises
+        ------
+        ValueError
+            if position is not a tuple or a string
+        NotImplementedError
+            if position is a string but not implemented
+        """
+        if isinstance(position, tuple) and len(position) == 2:
+            return int(position[0]), int(position[1])
+        elif isinstance(position, str):
+            position = position.lower()
+            if position == "bottom_right":
+                return (1, 1)
+            elif position == "bottom_left":
+                return (0, 1)
+            elif position == "bottom_center":
+                return (0.5, 1)
+            elif position == "top_right":
+                return (1, 0)
+            elif position == "top_left":
+                return (0, 0)
+            elif position == "top_center":
+                return (0.5, 0)
+            else:
+                raise NotImplementedError(f"Position {position} not implemented.")
+        else:
+            raise ValueError(
+                f"Position expected to be a tuple[int, int] or a string. Got {position}."
+            )
 
-    # def render(self, text: str, display: pygame.Surface) -> None:
-    #     """
-    #     Render text on the screen.
+    def _offset_resolver(
+        self, position: str | tuple[int, int], text_label: pg.LabelItem
+    ) -> tuple[int, int]:
+        """
+        This function takes strings like "bottom center" and converts them into a location for the text to be displayed.
+        If position is tuple, then passthrough.
 
-    #     Parameters
-    #     ----------
-    #     text : str
-    #         text to be displayed
-    #     display : pygame.Surface
-    #         display surface                    
-    #     """
-    #     self.text = self.font.render(text, True, (125, 125, 125))
-    #     position_tuple = self._position_resolver(self.position, display)
-    #     display.blit(self.text, position_tuple)
+        Parameters
+        ----------
+        position : str | tuple
+            position of the text on the screen
+
+        Returns
+        -------
+        tuple
+            position of the text on the screen
+
+        Raises
+        ------
+        ValueError
+            if position is not a tuple or a string
+        NotImplementedError
+            if position is a string but not implemented
+        """
+        if isinstance(position, tuple) and len(position) == 2:
+            return int(position[0]), int(position[1])
+        elif isinstance(position, str):
+            position = position.lower()
+            if position == "bottom_right":
+                return (-text_label.width(), -text_label.height())
+            elif position == "bottom_left":
+                return (0, -text_label.height())
+            elif position == "bottom_center":
+                return (-text_label.width()/2, -text_label.height())
+            elif position == "top_right":
+                return (-text_label.width(), 0)
+            elif position == "top_left":
+                return (0, 0)
+            elif position == "top_center":
+                return (-text_label.width()/2, 0)
+            else:
+                raise NotImplementedError(f"Position {position} not implemented.")
+        else:
+            raise ValueError(
+                f"Position expected to be a tuple[int, int] or a string. Got {position}."
+            )
+        
+    def render(self, text: str, parent: pg.PlotWidget) -> None:
+        """
+        Render text on the screen.
+
+        Parameters
+        ----------
+        text : str
+            text to be displayed
+        parent : pg.PlotWidget
+            pyqt parent plot widget                    
+        """
+        text_label = pg.LabelItem(text, color=(125, 125, 125)) # create text label
+        text_label.setParentItem(parent) # set parent to the plot widget
+        # Get the position and offset of the text
+        position_tuple = self._position_resolver(self.position)
+        offset_tuple = self._offset_resolver(self.position, text_label)
+        # Set the position and offset of the text
+        text_label.anchor(itemPos=position_tuple, parentPos=position_tuple, offset=offset_tuple)
 
 
 class Map:
@@ -208,42 +229,42 @@ class Car:
         self.color = (255, 0, 0) if state["collisions"][idx] > 0 else self.color
         self.steering = self.pose[2] + state["steering_angles"][idx]
 
-    # def render(self, display: pygame.Surface):
-    #     vertices = get_vertices(self.pose, self.car_length, self.car_width)
-    #     vertices[:, 0] = (vertices[:, 0] - self.origin[0]) / (
-    #         self.resolution * self.ppu
-    #     )
-    #     vertices[:, 1] = (vertices[:, 1] - self.origin[1]) / (
-    #         self.resolution * self.ppu
-    #     )
+    def render(self, display: pygame.Surface):
+        vertices = get_vertices(self.pose, self.car_length, self.car_width)
+        vertices[:, 0] = (vertices[:, 0] - self.origin[0]) / (
+            self.resolution * self.ppu
+        )
+        vertices[:, 1] = (vertices[:, 1] - self.origin[1]) / (
+            self.resolution * self.ppu
+        )
 
-    #     self.rect = pygame.draw.polygon(display, self.color, vertices)
+        self.rect = pygame.draw.polygon(display, self.color, vertices)
 
-    #     pygame.draw.lines(display, (0, 0, 0), True, vertices, self.car_tickness)
+        pygame.draw.lines(display, (0, 0, 0), True, vertices, self.car_tickness)
 
-    #     # draw two lines in proximity of the front wheels
-    #     # to indicate the steering angle
-    #     if self.show_wheels:
-    #         # percentage along the car length to draw the wheels segments
-    #         lam = 0.15
+        # draw two lines in proximity of the front wheels
+        # to indicate the steering angle
+        if self.show_wheels:
+            # percentage along the car length to draw the wheels segments
+            lam = 0.15
 
-    #         # find point at perc between front and back vertices
-    #         front_left = (vertices[0] * lam + vertices[3] * (1 - lam)).astype(int)
-    #         front_right = (vertices[1] * lam + vertices[2] * (1 - lam)).astype(int)
-    #         arrow_length = self.wheel_size / self.resolution
+            # find point at perc between front and back vertices
+            front_left = (vertices[0] * lam + vertices[3] * (1 - lam)).astype(int)
+            front_right = (vertices[1] * lam + vertices[2] * (1 - lam)).astype(int)
+            arrow_length = self.wheel_size / self.resolution
 
-    #         for mid_point in [front_left, front_right]:
-    #             end_point = mid_point + 0.5 * arrow_length * np.array(
-    #                 [np.cos(self.steering), np.sin(self.steering)]
-    #             )
-    #             base_point = mid_point - 0.5 * arrow_length * np.array(
-    #                 [np.cos(self.steering), np.sin(self.steering)]
-    #             )
+            for mid_point in [front_left, front_right]:
+                end_point = mid_point + 0.5 * arrow_length * np.array(
+                    [np.cos(self.steering), np.sin(self.steering)]
+                )
+                base_point = mid_point - 0.5 * arrow_length * np.array(
+                    [np.cos(self.steering), np.sin(self.steering)]
+                )
 
-    #             pygame.draw.line(
-    #                 display,
-    #                 (0, 0, 0),
-    #                 base_point.astype(int),
-    #                 end_point.astype(int),
-    #                 self.car_tickness + 1,
-    #             )
+                pygame.draw.line(
+                    display,
+                    (0, 0, 0),
+                    base_point.astype(int),
+                    end_point.astype(int),
+                    self.car_tickness + 1,
+                )
