@@ -3,6 +3,9 @@ import cv2
 import numpy as np
 import pyqtgraph as pg
 
+from PyQt6.QtWidgets import QGraphicsRectItem
+from PyQt6.QtGui import QTransform
+
 from ..collision_models import get_vertices
 from . import RenderSpec
 
@@ -180,7 +183,7 @@ class Car:
         self.car_length = car_length
         self.car_width = car_width
         self.wheel_size = wheel_size
-        self.car_tickness = render_spec.car_tickness
+        self.car_thickness = render_spec.car_tickness
         self.show_wheels = render_spec.show_wheels
 
         self.origin = map_origin
@@ -192,6 +195,10 @@ class Car:
         self.steering = None
         self.rect = None
 
+        # Tire params need to be updated
+        self.tire_width = 0.1
+        self.tire_length = 0.1
+
     def update(self, state: dict[str, np.ndarray], idx: int):
         self.pose = (
             state["poses_x"][idx],
@@ -201,7 +208,7 @@ class Car:
         self.color = (255, 0, 0) if state["collisions"][idx] > 0 else self.color
         self.steering = self.pose[2] + state["steering_angles"][idx]
 
-    def render(self, display: pygame.Surface):
+    def render(self, parent: pg.PlotWidget):
         vertices = get_vertices(self.pose, self.car_length, self.car_width)
         vertices[:, 0] = (vertices[:, 0] - self.origin[0]) / (
             self.resolution * self.ppu
@@ -210,33 +217,44 @@ class Car:
             self.resolution * self.ppu
         )
 
-        self.rect = pygame.draw.polygon(display, self.color, vertices)
+        x, y, th = self.pose[0], self.pose[1], self.pose[2]
+        # Create a QGraphicsRectItem
+        self.rect = QGraphicsRectItem(0, 0, self.car_length, self.car_width) # x, y, width, height
+        self.rect.setBrush(pg.mkBrush(self.color))
+        self.rect.setPen(pg.mkPen((0, 0, 0), self.car_thickness))
+        
+        # Apply rotation transformation
+        transform = QTransform()
+        transform.rotate(np.degrees(th))
+        transform.translate(x, y)
+        self.rect.setTransform(transform)
 
-        pygame.draw.lines(display, (0, 0, 0), True, vertices, self.car_tickness)
-
-        # draw two lines in proximity of the front wheels
+        # draw two rectangles at the front of the rectangle
         # to indicate the steering angle
         if self.show_wheels:
-            # percentage along the car length to draw the wheels segments
-            lam = 0.15
+            # Create two rectangles, one top left and one top right
+            top_left_rect = QGraphicsRectItem(0, 0, self.tire_length, self.tire_width)
+            top_left_rect.setBrush(pg.mkBrush((0, 0, 0)))
+            top_left_rect.setPen(pg.mkPen((0, 0, 0), 1))
+            
+            top_right_rect = QGraphicsRectItem(0, 0, self.tire_length, self.tire_width)
+            top_right_rect.setBrush(pg.mkBrush((0, 0, 0)))
+            top_right_rect.setPen(pg.mkPen((0, 0, 0), 1))
 
-            # find point at perc between front and back vertices
-            front_left = (vertices[0] * lam + vertices[3] * (1 - lam)).astype(int)
-            front_right = (vertices[1] * lam + vertices[2] * (1 - lam)).astype(int)
-            arrow_length = self.wheel_size / self.resolution
+            # Apply rotation transformation
+            transform = QTransform()
+            transform.rotate(np.degrees(self.steering + th))
+            transform.translate(x + self.car_length / 2, y + self.car_width / 2)
+            top_left_rect.setTransform(transform)
 
-            for mid_point in [front_left, front_right]:
-                end_point = mid_point + 0.5 * arrow_length * np.array(
-                    [np.cos(self.steering), np.sin(self.steering)]
-                )
-                base_point = mid_point - 0.5 * arrow_length * np.array(
-                    [np.cos(self.steering), np.sin(self.steering)]
-                )
+            transform = QTransform()
+            transform.rotate(np.degrees(self.steering + th))
+            transform.translate(x + self.car_length / 2, y - self.car_width / 2)
+            top_right_rect.setTransform(transform)
 
-                pygame.draw.line(
-                    display,
-                    (0, 0, 0),
-                    base_point.astype(int),
-                    end_point.astype(int),
-                    self.car_tickness + 1,
-                )
+            # Add the rectangle item to the scene
+            parent.addItem(top_left_rect)
+            parent.addItem(top_right_rect)
+
+
+
