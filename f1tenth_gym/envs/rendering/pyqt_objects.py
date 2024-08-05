@@ -5,7 +5,7 @@ import pyqtgraph as pg
 from PyQt6.QtWidgets import QGraphicsRectItem
 from PyQt6.QtGui import QTransform
 
-from renderer import RenderSpec
+from .renderer import RenderSpec
 
 
 class TextObject:

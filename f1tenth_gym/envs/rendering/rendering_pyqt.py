@@ -71,7 +71,17 @@ class PyQtEnvRenderer(EnvRenderer):
         self.window = pg.GraphicsLayoutWidget()
         self.window.setWindowTitle("F1Tenth Gym")
         self.window.setGeometry(0, 0, self.render_spec.window_size, self.render_spec.window_size)
-        self.canvas = self.window.addPlot()
+        self.canvas : pg.PlotItem = self.window.addPlot()
+
+        # Disable interactivity
+        self.canvas.setMouseEnabled(x=False, y=False)  # Disable mouse panning & zooming
+        self.canvas.hideButtons()  # Disable corner auto-scale button
+        self.canvas.setMenuEnabled(False)  # Disable right-click context menu
+
+        legend = self.canvas.addLegend()  # This doesn't disable legend interaction
+        # Override both methods responsible for mouse events
+        legend.mouseDragEvent = lambda *args, **kwargs: None
+        legend.hoverEvent = lambda *args, **kwargs: None
 
         # Remove axes
         self.canvas.hideAxis('bottom')
