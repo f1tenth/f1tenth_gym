@@ -104,27 +104,25 @@ class PyQtEnvRenderer(EnvRenderer):
         ----------
             state: simulation state as dictionary
         """
-        # if self.cars is None:
-        #     self.cars = [
-        #         Car(
-        #             car_length=self.params["length"],
-        #             car_width=self.params["width"],
-        #             color=self.car_colors[ic],
-        #             render_spec=self.render_spec,
-        #             map_origin=self.map_origin[:2],
-        #             resolution=self.map_resolution,
-        #             ppu=self.ppus[self.active_map_renderer],
-        #         )
-        #         for ic in range(len(self.agent_ids))
-        #     ]
+        if self.cars is None:
+            self.cars = [
+                Car(
+                    car_length=self.params["length"],
+                    car_width=self.params["width"],
+                    color=self.car_colors[ic],
+                    render_spec=self.render_spec,
+                    map_origin=self.map_origin[:2],
+                    resolution=self.map_resolution,
+                )
+                for ic in range(len(self.agent_ids))
+            ]
 
-        # # update cars state and zoom level (updating points-per-unit)
-        # for i in range(len(self.agent_ids)):
-        #     self.cars[i].update(state, i)
+        # update cars state and zoom level (updating points-per-unit)
+        for i in range(len(self.agent_ids)):
+            self.cars[i].update(state, i)
 
-        # # update time
-        # self.sim_time = state["sim_time"]
-        raise NotImplementedErrorw
+        # update time
+        self.sim_time = state["sim_time"]
 
     def add_renderer_callback(self, callback_fn: Callable[[EnvRenderer], None]) -> None:
         """

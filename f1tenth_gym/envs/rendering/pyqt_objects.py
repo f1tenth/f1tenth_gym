@@ -1,12 +1,10 @@
 from __future__ import annotations
-import cv2
 import numpy as np
 import pyqtgraph as pg
 
 from PyQt6.QtWidgets import QGraphicsRectItem
 from PyQt6.QtGui import QTransform
 
-from ..collision_models import get_vertices
 from . import RenderSpec
 
 
@@ -174,11 +172,11 @@ class Car:
         render_spec: RenderSpec,
         map_origin: tuple[float, float],
         resolution: float,
-        ppu: float,
         car_length: float,
         car_width: float,
         color: list[int] | None = None,
         wheel_size: float = 0.2,
+        parent: pg.PlotWidget = None,
     ):
         self.car_length = car_length
         self.car_width = car_width
@@ -188,16 +186,54 @@ class Car:
 
         self.origin = map_origin
         self.resolution = resolution
-        self.ppu = ppu
 
         self.color = color or (0, 0, 0)
-        self.pose = None
-        self.steering = None
-        self.rect = None
+        self.pose = (0, 0, 0)
+        self.steering = 0
+        self.chassis = None
 
         # Tire params need to be updated
         self.tire_width = 0.1
-        self.tire_length = 0.1
+        self.tire_length = self.wheel_size
+
+        x, y, th = self.pose[0], self.pose[1], self.pose[2]
+        # Create a QGraphicsRectItem
+        self.chassis = QGraphicsRectItem(0, 0, self.car_length, self.car_width) # x, y, width, height
+        self.chassis.setBrush(pg.mkBrush(self.color))
+        self.chassis.setPen(pg.mkPen((0, 0, 0), self.car_thickness))
+        
+        # Apply rotation transformation
+        transform = QTransform()
+        transform.rotate(np.degrees(th))
+        transform.translate(x, y)
+        self.chassis.setTransform(transform)
+
+        # draw two rectangles at the front of the rectangle
+        # to indicate the steering angle
+        if self.show_wheels:
+            # Create two rectangles, one top left and one top right
+            self.left_wheel = QGraphicsRectItem(0, 0, self.tire_length, self.tire_width)
+            self.left_wheel.setBrush(pg.mkBrush((0, 0, 0)))
+            self.left_wheel.setPen(pg.mkPen((0, 0, 0), 1))
+            
+            self.right_wheel = QGraphicsRectItem(0, 0, self.tire_length, self.tire_width)
+            self.right_wheel.setBrush(pg.mkBrush((0, 0, 0)))
+            self.right_wheel.setPen(pg.mkPen((0, 0, 0), 1))
+
+            # Apply rotation transformation
+            transform = QTransform()
+            transform.rotate(np.degrees(self.steering + th))
+            transform.translate(x + self.car_length / 2, y + self.car_width / 2)
+            self.left_wheel.setTransform(transform)
+
+            transform = QTransform()
+            transform.rotate(np.degrees(self.steering + th))
+            transform.translate(x + self.car_length / 2, y - self.car_width / 2)
+            self.right_wheel.setTransform(transform)
+
+            # Add the rectangle item to the scene
+            parent.addItem(self.left_wheel)
+            parent.addItem(self.right_wheel)
 
     def update(self, state: dict[str, np.ndarray], idx: int):
         self.pose = (
@@ -208,53 +244,26 @@ class Car:
         self.color = (255, 0, 0) if state["collisions"][idx] > 0 else self.color
         self.steering = self.pose[2] + state["steering_angles"][idx]
 
-    def render(self, parent: pg.PlotWidget):
-        vertices = get_vertices(self.pose, self.car_length, self.car_width)
-        vertices[:, 0] = (vertices[:, 0] - self.origin[0]) / (
-            self.resolution * self.ppu
-        )
-        vertices[:, 1] = (vertices[:, 1] - self.origin[1]) / (
-            self.resolution * self.ppu
-        )
-
+    def render(self):
+        # Updates transforms of all rectangles
         x, y, th = self.pose[0], self.pose[1], self.pose[2]
-        # Create a QGraphicsRectItem
-        self.rect = QGraphicsRectItem(0, 0, self.car_length, self.car_width) # x, y, width, height
-        self.rect.setBrush(pg.mkBrush(self.color))
-        self.rect.setPen(pg.mkPen((0, 0, 0), self.car_thickness))
-        
+
         # Apply rotation transformation
         transform = QTransform()
         transform.rotate(np.degrees(th))
         transform.translate(x, y)
-        self.rect.setTransform(transform)
+        self.chassis.setTransform(transform)
 
-        # draw two rectangles at the front of the rectangle
-        # to indicate the steering angle
         if self.show_wheels:
-            # Create two rectangles, one top left and one top right
-            top_left_rect = QGraphicsRectItem(0, 0, self.tire_length, self.tire_width)
-            top_left_rect.setBrush(pg.mkBrush((0, 0, 0)))
-            top_left_rect.setPen(pg.mkPen((0, 0, 0), 1))
-            
-            top_right_rect = QGraphicsRectItem(0, 0, self.tire_length, self.tire_width)
-            top_right_rect.setBrush(pg.mkBrush((0, 0, 0)))
-            top_right_rect.setPen(pg.mkPen((0, 0, 0), 1))
-
-            # Apply rotation transformation
             transform = QTransform()
             transform.rotate(np.degrees(self.steering + th))
             transform.translate(x + self.car_length / 2, y + self.car_width / 2)
-            top_left_rect.setTransform(transform)
+            self.left_wheel.setTransform(transform)
 
             transform = QTransform()
             transform.rotate(np.degrees(self.steering + th))
             transform.translate(x + self.car_length / 2, y - self.car_width / 2)
-            top_right_rect.setTransform(transform)
-
-            # Add the rectangle item to the scene
-            parent.addItem(top_left_rect)
-            parent.addItem(top_right_rect)
+            self.right_wheel.setTransform(transform)
 
 
 
