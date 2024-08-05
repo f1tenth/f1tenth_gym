@@ -2,7 +2,6 @@ from __future__ import annotations
 import logging
 import math
 from typing import Any, Callable, Optional
-from time import perf_counter
 
 import cv2
 import numpy as np
@@ -81,7 +80,9 @@ class PyQtEnvRenderer(EnvRenderer):
         self.top_info_renderer = TextObject(
             window_shape=(width, height), position="top_center"
         )
-        self.clock.sigFpsUpdate.connect(lambda fps: self.top_info_renderer.render(f'FPS: {fps:.1f}'))
+
+        if self.render_mode in ["human", "human_fast"]:
+            self.clock.sigFpsUpdate.connect(lambda fps: self.top_info_renderer.render(f'FPS: {fps:.1f}'))
 
         colors_rgb = [
             [rgb for rgb in ImageColor.getcolor(c, "RGB")]
@@ -155,88 +156,58 @@ class PyQtEnvRenderer(EnvRenderer):
         self.callbacks.append(callback_fn)
 
     def render(self) -> Optional[np.ndarray]:
-        # """
-        # Render the current state in a frame.
-        # It renders in the order: map, cars, callbacks, info text.
+        """
+        Render the current state in a frame.
+        It renders in the order: map, cars, callbacks, info text.
 
-        # Returns
-        # -------
-        # Optional[np.ndarray]
-        #     if render_mode is "rgb_array", returns the rendered frame as an array
-        # """
-        # self.event_handling()
+        Returns
+        -------
+        Optional[np.ndarray]
+            if render_mode is "rgb_array", returns the rendered frame as an array
+        """
+        self.event_handling()
 
-        # self.canvas.fill((255, 255, 255))  # white background
-        # self.map_canvas = self.map_canvases[self.active_map_renderer]
-        # self.map_canvas.fill((255, 255, 255))  # white background
+        if self.draw_flag:
 
-        # if self.draw_flag:
-        #     self.map_renderers[self.active_map_renderer].render(self.map_canvas)
+            # draw cars
+            for i in range(len(self.agent_ids)):
+                self.cars[i].render(self.map_canvas)
 
-        #     # draw cars
-        #     for i in range(len(self.agent_ids)):
-        #         self.cars[i].render(self.map_canvas)
+            # call callbacks
+            for callback_fn in self.callbacks:
+                callback_fn(self)
 
-        #     # call callbacks
-        #     for callback_fn in self.callbacks:
-        #         callback_fn(self)
+            if self.follow_agent_flag:
+                origin = self.map_origin
+                resolution = self.map_resolution * self.ppus[self.active_map_renderer]
+                ego_x, ego_y = self.cars[self.agent_to_follow].pose[:2]
+                cx = (ego_x - origin[0]) / resolution
+                cy = (ego_y - origin[1]) / resolution
+            else:
+                cx = self.map_canvas.get_width() / 2
+                cy = self.map_canvas.get_height() / 2
 
-        #     surface_mod_rect = self.map_canvas.get_rect()
-        #     screen_rect = self.canvas.get_rect()
+            agent_to_follow_id = (
+                self.agent_ids[self.agent_to_follow]
+                if self.agent_to_follow is not None
+                else None
+            )
+            self.bottom_info_renderer.render(
+                text=f"Focus on: {agent_to_follow_id}", display=self.canvas
+            )
 
-        #     if self.follow_agent_flag:
-        #         origin = self.map_origin
-        #         resolution = self.map_resolution * self.ppus[self.active_map_renderer]
-        #         ego_x, ego_y = self.cars[self.agent_to_follow].pose[:2]
-        #         cx = (ego_x - origin[0]) / resolution
-        #         cy = (ego_y - origin[1]) / resolution
-        #     else:
-        #         cx = self.map_canvas.get_width() / 2
-        #         cy = self.map_canvas.get_height() / 2
+        if self.render_spec.show_info:
+            self.top_info_renderer.render(text=INSTRUCTION_TEXT, display=self.canvas)
+        self.time_renderer.render(text=f"{self.sim_time:.2f}", display=self.canvas)
 
-        #     surface_mod_rect.x = screen_rect.centerx - cx
-        #     surface_mod_rect.y = screen_rect.centery - cy
+        if self.render_mode in ["human", "human_fast"]:
+            assert self.window is not None
 
-        #     self.canvas.blit(self.map_canvas, surface_mod_rect)
-
-        #     agent_to_follow_id = (
-        #         self.agent_ids[self.agent_to_follow]
-        #         if self.agent_to_follow is not None
-        #         else None
-        #     )
-        #     self.bottom_info_renderer.render(
-        #         text=f"Focus on: {agent_to_follow_id}", display=self.canvas
-        #     )
-
-        # if self.render_spec.show_info:
-        #     self.top_info_renderer.render(text=INSTRUCTION_TEXT, display=self.canvas)
-        # self.time_renderer.render(text=f"{self.sim_time:.2f}", display=self.canvas)
-
-        # if self.render_mode in ["human", "human_fast"]:
-        #     assert self.window is not None
-
-        #     self.fps_renderer.render(
-        #         text=f"FPS: {self.clock.get_fps():.2f}", display=self.canvas
-        #     )
-
-        #     self.window.blit(self.canvas, self.canvas.get_rect())
-
-        #     pygame.event.pump()
-        #     pygame.display.update()
-
-        #     # We need to ensure that human-rendering occurs at the predefined framerate.
-        #     # The following line will automatically add a delay to keep the framerate stable.
-        #     self.clock.tick(self.render_fps)
-        # else:  # rgb_array
-        #     frame = np.transpose(
-        #         np.array(pygame.surfarray.pixels3d(self.canvas)), axes=(1, 0, 2)
-        #     )
-        #     if frame.shape[0] > 2000:
-        #         frame = cv2.resize(
-        #             frame, dsize=(2000, 2000), interpolation=cv2.INTER_AREA
-        #         )
-        #     return frame
-        raise NotImplementedError
+        else:  
+            # rgb_array
+            # TODO: extract the frame from the canvas
+            frame = None
+            return frame
 
     def event_handling(self) -> None:
         """
