@@ -28,6 +28,7 @@ class TextObject:
         position: str | tuple,
         relative_font_size: int = 32,
         font_name: str = "Arial",
+        parent: pg.PlotWidget = None,
     ) -> None:
         """
         Initialize text object.
@@ -48,6 +49,14 @@ class TextObject:
         self.position = position
 
         self.text = self.font.render("", True, (125, 125, 125))
+
+        self.text_label = pg.LabelItem(self.text, color=(125, 125, 125)) # create text label
+        self.text_label.setParentItem(parent) # set parent to the plot widget
+        # Get the position and offset of the text
+        position_tuple = self._position_resolver(self.position)
+        offset_tuple = self._offset_resolver(self.position, self.text_label)
+        # Set the position and offset of the text
+        self.text_label.anchor(itemPos=position_tuple, parentPos=position_tuple, offset=offset_tuple)
 
     def _position_resolver(
         self, position: str | tuple[int, int]
@@ -143,24 +152,16 @@ class TextObject:
                 f"Position expected to be a tuple[int, int] or a string. Got {position}."
             )
         
-    def render(self, text: str, parent: pg.PlotWidget) -> None:
+    def render(self, text: str) -> None:
         """
         Render text on the screen.
 
         Parameters
         ----------
         text : str
-            text to be displayed
-        parent : pg.PlotWidget
-            pyqt parent plot widget                    
+            text to be displayed                 
         """
-        text_label = pg.LabelItem(text, color=(125, 125, 125)) # create text label
-        text_label.setParentItem(parent) # set parent to the plot widget
-        # Get the position and offset of the text
-        position_tuple = self._position_resolver(self.position)
-        offset_tuple = self._offset_resolver(self.position, text_label)
-        # Set the position and offset of the text
-        text_label.anchor(itemPos=position_tuple, parentPos=position_tuple, offset=offset_tuple)
+        self.text_label.setText(text)
 
 class Car:
     """

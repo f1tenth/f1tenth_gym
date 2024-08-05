@@ -2,11 +2,13 @@ from __future__ import annotations
 import logging
 import math
 from typing import Any, Callable, Optional
+from time import perf_counter
 
 import cv2
 import numpy as np
 from PyQt6 import QtWidgets
 import pyqtgraph as pg
+from pyqtgraph.examples.utils import FrameCounter
 from PIL import ImageColor
 
 from .pyqt_objects import (
@@ -64,6 +66,22 @@ class PyQtEnvRenderer(EnvRenderer):
         self.render_spec = render_spec
         self.render_mode = render_mode
         self.render_fps = render_fps
+
+        # fps and time renderer
+        self.clock = FrameCounter()
+        self.fps_renderer = TextObject(
+            window_shape=(width, height), position="bottom_left"
+        )
+        self.time_renderer = TextObject(
+            window_shape=(width, height), position="bottom_right"
+        )
+        self.bottom_info_renderer = TextObject(
+            window_shape=(width, height), position="bottom_center"
+        )
+        self.top_info_renderer = TextObject(
+            window_shape=(width, height), position="top_center"
+        )
+        self.clock.sigFpsUpdate.connect(lambda fps: self.top_info_renderer.render(f'FPS: {fps:.1f}'))
 
         colors_rgb = [
             [rgb for rgb in ImageColor.getcolor(c, "RGB")]
