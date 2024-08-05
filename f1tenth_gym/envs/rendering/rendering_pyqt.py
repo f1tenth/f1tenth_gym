@@ -66,23 +66,37 @@ class PyQtEnvRenderer(EnvRenderer):
         self.render_mode = render_mode
         self.render_fps = render_fps
 
+        # create the canvas
+        self.app = QtWidgets.QApplication([])
+        self.window = pg.GraphicsLayoutWidget()
+        self.window.setWindowTitle("F1Tenth Gym")
+        self.window.setGeometry(0, 0, self.render_spec.window_size, self.render_spec.window_size)
+        self.canvas = self.window.addPlot()
+
+        # Remove axes
+        self.canvas.hideAxis('bottom')
+        self.canvas.hideAxis('left')
+
+        # setting plot window background color to yellow 
+        self.window.setBackground('w') 
+
         # fps and time renderer
         self.clock = FrameCounter()
         self.fps_renderer = TextObject(
-            window_shape=(width, height), position="bottom_left"
+            parent=self.canvas, position="bottom_left"
         )
         self.time_renderer = TextObject(
-            window_shape=(width, height), position="bottom_right"
+            parent=self.canvas, position="bottom_right"
         )
         self.bottom_info_renderer = TextObject(
-            window_shape=(width, height), position="bottom_center"
+            parent=self.canvas, position="bottom_center"
         )
         self.top_info_renderer = TextObject(
-            window_shape=(width, height), position="top_center"
+            parent=self.canvas, position="top_center"
         )
 
         if self.render_mode in ["human", "human_fast"]:
-            self.clock.sigFpsUpdate.connect(lambda fps: self.top_info_renderer.render(f'FPS: {fps:.1f}'))
+            self.clock.sigFpsUpdate.connect(lambda fps: self.fps_renderer.render(f'FPS: {fps:.1f}'))
 
         colors_rgb = [
             [rgb for rgb in ImageColor.getcolor(c, "RGB")]
@@ -114,6 +128,9 @@ class PyQtEnvRenderer(EnvRenderer):
             self.active_map_renderer = "map"
             self.follow_agent_flag: bool = False
             self.agent_to_follow: int = None
+
+        self.window.show()
+        self.app.exec()
 
     def update(self, state: dict) -> None:
         """
@@ -165,8 +182,6 @@ class PyQtEnvRenderer(EnvRenderer):
         Optional[np.ndarray]
             if render_mode is "rgb_array", returns the rendered frame as an array
         """
-        self.event_handling()
-
         if self.draw_flag:
 
             # draw cars
