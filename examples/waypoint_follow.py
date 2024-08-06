@@ -208,7 +208,7 @@ class PurePursuitPlanner:
             if self.lookahead_point_render is None:
                 self.lookahead_point_render = e.render_points(points, color=(0, 0, 128), size=2)
             else:
-                self.lookahead_point_render.updateItems(points)
+                self.lookahead_point_render.setData(points)
 
     def render_local_plan(self, e):
         """
@@ -219,7 +219,7 @@ class PurePursuitPlanner:
             if self.local_plan_render is None:
                 self.local_plan_render = e.render_lines(points, color=(0, 128, 0), size=1)
             else:
-                self.local_plan_render.updateItems(points)
+                self.local_plan_render.setData(points)
 
     def _get_current_waypoint(
         self, waypoints, lookahead_distance, position, theta
