@@ -129,11 +129,11 @@ class TextObject:
         elif isinstance(position, str):
             position = position.lower()
             if position == "bottom_right":
-                return (-text_label.width(), -text_label.height())
+                return (-text_label.width(), 0)
             elif position == "bottom_left":
-                return (0, -text_label.height())
+                return (0, 0)
             elif position == "bottom_center":
-                return (-text_label.width()/2, -text_label.height())
+                return (-text_label.width()/2, 0)
             elif position == "top_right":
                 return (-text_label.width(), 0)
             elif position == "top_left":
@@ -158,7 +158,7 @@ class TextObject:
         """
         self.text_label.setText(text)
 
-# @njit(cache=True)
+@njit(cache=True)
 def _get_tire_vertices(pose, length, width, tire_width, tire_length, index, steering):
     """
     Utility function to return vertices of the car's tire given pose and size
