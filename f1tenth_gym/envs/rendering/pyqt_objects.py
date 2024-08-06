@@ -271,7 +271,7 @@ class Car:
             state["poses_theta"][idx],
         )
         self.color = (255, 0, 0) if state["collisions"][idx] > 0 else self.color
-        self.steering = self.pose[2] + state["steering_angles"][idx]
+        self.steering = state["steering_angles"][idx]
 
     def render(self):
         vertices = get_vertices(self.pose, self.car_length, self.car_width)
