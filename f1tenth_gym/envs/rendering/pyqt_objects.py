@@ -2,10 +2,11 @@ from __future__ import annotations
 import numpy as np
 import pyqtgraph as pg
 
-from PyQt6.QtWidgets import QGraphicsRectItem
-from PyQt6.QtGui import QTransform
+from PyQt6.QtWidgets import QGraphicsRectItem, QGraphicsPolygonItem
+from PyQt6 import QtGui
 
 from .renderer import RenderSpec
+from ..collision_models import get_vertices
 
 
 class TextObject:
@@ -189,45 +190,12 @@ class Car:
         self.tire_width = 0.1
         self.tire_length = self.wheel_size
 
-        x, y, th = self.pose[0], self.pose[1], self.pose[2]
-        # Create a QGraphicsRectItem
-        self.chassis = QGraphicsRectItem(0, 0, self.car_length, self.car_width) # x, y, width, height
-        self.chassis.setBrush(pg.mkBrush(self.color))
-        self.chassis.setPen(pg.mkPen((0, 0, 0), width=self.car_thickness))
-        self.chassis.setParentItem(parent)
-        
-        # Apply rotation transformation
-        transform = QTransform()
-        transform.rotate(np.degrees(th))
-        transform.translate(x, y)
-        self.chassis.setTransform(transform)
-
-        # draw two rectangles at the front of the rectangle
-        # to indicate the steering angle
-        if self.show_wheels:
-            # Create two rectangles, one top left and one top right
-            self.left_wheel = QGraphicsRectItem(0, 0, self.tire_length, self.tire_width)
-            self.left_wheel.setBrush(pg.mkBrush((0, 0, 0)))
-            self.left_wheel.setPen(pg.mkPen((0, 0, 0), width=1))
-            
-            self.right_wheel = QGraphicsRectItem(0, 0, self.tire_length, self.tire_width)
-            self.right_wheel.setBrush(pg.mkBrush((0, 0, 0)))
-            self.right_wheel.setPen(pg.mkPen((0, 0, 0), width=1))
-
-            # Apply rotation transformation
-            transform = QTransform()
-            transform.rotate(np.degrees(self.steering + th))
-            transform.translate(x + self.car_length / 2, y + self.car_width / 2)
-            self.left_wheel.setTransform(transform)
-
-            transform = QTransform()
-            transform.rotate(np.degrees(self.steering + th))
-            transform.translate(x + self.car_length / 2, y - self.car_width / 2)
-            self.right_wheel.setTransform(transform)
-
-            # Add the rectangle item to the scene
-            parent.addItem(self.left_wheel)
-            parent.addItem(self.right_wheel)
+        vertices = get_vertices(self.pose, self.car_length, self.car_width)
+        # vertices are rl, rr, fr, fl => Reorder to be rl, fl, fr, rr
+        vertices = np.array([vertices[0], vertices[3], vertices[2], vertices[1]])
+        # Append the first point to close the polygon
+        vertices = np.vstack([vertices, vertices[0]])
+        self.chassis : pg.PlotDataItem = parent.plot(vertices[:, 0], vertices[:, 1], pen=pg.mkPen(color=(0,0,0), width=self.car_thickness), fillLevel=0, brush=self.color)
 
     def update(self, state: dict[str, np.ndarray], idx: int):
         self.pose = (
@@ -239,25 +207,13 @@ class Car:
         self.steering = self.pose[2] + state["steering_angles"][idx]
 
     def render(self):
-        # Updates transforms of all rectangles
-        x, y, th = self.pose[0], self.pose[1], self.pose[2]
+        vertices = get_vertices(self.pose, self.car_length, self.car_width)
+        # vertices are rl, rr, fr, fl => Reorder to be rl, fl, fr, rr
+        vertices = np.array([vertices[0], vertices[3], vertices[2], vertices[1]])
+        # Append the first point to close the polygon
+        vertices = np.vstack([vertices, vertices[0]])
 
-        # Apply rotation transformation
-        transform = QTransform()
-        transform.rotate(np.degrees(th))
-        transform.translate(x, y)
-        self.chassis.setTransform(transform)
-
-        if self.show_wheels:
-            transform = QTransform()
-            transform.rotate(np.degrees(self.steering + th))
-            transform.translate(x + self.car_length / 2, y + self.car_width / 2)
-            self.left_wheel.setTransform(transform)
-
-            transform = QTransform()
-            transform.rotate(np.degrees(self.steering + th))
-            transform.translate(x + self.car_length / 2, y - self.car_width / 2)
-            self.right_wheel.setTransform(transform)
+        self.chassis.setData(vertices[:, 0], vertices[:, 1])
 
 
 
