@@ -310,10 +310,7 @@ class RaceCar(object):
         )
 
         # bound yaw angle
-        if self.state[4] > 2 * np.pi:
-            self.state[4] = self.state[4] - 2 * np.pi
-        elif self.state[4] < 0:
-            self.state[4] = self.state[4] + 2 * np.pi
+        self.state[4] %= 2 * np.pi
 
         # update scan
         current_scan = RaceCar.scan_simulator.scan(
