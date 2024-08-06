@@ -85,7 +85,7 @@ class PyQtEnvRenderer(EnvRenderer):
         legend.hoverEvent = lambda *args, **kwargs: None
         # self.scene() is a pyqtgraph.GraphicsScene.GraphicsScene.GraphicsScene
         self.window.scene().sigMouseClicked.connect(self.mouse_clicked)    
-
+        self.window.keyPressEvent = self.key_pressed
 
         # Remove axes
         self.canvas.hideAxis('bottom')
@@ -203,6 +203,20 @@ class PyQtEnvRenderer(EnvRenderer):
         """
         self.callbacks.append(callback_fn)
     
+    def key_pressed(self, event: QtGui.QKeyEvent) -> None:
+        """
+        Handle key press events.
+
+        Parameters
+        ----------
+        event : QtGui.QKeyEvent
+            key event
+        """
+        if event.key() == QtCore.Qt.Key.Key_S:
+            logging.debug("Pressed S key -> Enable/disable rendering")
+            self.draw_flag = not self.draw_flag
+            self.draw_flag_changed = True
+
     def mouse_clicked(self, event: QtGui.QMouseEvent) -> None:
         """
         Handle mouse click events.
