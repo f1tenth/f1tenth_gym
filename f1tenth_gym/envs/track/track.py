@@ -117,14 +117,19 @@ class Track:
             track_spec = Track.load_spec(
                 track=track, filespec=str(track_dir / f"{track_dir.stem}_map.yaml")
             )
+            track_spec.resolution = track_spec.resolution * track_scale
+            track_spec.origin = (
+                track_spec.origin[0] * track_scale,
+                track_spec.origin[1] * track_scale,
+                track_spec.origin[2],
+            )
 
             # load occupancy grid
             map_filename = pathlib.Path(track_spec.image)
             image = Image.open(track_dir / str(map_filename)).transpose(
                 Transpose.FLIP_TOP_BOTTOM
             )
-            image = image.resize(np.array(track_scale * np.array(image.size, dtype=np.int32), dtype=np.int32), Image.LANCZOS)
-            
+
             occupancy_map = np.array(image).astype(np.float32)
             occupancy_map[occupancy_map <= 128] = 0.0
             occupancy_map[occupancy_map > 128] = 255.0
