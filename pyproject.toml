@@ -46,7 +46,7 @@ yamldataclassconfig = "^1.5.0"
 requests = "^2.31.0"
 shapely = "^2.0.2"
 pyqtgraph = "^0.13.7"
-PyQT6 = "^6.7.1"
+PyQt6 = "^6.7.1"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.4"
