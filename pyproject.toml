@@ -33,9 +33,9 @@ packages = [
 ]
 
 [tool.poetry.dependencies]
-python = ">=3.9,<3.12"
+python = ">=3.9"
 gymnasium = "^0.29.1"
-numpy = "<=1.25,>=1.18"
+numpy = ">=1.18"
 pillow = ">=9.0.1"
 scipy = ">=1.7.3"
 numba = ">=0.55.2"
