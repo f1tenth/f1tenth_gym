@@ -125,6 +125,16 @@ class PyQtEnvRenderer(EnvRenderer):
         # load map image
         original_img = track.occupancy_map
 
+        # # convert shape from (W, H) to (W, H, 3)
+        # track_map = np.stack([original_img, original_img, original_img], axis=-1)
+
+        # # rotate and flip to match the track orientation
+        # track_map = np.rot90(track_map, k=1)  # rotate clockwise
+        # track_map = np.flip(track_map, axis=0)  # flip vertically
+
+        # self.image_item = pg.ImageItem(track_map)
+        # self.canvas.addItem(self.image_item)
+
         # callbacks for custom visualization, called at every rendering step
         self.callbacks = []
 
@@ -326,11 +336,6 @@ class PyQtEnvRenderer(EnvRenderer):
         size : Optional[int], optional
             size of the line, by default 1
         """
-        origin = self.map_origin
-        resolution = self.map_resolution
-        points = ((points - origin[:2]) / resolution).astype(int)
-        size = math.ceil(size)
-
         pen = pg.mkPen(color=pg.mkColor(*color), width=size)
         return self.canvas.plot(
             points[:, 0], points[:, 1], pen=pen, fillLevel=None, antialias=True
@@ -354,17 +359,15 @@ class PyQtEnvRenderer(EnvRenderer):
         size : Optional[int], optional
             size of the line, by default 1
         """
-        origin = self.map_origin
-        resolution = self.map_resolution
-        points = ((points - origin[:2]) / resolution).astype(int)
-        size = math.ceil(size)
-
         # Append the first point to the end to close the loop
         points = np.vstack([points, points[0]])
         
         pen = pg.mkPen(color=pg.mkColor(*color), width=size)
+        pen.setCapStyle(pg.QtCore.Qt.PenCapStyle.RoundCap)
+        pen.setJoinStyle(pg.QtCore.Qt.PenJoinStyle.RoundJoin)
+
         return self.canvas.plot(
-            points[:, 0], points[:, 1], pen=pen, fillLevel=None, antialias=True
+            points[:, 0], points[:, 1], pen=pen, cosmetic=True, antialias=True
         )  ## setting pen=None disables line drawing
 
 
