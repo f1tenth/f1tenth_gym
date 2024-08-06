@@ -5,7 +5,7 @@ from typing import Any, Callable, Optional
 
 import cv2
 import numpy as np
-from PyQt6 import QtWidgets
+from PyQt6 import QtWidgets, QtCore
 from PyQt6 import QtGui
 import pyqtgraph as pg
 from pyqtgraph.examples.utils import FrameCounter
@@ -83,6 +83,9 @@ class PyQtEnvRenderer(EnvRenderer):
         # Override both methods responsible for mouse events
         legend.mouseDragEvent = lambda *args, **kwargs: None
         legend.hoverEvent = lambda *args, **kwargs: None
+        # self.scene() is a pyqtgraph.GraphicsScene.GraphicsScene.GraphicsScene
+        self.window.scene().sigMouseClicked.connect(self.mouse_clicked)    
+
 
         # Remove axes
         self.canvas.hideAxis('bottom')
@@ -199,7 +202,48 @@ class PyQtEnvRenderer(EnvRenderer):
             callback function to be called at every rendering step
         """
         self.callbacks.append(callback_fn)
+    
+    def mouse_clicked(self, event: QtGui.QMouseEvent) -> None:
+        """
+        Handle mouse click events.
 
+        Parameters
+        ----------
+        event : QtGui.QMouseEvent
+            mouse event
+        """
+        if event.button() == QtCore.Qt.MouseButton.LeftButton:
+            logging.debug("Pressed left button -> Follow Next agent")
+
+            self.follow_agent_flag = True
+            if self.agent_to_follow is None:
+                self.agent_to_follow = 0
+            else:
+                self.agent_to_follow = (self.agent_to_follow + 1) % len(
+                    self.agent_ids
+                )
+
+            self.active_map_renderer = "car"
+        elif event.button() == QtCore.Qt.MouseButton.RightButton:
+            logging.debug("Pressed right button -> Follow Previous agent")
+
+            self.follow_agent_flag = True
+            if self.agent_to_follow is None:
+                self.agent_to_follow = 0
+            else:
+                self.agent_to_follow = (self.agent_to_follow - 1) % len(
+                    self.agent_ids
+                )
+
+            self.active_map_renderer = "car"
+        elif event.button() == QtCore.Qt.MouseButton.MiddleButton:
+            logging.debug("Pressed middle button -> Change to Map View")
+
+            self.follow_agent_flag = False
+            self.agent_to_follow = None
+
+            self.active_map_renderer = "map"
+            
     def render(self) -> Optional[np.ndarray]:
         """
         Render the current state in a frame.
@@ -221,15 +265,12 @@ class PyQtEnvRenderer(EnvRenderer):
                 callback_fn(self)
 
             if self.follow_agent_flag:
-                origin = self.map_origin
-                resolution = self.map_resolution
                 ego_x, ego_y = self.cars[self.agent_to_follow].pose[:2]
-                cx = (ego_x - origin[0]) / resolution
-                cy = (ego_y - origin[1]) / resolution
+                self.canvas.setXRange(ego_x - 10, ego_x + 10)
+                self.canvas.setYRange(ego_y - 10, ego_y + 10)
             else:
-                cx = self.map_canvas.get_width() / 2
-                cy = self.map_canvas.get_height() / 2
-
+                self.canvas.autoRange()
+                
             agent_to_follow_id = (
                 self.agent_ids[self.agent_to_follow]
                 if self.agent_to_follow is not None
@@ -253,55 +294,6 @@ class PyQtEnvRenderer(EnvRenderer):
             # TODO: extract the frame from the canvas
             frame = None
             return frame
-
-    def event_handling(self) -> None:
-        """
-        Handle interaction events to change point-of-view.
-
-        Events:
-            - Left mouse button: follow next agent (according to agent_ids order)
-            - Right mouse button: follow previous agent
-            - Middle mouse button: change to map view
-            - S key: enable/disable rendering
-        """
-        # for event in pygame.event.get():
-        #     if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-        #         logging.debug("Pressed left button -> Follow Next agent")
-
-        #         self.follow_agent_flag = True
-        #         if self.agent_to_follow is None:
-        #             self.agent_to_follow = 0
-        #         else:
-        #             self.agent_to_follow = (self.agent_to_follow + 1) % len(
-        #                 self.agent_ids
-        #             )
-
-        #         self.active_map_renderer = "car"
-
-        #     elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 3:
-        #         logging.debug("Pressed right button -> Follow Previous agent")
-
-        #         self.follow_agent_flag = True
-        #         if self.agent_to_follow is None:
-        #             self.agent_to_follow = 0
-        #         else:
-        #             self.agent_to_follow = (self.agent_to_follow - 1) % len(
-        #                 self.agent_ids
-        #             )
-
-        #         self.active_map_renderer = "car"
-
-        #     elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 2:
-        #         logging.debug("Pressed middle button -> Change to Map View")
-
-        #         self.follow_agent_flag = False
-        #         self.agent_to_follow = None
-
-        #         self.active_map_renderer = "map"
-
-        #     elif event.type == pygame.KEYDOWN and event.key == pygame.K_s:
-        #         logging.debug("Pressed S key -> Enable/disable rendering")
-        #         self.draw_flag = not (self.draw_flag)
 
     def render_points(
         self,
