@@ -6,6 +6,7 @@ from typing import Any, Callable, Optional
 import cv2
 import numpy as np
 from PyQt6 import QtWidgets
+from PyQt6 import QtGui
 import pyqtgraph as pg
 from pyqtgraph.examples.utils import FrameCounter
 from PIL import ImageColor
@@ -125,15 +126,22 @@ class PyQtEnvRenderer(EnvRenderer):
         # load map image
         original_img = track.occupancy_map
 
-        # # convert shape from (W, H) to (W, H, 3)
-        # track_map = np.stack([original_img, original_img, original_img], axis=-1)
+        # convert shape from (W, H) to (W, H, 3)
+        track_map = np.stack([original_img, original_img, original_img], axis=-1)
 
-        # # rotate and flip to match the track orientation
-        # track_map = np.rot90(track_map, k=1)  # rotate clockwise
-        # track_map = np.flip(track_map, axis=0)  # flip vertically
+        # rotate and flip to match the track orientation
+        track_map = np.rot90(track_map, k=1)  # rotate clockwise
+        track_map = np.flip(track_map, axis=0)  # flip vertically
 
-        # self.image_item = pg.ImageItem(track_map)
-        # self.canvas.addItem(self.image_item)
+        self.image_item = pg.ImageItem(track_map)
+        # Example: Transformed display of ImageItem
+        tr = QtGui.QTransform()  # prepare ImageItem transformation:
+        # Translate image by the origin of the map 
+        tr.translate(self.map_origin[0], self.map_origin[1])
+        # Scale image by the resolution of the map
+        tr.scale(self.map_resolution, self.map_resolution)
+        self.image_item.setTransform(tr)
+        self.canvas.addItem(self.image_item)
 
         # callbacks for custom visualization, called at every rendering step
         self.callbacks = []
