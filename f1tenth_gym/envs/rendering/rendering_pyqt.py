@@ -9,6 +9,7 @@ from PyQt6 import QtWidgets, QtCore
 from PyQt6 import QtGui
 import pyqtgraph as pg
 from pyqtgraph.examples.utils import FrameCounter
+from pyqtgraph.exporters import ImageExporter
 from PIL import ImageColor
 
 from .pyqt_objects import (
@@ -160,7 +161,10 @@ class PyQtEnvRenderer(EnvRenderer):
             self.follow_agent_flag: bool = False
             self.agent_to_follow: int = None
 
-        self.window.show()
+        if self.render_mode in ["human", "human_fast"]:
+            self.window.show()
+        elif self.render_mode == "rgb_array":
+            self.exporter = ImageExporter(self.canvas)
 
     def update(self, state: dict) -> None:
         """
@@ -304,9 +308,16 @@ class PyQtEnvRenderer(EnvRenderer):
             assert self.window is not None
 
         else:  
-            # rgb_array
-            # TODO: extract the frame from the canvas
-            frame = None
+            # rgb_array mode => extract the frame from the canvas
+            qImage = self.exporter.export(toBytes=True)
+
+            width = qImage.width()
+            height = qImage.height()
+
+            ptr = qImage.bits()
+            ptr.setsize(height * width * 4)
+            frame = np.array(ptr).reshape(height, width, 4)  #  Copies the data
+            
             return frame
 
     def render_points(
