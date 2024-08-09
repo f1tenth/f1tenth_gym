@@ -480,7 +480,7 @@ class ScanSimulator2D(object):
         self.map_width = self.map_img.shape[1]
 
         # load map specification
-        self.map_resolution = self.track.spec.resolution * map_scale
+        self.map_resolution = self.track.spec.resolution
         self.origin = self.track.spec.origin
 
         self.orig_x = self.origin[0]

@@ -205,8 +205,8 @@ class PurePursuitPlanner:
         Callback to render the lookahead point.
         """
         if self.lookahead_point is not None:
+            points = self.lookahead_point[:2][None]  # shape (1, 2)~
             if self.lookahead_point_render is None:
-                points = self.lookahead_point[:2][None]  # shape (1, 2)
                 self.lookahead_point_render = e.render_points(points, color=(0, 0, 128), size=2)
             else:
                 self.lookahead_point_render.setData(points)
@@ -216,8 +216,8 @@ class PurePursuitPlanner:
         update waypoints being drawn by EnvRenderer
         """
         if self.current_index is not None:
+            points = self.waypoints[self.current_index : self.current_index + 10, :2]
             if self.local_plan_render is None:
-                points = self.waypoints[self.current_index : self.current_index + 10, :2]
                 self.local_plan_render = e.render_lines(points, color=(0, 128, 0), size=1)
             else:
                 self.local_plan_render.updateItems(points)
