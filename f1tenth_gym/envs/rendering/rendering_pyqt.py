@@ -314,7 +314,7 @@ class PyQtEnvRenderer(EnvRenderer):
         points: list | np.ndarray,
         color: Optional[tuple[int, int, int]] = (0, 0, 255),
         size: Optional[int] = 1,
-    ) -> None:
+    ) -> pg.PlotDataItem:
         """
         Render a sequence of xy points on screen.
 
@@ -327,10 +327,9 @@ class PyQtEnvRenderer(EnvRenderer):
         size : Optional[int], optional
             size of the points in pixels, by default 1
         """
-        origin = self.map_origin
-        resolution = self.map_resolution
-        points = ((points - origin[:2]) / resolution).astype(int)
-        size = math.ceil(size)
+        return self.canvas.plot(
+            points[:, 0], points[:, 1], pen=None, symbol="o", symbolPen=pg.mkPen(color=color, width=0), symbolBrush=pg.mkBrush(color=color, width=0), symbolSize=size
+        )
 
     def render_lines(
         self,
