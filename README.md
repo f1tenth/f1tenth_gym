@@ -1,6 +1,5 @@
-![Python 3.8 3.9](https://github.com/f1tenth/f1tenth_gym/actions/workflows/ci.yml/badge.svg)
-![Docker](https://github.com/f1tenth/f1tenth_gym/actions/workflows/docker.yml/badge.svg)
-![Code Style](https://github.com/f1tenth/f1tenth_gym/actions/workflows/lint.yml/badge.svg)
+![Python 3.9 3.10 3.11](https://github.com/f1tenth/f1tenth_gym/actions/workflows/ci.yml/badge.svg?branch=v1.0.0)
+![Code Style](https://github.com/f1tenth/f1tenth_gym/actions/workflows/lint.yml/badge.svg?branch=v1.0.0)
 
 # The F1TENTH Gym environment
 

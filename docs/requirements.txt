@@ -1,1 +1,5 @@
-breathe
+sphinx==7.2.6
+numpydoc==1.6.0
+pydata-sphinx-theme==0.15.2
+sphinx-design==0.5.0
+sphinx-copybutton==0.5.2
