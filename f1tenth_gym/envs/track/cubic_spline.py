@@ -182,7 +182,7 @@ class CubicSpline2D:
             + t * (self.s[min_dist_segment + 1] - self.s[min_dist_segment])
         )
 
-        return s, 0.0
+        return s, ey
 
     def _calc_tangent(self, s: float) -> np.ndarray:
         """
