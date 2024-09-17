@@ -223,11 +223,13 @@ class FeaturesObservation(Observation):
             lap_count = self.env.lap_counts[i]
 
             x, y, theta = agent.state[xi], agent.state[yi], agent.state[yawi]
-            vx, vy = agent.state[vxi], 0.0
+            vlong = agent.state[vxi]
             delta = agent.state[deltai]
             beta = (
                 0.0 if len(agent.state) < 7 else agent.state[slipi]
             )  # set 0.0 when KST Model
+            vx = vlong * np.cos(beta)
+            vy = vlong * np.sin(beta)
             angvel = (
                 0.0 if len(agent.state) < 7 else agent.state[yaw_ratei]
             )  # set 0.0 when KST Model
@@ -279,6 +281,18 @@ def observation_factory(env, type: str | None, **kwargs) -> Observation:
             "pose_y",
             "delta",
             "linear_vel_x",
+            "pose_theta",
+            "ang_vel_z",
+            "beta",
+        ]
+        return FeaturesObservation(env, features=features)
+    elif type == "frenet_dynamic_state":
+        features = [
+            "pose_x",
+            "pose_y",
+            "delta",
+            "linear_vel_x",
+            "linear_vel_y",
             "pose_theta",
             "ang_vel_z",
             "beta",

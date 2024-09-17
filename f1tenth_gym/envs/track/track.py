@@ -276,7 +276,7 @@ class Track:
             ey: lateral deviation
             ephi: heading deviation
         """
-        s, ey = self.centerline.spline.calc_arclength(x, y, s_guess)
+        s, ey = self.centerline.spline.calc_arclength_inaccurate(x, y)
         if s > self.centerline.spline.s[-1]:
             # Wrap around
             s = s - self.centerline.spline.s[-1]
