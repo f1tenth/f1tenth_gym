@@ -143,13 +143,14 @@ class F110Env(gym.Env):
             model=self.model,
             action_type=self.action_type,
         )
-        self.sim.set_map(self.map)
+        self.sim.set_map(self.map, config["scale"])
 
         if isinstance(self.map, Track):
             self.track = self.map
         else:
             self.track = Track.from_track_name(
-                self.map
+                self.map,
+                track_scale=config["scale"],
             )  # load track in gym env for convenience
 
         # observations
@@ -189,6 +190,148 @@ class F110Env(gym.Env):
         )
 
     @classmethod
+    def fullscale_vehicle_params(cls) -> dict:
+        params = {
+            "mu": 1.0489,
+            "C_Sf": 4.718,
+            "C_Sr": 5.4562,
+            "lf": 0.88392,
+            "lr": 1.50876,
+            "h": 0.074,
+            "m": 1225.8878467253344,
+            "I": 1538.8533713561394,
+            "width": 1.674,
+            "length": 4.298,
+
+            # steering constraints
+            "s_min": -0.91,
+            "s_max": 0.91,
+            "sv_min": -0.4,
+            "sv_max": 0.4,
+            # maximum curvature change
+            "kappa_dot_max": 0.4,
+            # maximum curvature rate rate
+            "kappa_dot_dot_max": 20,
+
+            # Longitudinal constraints
+            "v_switch": 4.755,
+            "a_max": 11.5,
+            "v_min": -13.9,
+            "v_max": 45.8,
+            # maximum longitudinal jerk [m/s^3]
+            "j_max": 10.0e+3,
+            # maximum longitudinal jerk change [m/s^4]
+            "j_dot_max": 10.0e3,
+
+            # Extra parameters (for future use in multibody simulation)
+            # sprung mass [kg]  SMASS
+            "m_s": 1094.542720290477,
+            # unsprung mass front [kg]  UMASSF
+            "m_uf": 65.67256321742863,
+            # unsprung mass rear [kg]  UMASSR
+            "m_ur": 65.67256321742863,
+
+            # moments of inertia of sprung mass
+            # moment of inertia for sprung mass in roll [kg m^2]  IXS
+            "I_Phi_s": 244.04723069965206,
+            # moment of inertia for sprung mass in pitch [kg m^2]  IYS
+            "I_y_s": 1342.2597688480864,
+            # moment of inertia for sprung mass in yaw [kg m^2]  IZZ
+            "I_z": 1538.8533713561394,
+            # moment of inertia cross product [kg m^2]  IXZ
+            "I_xz_s": 0.0,
+
+            # suspension parameters
+            # suspension spring rate (front) [N/m]  KSF
+            "K_sf": 21898.332429625985,
+            # suspension damping rate (front) [N s/m]  KSDF
+            "K_sdf": 1459.3902937206362,
+            # suspension spring rate (rear) [N/m]  KSR
+            "K_sr": 21898.332429625985,
+            # suspension damping rate (rear) [N s/m]  KSDR
+            "K_sdr": 1459.3902937206362,
+
+            # geometric parameters
+            # track width front [m]  TRWF
+            "T_f": 1.389888,
+            # track width rear [m]  TRWB
+            "T_r": 1.423416,
+            # lateral spring rate at compliant compliant pin joint between M_s and M_u [N/m]  KRAS
+            "K_ras": 175186.65943700788,
+
+            # auxiliary torsion roll stiffness per axle (normally negative) (front) [N m/rad]  KTSF
+            "K_tsf": -12880.270509148304,
+            # auxiliary torsion roll stiffness per axle (normally negative) (rear) [N m/rad]  KTSR
+            "K_tsr": 0.0,
+            # damping rate at compliant compliant pin joint between M_s and M_u [N s/m]  KRADP
+            "K_rad": 10215.732056044453,
+            # vertical spring rate of tire [N/m]  KZT
+            "K_zt": 189785.5477234252,
+
+            # center of gravity height of total mass [m]  HCG (mainly required for conversion to other vehicle models)
+            "h_cg": 0.5577840000000001,
+            # height of roll axis above ground (front) [m]  HRAF
+            "h_raf": 0.0,
+            # height of roll axis above ground (rear) [m]  HRAR
+            "h_rar": 0.0,
+
+            # M_s center of gravity above ground [m]  HS
+            "h_s": 0.59436,
+
+            # moment of inertia for unsprung mass about x-axis (front) [kg m^2]  IXUF
+            "I_uf": 32.53963075995361,
+            # moment of inertia for unsprung mass about x-axis (rear) [kg m^2]  IXUR
+            "I_ur": 32.53963075995361,
+            # wheel inertia, from internet forum for 235/65 R 17 [kg m^2]
+            "I_y_w": 1.7,
+
+            # lateral compliance rate of tire, wheel, and suspension, per tire [m/N]  KLT
+            "K_lt": 1.0278264878518764e-05,
+            # effective wheel/tire radius  chosen as tire rolling radius RR  taken from ADAMS documentation [m]
+            "R_w": 0.344,
+
+            # split of brake and engine torque
+            "T_sb": 0.76,
+            "T_se": 1,
+
+            # suspension parameters
+            # [rad/m]  DF
+            "D_f": -0.6233595800524934,
+            # [rad/m]  DR
+            "D_r": -0.20997375328083986,
+            # [needs conversion if nonzero]  EF
+            "E_f": 0,
+            # [needs conversion if nonzero]  ER
+            "E_r": 0,
+
+        }
+        return params
+
+    @classmethod
+    def f1tenth_vehicle_params(cls) -> dict:
+        params = {
+            "mu": 1.0489,
+            "C_Sf": 4.718,
+            "C_Sr": 5.4562,
+            "lf": 0.15875,
+            "lr": 0.17145,
+            "h": 0.074,
+            "m": 3.74,
+            "I": 0.04712,
+            "s_min": -0.4189,
+            "s_max": 0.4189,
+            "sv_min": -3.2,
+            "sv_max": 3.2,
+            "v_switch": 7.319,
+            "a_max": 9.51,
+            "v_min": -5.0,
+            "v_max": 20.0,
+            "width": 0.31,
+            "length": 0.58,
+        }
+        return params
+
+    @classmethod
     def default_config(cls) -> dict:
         """
         Default environment configuration.
@@ -204,26 +347,8 @@ class F110Env(gym.Env):
         return {
             "seed": 12345,
             "map": "Spielberg",
-            "params": {
-                "mu": 1.0489,
-                "C_Sf": 4.718,
-                "C_Sr": 5.4562,
-                "lf": 0.15875,
-                "lr": 0.17145,
-                "h": 0.074,
-                "m": 3.74,
-                "I": 0.04712,
-                "s_min": -0.4189,
-                "s_max": 0.4189,
-                "sv_min": -3.2,
-                "sv_max": 3.2,
-                "v_switch": 7.319,
-                "a_max": 9.51,
-                "v_min": -5.0,
-                "v_max": 20.0,
-                "width": 0.31,
-                "length": 0.58,
-            },
+            "scale": 1.0,
+            "params": cls.f1tenth_vehicle_params(),
             "num_agents": 2,
             "timestep": 0.01,
             "ego_idx": 0,
