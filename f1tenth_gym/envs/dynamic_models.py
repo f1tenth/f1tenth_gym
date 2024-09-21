@@ -1,24 +1,3 @@
-# Copyright 2020 Technical University of Munich, Professorship of Cyber-Physical Systems, Matthew O'Kelly, Aman Sinha, Hongrui Zheng
-
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-
-# The above copyright notice and this permission notice shall be included in all
-# copies or substantial portions of the Software.
-
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-# SOFTWARE.
-
-
 """
 Prototype of vehicle dynamics functions and classes for simulating 2D Single
 Track dynamic model
@@ -335,7 +314,7 @@ def vehicle_dynamics_st(
     ACCL = u[1]
 
     # switch to kinematic model for small velocities
-    if V < 0.5:
+    if V < 0.1:
         # wheelbase
         lwb = lf + lr
         BETA_HAT = np.arctan(np.tan(DELTA) * lr / lwb)
@@ -362,6 +341,8 @@ def vehicle_dynamics_st(
         )
     else:
         # system dynamics
+        glr = (g * lr - ACCL * h)
+        glf = (g * lf + ACCL * h)
         f = np.array(
             [
                 V * np.cos(PSI + BETA),  # X_DOT
@@ -369,31 +350,22 @@ def vehicle_dynamics_st(
                 STEER_VEL,  # DELTA_DOT
                 ACCL,  # V_DOT
                 PSI_DOT,  # PSI_DOT
-                ((mu * m) / (I * (lf + lr)))
-                * (
-                    lf * C_Sf * (g * lr - ACCL * h) * DELTA
-                    + (
-                        lr * C_Sr * (g * lf + ACCL * h)
-                        - lf * C_Sf * (g * lr - ACCL * h)
-                    )
-                    * BETA
-                    - (
-                        lf * lf * C_Sf * (g * lr - ACCL * h)
-                        + lr * lr * C_Sr * (g * lf + ACCL * h)
-                    )
-                    * (PSI_DOT / V)
-                ),  # PSI_DOT_DOT
-                (mu / (V * (lr + lf)))
-                * (
-                    C_Sf * (g * lr - ACCL * h) * DELTA
-                    - (C_Sr * (g * lf + ACCL * h) + C_Sf * (g * lr - ACCL * h)) * BETA
-                    + (
-                        C_Sr * (g * lf + ACCL * h) * lr
-                        - C_Sf * (g * lr - ACCL * h) * lf
-                    )
-                    * (PSI_DOT / V)
-                )
-                - PSI_DOT,  # BETA_DOT
+                ((mu * m) / (I * (lf + lr))) * (
+                lf * C_Sf * (g * lr - ACCL * h) * DELTA
+                + (
+                    lr * C_Sr * (g * lf + ACCL * h) - lf * C_Sf * (g * lr - ACCL * h)
+                ) * BETA
+                - (
+                    lf * lf * C_Sf * (g * lr - ACCL * h) + lr * lr * C_Sr * (g * lf + ACCL * h)
+                ) * (PSI_DOT / V)
+            ),  # PSI_DOT_DOT
+                (mu / (V * (lr + lf))) * (
+                C_Sf * (g * lr - ACCL * h) * DELTA \
+                - (C_Sr * (g * lf + ACCL * h) + C_Sf * (g * lr - ACCL * h)) * BETA
+                + (
+                    C_Sr * (g * lf + ACCL * h) * lr - C_Sf * (g * lr - ACCL * h) * lf
+                ) * (PSI_DOT / V)
+            ) - PSI_DOT,  # BETA_DOT
             ]
         )
 
