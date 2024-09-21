@@ -2,12 +2,12 @@ import pathlib
 from typing import Any, Optional
 
 from .renderer import RenderSpec, EnvRenderer
-from ..track import Track
+# from ..track import Track This is due to a circular import
 
 
 def make_renderer(
     params: dict[str, Any],
-    track: Track,
+    track: "Track",
     agent_ids: list[str],
     render_mode: Optional[str] = None,
     render_fps: Optional[int] = 100,
@@ -33,7 +33,7 @@ def make_renderer(
 
     if render_spec.render_type == "pygame":
         from .rendering_pygame import PygameEnvRenderer as EnvRenderer
-    elif render_spec.render_type == "pyqt6": 
+    elif render_spec.render_type == "pyqt6":
         from .rendering_pyqt import PyQtEnvRenderer as EnvRenderer
     else:
         raise ValueError(f"Unknown render type: {render_spec.render_type}")
