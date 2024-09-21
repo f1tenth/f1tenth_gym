@@ -26,12 +26,13 @@ Prototype of base classes
 Replacement of the old RaceCar, Simulator classes in C++
 Author: Hongrui Zheng
 """
+
 from __future__ import annotations
 import numpy as np
 from .dynamic_models import DynamicModel
 from .action import CarAction
 from .collision_models import collision_multiple, get_vertices
-from .integrator import EulerIntegrator, IntegratorType
+from .integrator import EulerIntegrator, Integrator
 from .laser_models import ScanSimulator2D, check_ttc_jit, ray_cast
 from .track import Track
 
@@ -380,7 +381,7 @@ class Simulator(object):
         num_agents,
         seed,
         action_type: CarAction,
-        integrator=IntegratorType.RK4,
+        integrator=Integrator,
         model=DynamicModel.ST,
         time_step=0.01,
         ego_idx=0,
