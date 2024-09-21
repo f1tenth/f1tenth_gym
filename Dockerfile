@@ -42,7 +42,7 @@ RUN apt-get update --fix-missing && \
                     fontconfig \
                     libfreetype6-dev
 
-RUN pip3 install --upgrade pip
+RUN pip3 install --upgrade pip==24.0
 RUN pip3 install PyOpenGL \
                  PyOpenGL_accelerate
 
