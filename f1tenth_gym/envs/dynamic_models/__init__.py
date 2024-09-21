@@ -13,7 +13,7 @@ from .utils import pid_steer, pid_accl
 class DynamicModel(Enum):
     KS = 1  # Kinematic Single Track
     ST = 2  # Single Track
-    MB = 3
+    MB = 3  # Multi-body Model
 
     @staticmethod
     def from_string(model: str):
@@ -24,6 +24,8 @@ class DynamicModel(Enum):
             return DynamicModel.KS
         elif model == "st":
             return DynamicModel.ST
+        elif model == "mb":
+            return DynamicModel.MB
         else:
             raise ValueError(f"Unknown model type {model}")
 
@@ -35,6 +37,9 @@ class DynamicModel(Enum):
         elif self == DynamicModel.ST:
             # state is [x, y, steer_angle, vel, yaw_angle, yaw_rate, slip_angle]
             state = np.zeros(7)
+        elif self == DynamicModel.MB:
+            # state is a 29D vector
+            state = np.zeros(29)
         else:
             raise ValueError(f"Unknown model type {self}")
 

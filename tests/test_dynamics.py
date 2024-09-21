@@ -26,9 +26,94 @@ import numpy as np
 from f1tenth_gym.envs.dynamic_models import (
     vehicle_dynamics_ks,
     vehicle_dynamics_st,
-    func_KS,
-    func_ST,
 )
+
+def func_KS(
+    x,
+    t,
+    u,
+    mu,
+    C_Sf,
+    C_Sr,
+    lf,
+    lr,
+    h,
+    m,
+    I,
+    s_min,
+    s_max,
+    sv_min,
+    sv_max,
+    v_switch,
+    a_max,
+    v_min,
+    v_max,
+):
+    f = vehicle_dynamics_ks(
+        x,
+        u,
+        mu,
+        C_Sf,
+        C_Sr,
+        lf,
+        lr,
+        h,
+        m,
+        I,
+        s_min,
+        s_max,
+        sv_min,
+        sv_max,
+        v_switch,
+        a_max,
+        v_min,
+        v_max,
+    )
+    return f
+
+
+def func_ST(
+    x,
+    t,
+    u,
+    mu,
+    C_Sf,
+    C_Sr,
+    lf,
+    lr,
+    h,
+    m,
+    I,
+    s_min,
+    s_max,
+    sv_min,
+    sv_max,
+    v_switch,
+    a_max,
+    v_min,
+    v_max,
+):
+    f = vehicle_dynamics_st(
+        x,
+        u,
+        mu,
+        C_Sf,
+        C_Sr,
+        lf,
+        lr,
+        h,
+        m,
+        I,
+        s_min,
+        s_max,
+        sv_min,
+        sv_max,
+        v_switch,
+        a_max,
+        v_min,
+        v_max,
+    )
+    return f
 
 
 class DynamicsTest(unittest.TestCase):
