@@ -2,13 +2,16 @@
 This module contains the dynamic models available in the F1Tenth Gym.
 Each submodule contains a single model, and the equations or their source is documented alongside it. Many of the models are from the CommonRoad repository, available here: https://gitlab.lrz.de/tum-cps/commonroad-vehicle-models/
 """
+
 import warnings
 from enum import Enum
 import numpy as np
 
 from .kinematic import vehicle_dynamics_ks
 from .single_track import vehicle_dynamics_st
+from .multi_body import init_mb, vehicle_dynamics_mb
 from .utils import pid_steer, pid_accl
+
 
 class DynamicModel(Enum):
     KS = 1  # Kinematic Single Track
@@ -29,7 +32,10 @@ class DynamicModel(Enum):
         else:
             raise ValueError(f"Unknown model type {model}")
 
-    def get_initial_state(self, pose=None):
+    def get_initial_state(self, pose=None, params: dict = None):
+        # Assert that if self is MB, params is not None
+        if self == DynamicModel.MB and params is None:
+            raise ValueError("MultiBody model requires parameters to be provided.")
         # initialize zero state
         if self == DynamicModel.KS:
             # state is [x, y, steer_angle, vel, yaw_angle]
@@ -48,6 +54,9 @@ class DynamicModel(Enum):
             state[0:2] = pose[0:2]
             state[4] = pose[2]
 
+        # If state is MultiBody, we must inflate the state to 29D
+        if self == DynamicModel.MB:
+            state = init_mb(state, params)
         return state
 
     @property
@@ -56,5 +65,7 @@ class DynamicModel(Enum):
             return vehicle_dynamics_ks
         elif self == DynamicModel.ST:
             return vehicle_dynamics_st
+        elif self == DynamicModel.MB:
+            return vehicle_dynamics_mb
         else:
             raise ValueError(f"Unknown model type {self}")

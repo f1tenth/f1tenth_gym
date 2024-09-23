@@ -286,6 +286,41 @@ class F110Env(gym.Env):
             "E_f": 0,
             # [needs conversion if nonzero]  ER
             "E_r": 0,
+            # tire parameters from ADAMS handbook
+            # longitudinal coefficients
+            "tire_p_cx1": 1.6411,  # Shape factor Cfx for longitudinal force
+            "tire_p_dx1": 1.1739,  # Longitudinal friction Mux at Fznom
+            "tire_p_dx3": 0,  # Variation of friction Mux with camber
+            "tire_p_ex1": 0.46403,  # Longitudinal curvature Efx at Fznom
+            "tire_p_kx1": 22.303,  # Longitudinal slip stiffness Kfx/Fz at Fznom
+            "tire_p_hx1": 0.0012297,  # Horizontal shift Shx at Fznom
+            "tire_p_vx1": -8.8098e-006,  # Vertical shift Svx/Fz at Fznom
+            "tire_r_bx1": 13.276,  # Slope factor for combined slip Fx reduction
+            "tire_r_bx2": -13.778,  # Variation of slope Fx reduction with kappa
+            "tire_r_cx1": 1.2568,  # Shape factor for combined slip Fx reduction
+            "tire_r_ex1": 0.65225,  # Curvature factor of combined Fx
+            "tire_r_hx1": 0.0050722,  # Shift factor for combined slip Fx reduction
+            # lateral coefficients
+            "tire_p_cy1": 1.3507,  # Shape factor Cfy for lateral forces
+            "tire_p_dy1": 1.0489,  # Lateral friction Muy
+            "tire_p_dy3": -2.8821,  # Variation of friction Muy with squared camber
+            "tire_p_ey1": -0.0074722,  # Lateral curvature Efy at Fznom
+            "tire_p_ky1": -21.92,  # Maximum value of stiffness Kfy/Fznom
+            "tire_p_hy1": 0.0026747,  # Horizontal shift Shy at Fznom
+            "tire_p_hy3": 0.031415,  # Variation of shift Shy with camber
+            "tire_p_vy1": 0.037318,  # Vertical shift in Svy/Fz at Fznom
+            "tire_p_vy3": -0.32931,  # Variation of shift Svy/Fz with camber
+            "tire_r_by1": 7.1433,  # Slope factor for combined Fy reduction
+            "tire_r_by2": 9.1916,  # Variation of slope Fy reduction with alpha
+            "tire_r_by3": -0.027856,  # Shift term for alpha in slope Fy reduction
+            "tire_r_cy1": 1.0719,  # Shape factor for combined Fy reduction
+            "tire_r_ey1": -0.27572,  # Curvature factor of combined Fy
+            "tire_r_hy1": 5.7448e-006,  # Shift factor for combined Fy reduction
+            "tire_r_vy1": -0.027825,  # Kappa induced side force Svyk/Muy*Fz at Fznom
+            "tire_r_vy3": -0.27568,  # Variation of Svyk/Muy*Fz with camber
+            "tire_r_vy4": 12.12,  # Variation of Svyk/Muy*Fz with alpha
+            "tire_r_vy5": 1.9,  # Variation of Svyk/Muy*Fz with kappa
+            "tire_r_vy6": -10.704,  # Variation of Svyk/Muy*Fz with atan(kappa)
         }
         return params
 

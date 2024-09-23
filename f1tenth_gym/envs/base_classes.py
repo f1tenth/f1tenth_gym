@@ -104,7 +104,7 @@ class RaceCar(object):
         self.model = model
 
         # state of the vehicle
-        self.state = self.model.get_initial_state()
+        self.state = self.model.get_initial_state(params=self.params)
 
         # pose of opponents in the world
         self.opp_poses = None
@@ -205,7 +205,7 @@ class RaceCar(object):
         # clear collision indicator
         self.in_collision = False
         # init state from pose
-        self.state = self.model.get_initial_state(pose=pose)
+        self.state = self.model.get_initial_state(pose=pose, params=self.params)
 
         self.steer_buffer = np.empty((0,))
         # reset scan random generator

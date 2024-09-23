@@ -3,27 +3,8 @@ from numba import njit
 
 from .utils import steering_constraint, accl_constraints
 
-@njit(cache=True)
-def vehicle_dynamics_st(
-    x,
-    u_init,
-    mu,
-    C_Sf,
-    C_Sr,
-    lf,
-    lr,
-    h,
-    m,
-    I,
-    s_min,
-    s_max,
-    sv_min,
-    sv_max,
-    v_switch,
-    a_max,
-    v_min,
-    v_max,
-):
+
+def vehicle_dynamics_st(x: np.ndarray, u_init: np.ndarray, params: dict):
     """
     Single Track Vehicle Dynamics.
     From https://gitlab.lrz.de/tum-cps/commonroad-vehicle-models/-/blob/master/vehicleModels_commonRoad.pdf, section 7
@@ -40,22 +21,23 @@ def vehicle_dynamics_st(
             u (numpy.ndarray (2, )): control input vector (u1, u2)
                 u1: steering angle velocity of front wheels
                 u2: longitudinal acceleration
-            mu (float): friction coefficient
-            C_Sf (float): cornering stiffness of front wheels
-            C_Sr (float): cornering stiffness of rear wheels
-            lf (float): distance from center of gravity to front axle
-            lr (float): distance from center of gravity to rear axle
-            h (float): height of center of gravity
-            m (float): mass of vehicle
-            I (float): moment of inertia of vehicle, about Z axis
-            s_min (float): minimum steering angle
-            s_max (float): maximum steering angle
-            sv_min (float): minimum steering velocity
-            sv_max (float): maximum steering velocity
-            v_switch (float): velocity above which the acceleration is no longer able to create wheel spin
-            a_max (float): maximum allowed acceleration
-            v_min (float): minimum allowed velocity
-            v_max (float): maximum allowed velocity
+            params (dict): dictionary containing the following parameters:
+                mu (float): friction coefficient
+                C_Sf (float): cornering stiffness of front wheels
+                C_Sr (float): cornering stiffness of rear wheels
+                lf (float): distance from center of gravity to front axle
+                lr (float): distance from center of gravity to rear axle
+                h (float): height of center of gravity
+                m (float): mass of vehicle
+                I (float): moment of inertia of vehicle, about Z axis
+                s_min (float): minimum steering angle
+                s_max (float): maximum steering angle
+                sv_min (float): minimum steering velocity
+                sv_max (float): maximum steering velocity
+                v_switch (float): velocity above which the acceleration is no longer able to create wheel spin
+                a_max (float): maximum allowed acceleration
+                v_min (float): minimum allowed velocity
+                v_max (float): maximum allowed velocity
 
         Returns:
             f (numpy.ndarray): right hand side of differential equations
@@ -77,8 +59,22 @@ def vehicle_dynamics_st(
     # constraints
     u = np.array(
         [
-            steering_constraint(DELTA, u_init[0], s_min, s_max, sv_min, sv_max),
-            accl_constraints(V, u_init[1], v_switch, a_max, v_min, v_max),
+            steering_constraint(
+                DELTA,
+                u_init[0],
+                params["s_min"],
+                params["s_max"],
+                params["sv_min"],
+                params["sv_max"],
+            ),
+            accl_constraints(
+                V,
+                u_init[1],
+                params["v_switch"],
+                params["a_max"],
+                params["v_min"],
+                params["v_max"],
+            ),
         ]
     )
     # Controls
@@ -88,11 +84,11 @@ def vehicle_dynamics_st(
     # switch to kinematic model for small velocities
     if V < 0.1:
         # wheelbase
-        lwb = lf + lr
-        BETA_HAT = np.arctan(np.tan(DELTA) * lr / lwb)
+        lwb = params["lf"] + params["lr"]
+        BETA_HAT = np.arctan(np.tan(DELTA) * params["lr"] / lwb)
         BETA_DOT = (
-            (1 / (1 + (np.tan(DELTA) * (lr / lwb)) ** 2))
-            * (lr / (lwb * np.cos(DELTA) ** 2))
+            (1 / (1 + (np.tan(DELTA) * (params["lr"] / lwb)) ** 2))
+            * (params["lr"] / (lwb * np.cos(DELTA) ** 2))
             * STEER_VEL
         )
         f = np.array(
@@ -113,8 +109,8 @@ def vehicle_dynamics_st(
         )
     else:
         # system dynamics
-        glr = (g * lr - ACCL * h)
-        glf = (g * lf + ACCL * h)
+        glr = g * params["lr"] - ACCL * params["h"]
+        glf = g * params["lf"] + ACCL * params["h"]
         f = np.array(
             [
                 V * np.cos(PSI + BETA),  # X_DOT
@@ -122,22 +118,34 @@ def vehicle_dynamics_st(
                 STEER_VEL,  # DELTA_DOT
                 ACCL,  # V_DOT
                 PSI_DOT,  # PSI_DOT
-                ((mu * m) / (I * (lf + lr))) * (
-                lf * C_Sf * (g * lr - ACCL * h) * DELTA
-                + (
-                    lr * C_Sr * (g * lf + ACCL * h) - lf * C_Sf * (g * lr - ACCL * h)
-                ) * BETA
-                - (
-                    lf * lf * C_Sf * (g * lr - ACCL * h) + lr * lr * C_Sr * (g * lf + ACCL * h)
-                ) * (PSI_DOT / V)
-            ),  # PSI_DOT_DOT
-                (mu / (V * (lr + lf))) * (
-                C_Sf * (g * lr - ACCL * h) * DELTA \
-                - (C_Sr * (g * lf + ACCL * h) + C_Sf * (g * lr - ACCL * h)) * BETA
-                + (
-                    C_Sr * (g * lf + ACCL * h) * lr - C_Sf * (g * lr - ACCL * h) * lf
-                ) * (PSI_DOT / V)
-            ) - PSI_DOT,  # BETA_DOT
+                (
+                    (params["mu"] * params["m"])
+                    / (params["I"] * (params["lf"] + params["lr"]))
+                )
+                * (
+                    params["lf"] * params["C_Sf"] * (glr) * DELTA
+                    + (
+                        params["lr"] * params["C_Sr"] * (glf)
+                        - params["lf"] * params["C_Sf"] * (glr)
+                    )
+                    * BETA
+                    - (
+                        params["lf"] * params["lf"] * params["C_Sf"] * (glr)
+                        + params["lr"] * params["lr"] * params["C_Sr"] * (glf)
+                    )
+                    * (PSI_DOT / V)
+                ),  # PSI_DOT_DOT
+                (params["mu"] / (V * (params["lr"] + params["lf"])))
+                * (
+                    params["C_Sf"] * (glr) * DELTA
+                    - (params["C_Sr"] * (glf) + params["C_Sf"] * (glr)) * BETA
+                    + (
+                        params["C_Sr"] * (glf) * params["lr"]
+                        - params["C_Sf"] * (glr) * params["lf"]
+                    )
+                    * (PSI_DOT / V)
+                )
+                - PSI_DOT,  # BETA_DOT
             ]
         )
 

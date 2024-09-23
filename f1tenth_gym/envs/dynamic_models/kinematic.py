@@ -3,27 +3,8 @@ from numba import njit
 
 from .utils import steering_constraint, accl_constraints
 
-@njit(cache=True)
-def vehicle_dynamics_ks(
-    x,
-    u_init,
-    mu,
-    C_Sf,
-    C_Sr,
-    lf,
-    lr,
-    h,
-    m,
-    I,
-    s_min,
-    s_max,
-    sv_min,
-    sv_max,
-    v_switch,
-    a_max,
-    v_min,
-    v_max,
-):
+
+def vehicle_dynamics_ks(x: np.ndarray, u_init: np.ndarray, params: dict):
     """
     Single Track Kinematic Vehicle Dynamics.
     Follows https://gitlab.lrz.de/tum-cps/commonroad-vehicle-models/-/blob/master/vehicleModels_commonRoad.pdf, section 5
@@ -38,22 +19,23 @@ def vehicle_dynamics_ks(
             u (numpy.ndarray (2, )): control input vector (u1, u2)
                 u1: steering angle velocity of front wheels
                 u2: longitudinal acceleration
-            mu (float): friction coefficient
-            C_Sf (float): cornering stiffness of front wheels
-            C_Sr (float): cornering stiffness of rear wheels
-            lf (float): distance from center of gravity to front axle
-            lr (float): distance from center of gravity to rear axle
-            h (float): height of center of gravity
-            m (float): mass of vehicle
-            I (float): moment of inertia of vehicle, about Z axis
-            s_min (float): minimum steering angle
-            s_max (float): maximum steering angle
-            sv_min (float): minimum steering velocity
-            sv_max (float): maximum steering velocity
-            v_switch (float): velocity above which the acceleration is no longer able to create wheel slip
-            a_max (float): maximum allowed acceleration
-            v_min (float): minimum allowed velocity
-            v_max (float): maximum allowed velocity
+            params (dict): dictionary containing the following parameters:
+                mu (float): friction coefficient
+                C_Sf (float): cornering stiffness of front wheels
+                C_Sr (float): cornering stiffness of rear wheels
+                lf (float): distance from center of gravity to front axle
+                lr (float): distance from center of gravity to rear axle
+                h (float): height of center of gravity
+                m (float): mass of vehicle
+                I (float): moment of inertia of vehicle, about Z axis
+                s_min (float): minimum steering angle
+                s_max (float): maximum steering angle
+                sv_min (float): minimum steering velocity
+                sv_max (float): maximum steering velocity
+                v_switch (float): velocity above which the acceleration is no longer able to create wheel slip
+                a_max (float): maximum allowed acceleration
+                v_min (float): minimum allowed velocity
+                v_max (float): maximum allowed velocity
 
         Returns:
             f (numpy.ndarray): right hand side of differential equations
@@ -68,13 +50,27 @@ def vehicle_dynamics_ks(
     RAW_STEER_VEL = u_init[0]
     RAW_ACCL = u_init[1]
     # wheelbase
-    lwb = lf + lr
+    lwb = params["lf"] + params["lr"]
 
     # constraints
     u = np.array(
         [
-            steering_constraint(DELTA, RAW_STEER_VEL, s_min, s_max, sv_min, sv_max),
-            accl_constraints(V, RAW_ACCL, v_switch, a_max, v_min, v_max),
+            steering_constraint(
+                DELTA,
+                RAW_STEER_VEL,
+                params["s_min"],
+                params["s_max"],
+                params["sv_min"],
+                params["sv_max"],
+            ),
+            accl_constraints(
+                V,
+                RAW_ACCL,
+                params["v_switch"],
+                params["a_max"],
+                params["v_min"],
+                params["v_max"],
+            ),
         ]
     )
     # Corrected Actions

@@ -1,6 +1,7 @@
 import numpy as np
 from numba import njit
 
+
 @njit(cache=True)
 def upper_accel_limit(vel, a_max, v_switch):
     """
