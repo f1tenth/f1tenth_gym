@@ -157,7 +157,7 @@ def vehicle_dynamics_mb(x: np.ndarray, u_init: np.ndarray, params: dict):
     E_f = params["E_f"]  # [needs conversion if nonzero]  EF
     E_r = params["E_r"]  # [needs conversion if nonzero]  ER
 
-    use_kinematic = True if x[3] < 0.1 else False
+    use_kinematic = True if x[3] < 0.5 else False
 
     # consider steering and acceleration constraints - outside of the integration
     # u = np.array([steering_constraint(x[2], u_init[0], s_min, s_max, sv_min, sv_max), accl_constraints(x[3], u_init[1], v_switch, a_max, v_min, v_max)])

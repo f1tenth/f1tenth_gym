@@ -1,3 +1,4 @@
+# %%
 import time
 from typing import Tuple
 
@@ -7,6 +8,7 @@ from numba import njit
 
 from f1tenth_gym.envs.f110_env import F110Env
 
+# %%
 """
 Planner Helpers
 """
@@ -207,7 +209,9 @@ class PurePursuitPlanner:
         if self.lookahead_point is not None:
             points = self.lookahead_point[:2][None]  # shape (1, 2)~
             if self.lookahead_point_render is None:
-                self.lookahead_point_render = e.render_points(points, color=(0, 0, 128), size=2)
+                self.lookahead_point_render = e.render_points(
+                    points, color=(0, 0, 128), size=2
+                )
             else:
                 self.lookahead_point_render.setData(points)
 
@@ -218,7 +222,9 @@ class PurePursuitPlanner:
         if self.current_index is not None:
             points = self.waypoints[self.current_index : self.current_index + 10, :2]
             if self.local_plan_render is None:
-                self.local_plan_render = e.render_lines(points, color=(0, 128, 0), size=1)
+                self.local_plan_render = e.render_lines(
+                    points, color=(0, 128, 0), size=1
+                )
             else:
                 self.local_plan_render.updateItems(points)
 
@@ -289,6 +295,7 @@ class PurePursuitPlanner:
         return speed, steering_angle
 
 
+# %%
 def main():
     """
     main entry point
@@ -297,8 +304,8 @@ def main():
     work = {
         "mass": 3.463388126201571,
         "lf": 0.15597534362552312,
-        "tlad": 0.82461887897713965*10,
-        "vgain": 1,
+        "tlad": 0.82461887897713965 * 10,
+        "vgain": 100,
     }
 
     num_agents = 1
@@ -310,7 +317,7 @@ def main():
             "timestep": 0.01,
             "integrator": "rk4",
             "control_input": ["speed", "steering_angle"],
-            "model": "st",
+            "model": "mb",
             "observation_config": {"type": "kinematic_state"},
             "params": F110Env.fullscale_vehicle_params(),
             "reset_config": {"type": "rl_random_static"},
@@ -320,7 +327,13 @@ def main():
     )
     track = env.unwrapped.track
 
-    planner = PurePursuitPlanner(track=track, wb=(F110Env.fullscale_vehicle_params()["lf"] + F110Env.fullscale_vehicle_params()["lr"]))
+    planner = PurePursuitPlanner(
+        track=track,
+        wb=(
+            F110Env.fullscale_vehicle_params()["lf"]
+            + F110Env.fullscale_vehicle_params()["lr"]
+        ),
+    )
 
     env.unwrapped.add_render_callback(track.raceline.render_waypoints)
     env.unwrapped.add_render_callback(planner.render_local_plan)
@@ -352,5 +365,16 @@ def main():
     print("Sim elapsed time:", laptime, "Real elapsed time:", time.time() - start)
 
 
+# %%
+
 if __name__ == "__main__":
     main()
+# %%
+work = {
+    "mass": 3.463388126201571,
+    "lf": 0.15597534362552312,
+    "tlad": 0.82461887897713965 * 10,
+    "vgain": 1,
+}
+
+num_agents = 1
