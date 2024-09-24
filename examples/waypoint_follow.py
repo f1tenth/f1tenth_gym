@@ -1,4 +1,3 @@
-# %%
 import time
 from typing import Tuple
 
@@ -8,7 +7,6 @@ from numba import njit
 
 from f1tenth_gym.envs.f110_env import F110Env
 
-# %%
 """
 Planner Helpers
 """
@@ -295,7 +293,6 @@ class PurePursuitPlanner:
         return speed, steering_angle
 
 
-# %%
 def main():
     """
     main entry point
@@ -305,7 +302,7 @@ def main():
         "mass": 3.463388126201571,
         "lf": 0.15597534362552312,
         "tlad": 0.82461887897713965 * 10,
-        "vgain": 100,
+        "vgain": 1.0,
     }
 
     num_agents = 1
@@ -346,7 +343,8 @@ def main():
     laptime = 0.0
     start = time.time()
 
-    while not done:
+    i = 1
+    while not done or i < 1000:
         action = env.action_space.sample()
         for i, agent_id in enumerate(obs.keys()):
             speed, steer = planner.plan(
@@ -357,15 +355,13 @@ def main():
                 work["vgain"],
             )
             action[i] = np.array([steer, speed])
-
         obs, step_reward, done, truncated, info = env.step(action)
         laptime += step_reward
         frame = env.render()
+        i += 1
 
     print("Sim elapsed time:", laptime, "Real elapsed time:", time.time() - start)
 
-
-# %%
 
 if __name__ == "__main__":
     main()

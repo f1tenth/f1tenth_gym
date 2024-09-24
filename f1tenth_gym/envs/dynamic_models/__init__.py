@@ -32,7 +32,7 @@ class DynamicModel(Enum):
         else:
             raise ValueError(f"Unknown model type {model}")
 
-    def get_initial_state(self, pose=None, params: dict = None):
+    def get_initial_state(self, pose=None, params: dict|None = None):
         # Assert that if self is MB, params is not None
         if self == DynamicModel.MB and params is None:
             raise ValueError("MultiBody model requires parameters to be provided.")

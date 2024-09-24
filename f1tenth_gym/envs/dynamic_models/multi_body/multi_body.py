@@ -1,13 +1,15 @@
 import numpy as np
 from numba import njit
 
+from f1tenth_gym.envs.dynamic_models.utils import steering_constraint, accl_constraints
+
 from .tire_model import (
     formula_lateral,
     formula_lateral_comb,
     formula_longitudinal,
     formula_longitudinal_comb,
 )
-from ..kinematic import vehicle_dynamics_ks
+from ..kinematic import vehicle_dynamics_ks_cog
 
 
 def vehicle_dynamics_mb(x: np.ndarray, u_init: np.ndarray, params: dict):
@@ -33,45 +35,45 @@ def vehicle_dynamics_mb(x: np.ndarray, u_init: np.ndarray, params: dict):
     g = 9.81  # [m/s^2]
 
     # states
-    # x1 = x-position in a global coordinate system
-    # x2 = y-position in a global coordinate system
-    # x3 = steering angle of front wheels
-    # x4 = velocity in x-direction
-    # x5 = yaw angle
-    # x6 = yaw rate
+    # x0 = x-position in a global coordinate system
+    # x1 = y-position in a global coordinate system
+    # x2 = steering angle of front wheels
+    # x3 = velocity in x-direction
+    # x4 = yaw angle
+    # x5 = yaw rate
 
-    # x7 = roll angle
-    # x8 = roll rate
-    # x9 = pitch angle
-    # x10 = pitch rate
-    # x11 = velocity in y-direction
-    # x12 = z-position
-    # x13 = velocity in z-direction
+    # x6 = roll angle
+    # x7 = roll rate
+    # x8 = pitch angle
+    # x9 = pitch rate
+    # x10 = velocity in y-direction
+    # x11 = z-position
+    # x12 = velocity in z-direction
 
-    # x14 = roll angle front
-    # x15 = roll rate front
-    # x16 = velocity in y-direction front
-    # x17 = z-position front
-    # x18 = velocity in z-direction front
+    # x13 = roll angle front
+    # x14 = roll rate front
+    # x15 = velocity in y-direction front
+    # x16 = z-position front
+    # x17 = velocity in z-direction front
 
-    # x19 = roll angle rear
-    # x20 = roll rate rear
-    # x21 = velocity in y-direction rear
-    # x22 = z-position rear
-    # x23 = velocity in z-direction rear
+    # x18 = roll angle rear
+    # x19 = roll rate rear
+    # x20 = velocity in y-direction rear
+    # x21 = z-position rear
+    # x22 = velocity in z-direction rear
 
-    # x24 = left front wheel angular speed
-    # x25 = right front wheel angular speed
-    # x26 = left rear wheel angular speed
-    # x27 = right rear wheel angular speed
+    # x23 = left front wheel angular speed
+    # x24 = right front wheel angular speed
+    # x25 = left rear wheel angular speed
+    # x26 = right rear wheel angular speed
 
-    # x28 = delta_y_f
-    # x29 = delta_y_r
+    # x27 = delta_y_f
+    # x28 = delta_y_r
 
-    # u1 = steering angle velocity of front wheels
-    # u2 = acceleration
+    # u0 = steering angle velocity of front wheels
+    # u1 = acceleration
 
-    u = u_init
+    u = np.zeros_like(u_init)
 
     # vehicle body dimensions
     length = params["length"]  # vehicle length [m]
@@ -84,10 +86,10 @@ def vehicle_dynamics_mb(x: np.ndarray, u_init: np.ndarray, params: dict):
     sv_max = params["sv_max"]  # maximum steering velocity [rad/s]
 
     # longitudinal constraints
-    v_min = params["s_min"]  # minimum velocity [m/s]
-    v_max = params["s_max"]  # minimum velocity [m/s]
-    v_switch = params["sv_min"]  # switching velocity [m/s]
-    a_max = params["sv_max"]  # maximum absolute acceleration [m/s^2]
+    v_min = params["v_min"]  # minimum velocity [m/s]
+    v_max = params["v_max"]  # minimum velocity [m/s]
+    v_switch = params["v_switch"]  # switching velocity [m/s]
+    a_max = params["a_max"]  # maximum absolute acceleration [m/s^2]
 
     # masses
     m = params["m"]  # vehicle mass [kg]  MASS
@@ -157,18 +159,17 @@ def vehicle_dynamics_mb(x: np.ndarray, u_init: np.ndarray, params: dict):
     E_f = params["E_f"]  # [needs conversion if nonzero]  EF
     E_r = params["E_r"]  # [needs conversion if nonzero]  ER
 
-    use_kinematic = True if x[3] < 0.5 else False
+    KIN_THRESH = 0.5
 
     # consider steering and acceleration constraints - outside of the integration
-    # u = np.array([steering_constraint(x[2], u_init[0], s_min, s_max, sv_min, sv_max), accl_constraints(x[3], u_init[1], v_switch, a_max, v_min, v_max)])
+    u[0] = steering_constraint(x[2], u_init[0], s_min, s_max, sv_min, sv_max)
+    u[1] = accl_constraints(x[3], u_init[1], v_switch, a_max, v_min, v_max)
 
-    # compute slip angle at cg - outside of the integration
-    # switch to kinematic model for small velocities handeled outside
-    if use_kinematic:
+    if abs(x[3]) < KIN_THRESH:
         beta = 0.0
     else:
-        beta = np.arctan(x[10] / x[3])
-        vel = np.sqrt(x[3] ** 2 + x[10] ** 2)
+        beta = np.atan(x[10] / x[3])
+    vel = np.sqrt(x[3] ** 2 + x[10] ** 2)
 
     # vertical tire forces
     F_z_LF = (x[16] + R_w * (np.cos(x[13]) - 1) - 0.5 * T_f * np.sin(x[13])) * K_zt
@@ -187,25 +188,20 @@ def vehicle_dynamics_mb(x: np.ndarray, u_init: np.ndarray, params: dict):
     u_w_rr = x[3] - 0.5 * T_r * x[5]
 
     # negative wheel spin forbidden
-    u_w_lf = np.maximum(u_w_lf, 0.0)
-    u_w_rf = np.maximum(u_w_rf, 0.0)
-    u_w_lr = np.maximum(u_w_lr, 0.0)
-    u_w_rr = np.maximum(u_w_rr, 0.0)
-    # if u_w_lf < 0.0:
-    #     u_w_lf *= 0
-    #
-    # if u_w_rf < 0.0:
-    #     u_w_rf *= 0
-    #
-    # if u_w_lr < 0.0:
-    #     u_w_lr *= 0
-    #
-    # if u_w_rr < 0.0:
-    #     u_w_rr *= 0
+    if u_w_lf < 0.0:
+        u_w_lf *= 0
 
+    if u_w_rf < 0.0:
+        u_w_rf *= 0
+
+    if u_w_lr < 0.0:
+        u_w_lr *= 0
+
+    if u_w_rr < 0.0:
+        u_w_rr *= 0
     # compute longitudinal slip
     # switch to kinematic model for small velocities
-    if use_kinematic:
+    if abs(x[3]) < KIN_THRESH:
         s_lf = 0.0
         s_rf = 0.0
         s_lr = 0.0
@@ -218,28 +214,28 @@ def vehicle_dynamics_mb(x: np.ndarray, u_init: np.ndarray, params: dict):
 
     # lateral slip angles
     # switch to kinematic model for small velocities
-    if use_kinematic:
+    if abs(x[3]) < KIN_THRESH:
         alpha_LF = 0.0
         alpha_RF = 0.0
         alpha_LR = 0.0
         alpha_RR = 0.0
     else:
         alpha_LF = (
-            np.arctan(
+            np.atan(
                 (x[10] + lf * x[5] - x[14] * (R_w - x[16])) / (x[3] + 0.5 * T_f * x[5])
             )
             - x[2]
         )
         alpha_RF = (
-            np.arctan(
+            np.atan(
                 (x[10] + lf * x[5] - x[14] * (R_w - x[16])) / (x[3] - 0.5 * T_f * x[5])
             )
             - x[2]
         )
-        alpha_LR = np.arctan(
+        alpha_LR = np.atan(
             (x[10] - lr * x[5] - x[19] * (R_w - x[21])) / (x[3] + 0.5 * T_r * x[5])
         )
-        alpha_RR = np.arctan(
+        alpha_RR = np.atan(
             (x[10] - lr * x[5] - x[19] * (R_w - x[21])) / (x[3] - 0.5 * T_r * x[5])
         )
 
@@ -481,9 +477,9 @@ def vehicle_dynamics_mb(x: np.ndarray, u_init: np.ndarray, params: dict):
     sumY_ur = (F_y_LR + F_y_RR) - F_RAR * np.cos(x[6]) - (F_SLR + F_SRR) * np.sin(x[6])
 
     # dynamics common with single-track model
-    f = np.zeros((29,))  # init 'right hand side'
+    f = np.zeros(29)  # init 'right hand side'
     # switch to kinematic model for small velocities
-    if use_kinematic:
+    if abs(x[3]) < KIN_THRESH:
         # wheelbase
         # lwb = lf + lr
 
@@ -496,14 +492,11 @@ def vehicle_dynamics_mb(x: np.ndarray, u_init: np.ndarray, params: dict):
         # Use kinematic model with reference point at center of mass
         # wheelbase
         lwb = lf + lr
-
         # system dynamics
-        x_ks = x[0:5]
+        x_ks = [x[0], x[1], x[2], x[3], x[4]]
         # kinematic model
-        # f_ks = vehicle_dynamics_ks_cog(x_ks, u, p)
-        # f = [f_ks[0], f_ks[1], f_ks[2], f_ks[3], f_ks[4]] # 1 2 3 4 5
-        f_ks = vehicle_dynamics_ks(x_ks, u, params)
-        f[0:5] = f_ks
+        f_ks = vehicle_dynamics_ks_cog(np.array(x_ks), u, params)
+        f[0:5] = np.array([f_ks[0], f_ks[1], f_ks[2], f_ks[3], f_ks[4]])
         # derivative of slip angle and yaw rate
         d_beta = (lr * u[0]) / (
             lwb * np.cos(x[2]) ** 2 * (1 + (np.tan(x[2]) ** 2 * lr / lwb) ** 2)
@@ -517,80 +510,65 @@ def vehicle_dynamics_mb(x: np.ndarray, u_init: np.ndarray, params: dict):
                 + x[3] * np.cos(x[6]) * u[0] / np.cos(x[2]) ** 2
             )
         )
-        # f.append(dd_psi) # 6
         f[5] = dd_psi
 
     else:
-        f[0] = np.cos(beta + x[4]) * vel  # 1
-        f[1] = np.sin(beta + x[4]) * vel  # 2
-        f[2] = u[0]  # 3
-        f[3] = 1 / m * sumX + x[5] * x[10]  # 4
-        f[4] = x[5]  # 5
-        f[5] = (
-            1 / (I_z - (I_xz_s) ** 2 / I_Phi_s) * (sumN + I_xz_s / I_Phi_s * sumL)
-        )  # 6
+        f[0] = np.cos(beta + x[4]) * vel
+        f[1] = np.sin(beta + x[4]) * vel
+        f[2] = u[0]
+        f[3] = 1 / m * sumX + x[5] * x[10]
+        f[4] = x[5]
+        f[5] = 1 / (I_z - (I_xz_s) ** 2 / I_Phi_s) * (sumN + I_xz_s / I_Phi_s * sumL)
 
     # remaining sprung mass dynamics
-    f[6] = x[7]  # 7
-    f[7] = 1 / (I_Phi_s - (I_xz_s) ** 2 / I_z) * (I_xz_s / I_z * sumN + sumL)  # 8
-    f[8] = x[9]  # 9
-    f[9] = 1 / I_y_s * sumM_s  # 10
-    f[10] = 1 / m_s * sumY_s - x[5] * x[3]  # 11
-    f[11] = x[12]  # 12
-    f[12] = g - 1 / m_s * sumZ_s  # 13
+    f[6] = x[7]
+    f[7] = 1 / (I_Phi_s - (I_xz_s) ** 2 / I_z) * (I_xz_s / I_z * sumN + sumL)
+    f[8] = x[9]
+    f[9] = 1 / I_y_s * sumM_s
+    f[10] = 1 / m_s * sumY_s - x[5] * x[3]
+    f[11] = x[12]
+    f[12] = g - 1 / m_s * sumZ_s
 
     # unsprung mass dynamics (front)
-    f[13] = x[14]  # 14
-    f[14] = 1 / I_uf * sumL_uf  # 15
-    f[15] = 1 / m_uf * sumY_uf - x[5] * x[3]  # 16
-    f[16] = x[17]  # 17
-    f[17] = g - 1 / m_uf * sumZ_uf  # 18
+    f[13] = x[14]
+    f[14] = 1 / I_uf * sumL_uf
+    f[15] = 1 / m_uf * sumY_uf - x[5] * x[3]
+    f[16] = x[17]
+    f[17] = g - 1 / m_uf * sumZ_uf
 
     # unsprung mass dynamics (rear)
-    f[18] = x[19]  # 19
-    f[19] = 1 / I_ur * sumL_ur  # 20
-    f[20] = 1 / m_ur * sumY_ur - x[5] * x[3]  # 21
-    f[21] = x[22]  # 22
-    f[22] = g - 1 / m_ur * sumZ_ur  # 23
+    f[18] = x[19]
+    f[19] = 1 / I_ur * sumL_ur
+    f[20] = 1 / m_ur * sumY_ur - x[5] * x[3]
+    f[21] = x[22]
+    f[22] = g - 1 / m_ur * sumZ_ur
 
-    # convert acceleration input to brake and engine torque - splitting for brake/drive torque is outside of the integration
-    if u[0] > 0:
+    # convert acceleration input to brake and engine torque
+    if u[1] > 0:
         T_B = 0.0
-        T_E = m * R_w * u[0]
+        T_E = m * R_w * u[1]
     else:
-        T_B = m * R_w * u[0]
+        T_B = m * R_w * u[1]
         T_E = 0.0
 
-    # wheel dynamics (p.T  new parameter for torque splitting) - splitting for brake/drive torque is outside of the integration
-    f[23] = 1 / I_y_w * (-R_w * F_x_LF + 0.5 * T_sb * T_B + 0.5 * T_se * T_E)  # 24
-    f[24] = 1 / I_y_w * (-R_w * F_x_RF + 0.5 * T_sb * T_B + 0.5 * T_se * T_E)  # 25
+    # wheel dynamics  (T  new parameter for torque splitting)
+    f[23] = 1 / I_y_w * (-R_w * F_x_LF + 0.5 * T_sb * T_B + 0.5 * T_se * T_E)
+    f[24] = 1 / I_y_w * (-R_w * F_x_RF + 0.5 * T_sb * T_B + 0.5 * T_se * T_E)
     f[25] = (
         1 / I_y_w * (-R_w * F_x_LR + 0.5 * (1 - T_sb) * T_B + 0.5 * (1 - T_se) * T_E)
-    )  # 26
+    )
     f[26] = (
         1 / I_y_w * (-R_w * F_x_RR + 0.5 * (1 - T_sb) * T_B + 0.5 * (1 - T_se) * T_E)
-    )  # 27
+    )
 
-    # negative wheel spin forbidden handeled outside of this function
+    # negative wheel spin forbidden
     for iState in range(23, 27):
         if x[iState] < 0.0:
             x[iState] = 0.0
             f[iState] = 0.0
 
     # compliant joint equations
-    f[27] = dot_delta_y_f  # 28
-    f[28] = dot_delta_y_r  # 29
-
-    # longitudinal slip
-    # s_lf
-    # s_rf
-    # s_lr
-    # s_rr
-
-    # lateral slip
-    # alpha_LF
-    # alpha_RF
-    # alpha_LR
-    # alpha_RR
+    f[27] = dot_delta_y_f
+    f[28] = dot_delta_y_r
 
     return f
