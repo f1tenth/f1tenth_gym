@@ -1,7 +1,7 @@
 import numpy as np
 from numba import njit
 
-
+@njit(cache=True)
 def upper_accel_limit(vel, a_max, v_switch):
     """
     Upper acceleration limit, adjusts the acceleration based on constraints
@@ -21,7 +21,7 @@ def upper_accel_limit(vel, a_max, v_switch):
 
     return pos_limit
 
-
+@njit(cache=True)
 def accl_constraints(vel, a_long_d, v_switch, a_max, v_min, v_max):
     """
     Acceleration constraints, adjusts the acceleration based on constraints
@@ -83,7 +83,7 @@ def steering_constraint(
 
     return steering_velocity
 
-
+@njit(cache=True)
 def pid_steer(steer, current_steer, max_sv):
     # steering
     steer_diff = steer - current_steer
@@ -95,6 +95,7 @@ def pid_steer(steer, current_steer, max_sv):
     return sv
 
 
+@njit(cache=True)
 def pid_accl(speed, current_speed, max_a, max_v, min_v):
     """
     Basic controller for speed/steer -> accl./steer vel.
