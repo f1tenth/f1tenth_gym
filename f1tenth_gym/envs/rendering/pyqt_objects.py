@@ -172,9 +172,13 @@ def _get_tire_vertices(pose, length, width, tire_width, tire_length, index, stee
         vertices (np.ndarray, (4, 2)): corner vertices of the vehicle body
     """
     pose_arr = np.array(pose)
-    pose_arr[2] = pose_arr[2] + steering
-    H = get_trmtx(pose_arr)
     if index == 'fl':
+        # Shift back, rotate
+        H_shift = get_trmtx(np.array([-(length/2 - tire_length/2), -(width/2 - tire_width/2), 0]))
+        H_steer = get_trmtx(np.array([0, 0, steering]))
+        H_back = get_trmtx(np.array([length/2 - tire_length/2, width/2 - tire_width/2, 0]))
+        H = get_trmtx(pose_arr)
+        H = H.dot(H_back).dot(H_steer).dot(H_shift)
         fl = H.dot(np.asarray([[length / 2], [width / 2], [0.0], [1.0]])).flatten()
         fr = H.dot(np.asarray([[length / 2], [width / 2 - tire_width], [0.0], [1.0]])).flatten()
         rr = H.dot(np.asarray([[length / 2 - tire_length], [width / 2 - tire_width], [0.0], [1.0]])).flatten()
@@ -187,6 +191,13 @@ def _get_tire_vertices(pose, length, width, tire_width, tire_length, index, stee
             [[rl[0], rl[1]], [fl[0], fl[1]], [fr[0], fr[1]], [rr[0], rr[1]], [rl[0], rl[1]]]
         )
     elif index == 'fr':
+        # Shift back, rotate
+        H_shift = get_trmtx(np.array([-(length/2 - tire_length/2), -(-width/2 + tire_width/2), 0]))
+        H_steer = get_trmtx(np.array([0, 0, steering]))
+        H_back = get_trmtx(np.array([length/2 - tire_length/2, -width/2 + tire_width/2, 0]))
+        H = get_trmtx(pose_arr)
+        H = H.dot(H_back).dot(H_steer).dot(H_shift)
+
         fl = H.dot(np.asarray([[length / 2], [-width / 2 + tire_width], [0.0], [1.0]])).flatten()
         fr = H.dot(np.asarray([[length / 2], [-width / 2], [0.0], [1.0]])).flatten()
         rr = H.dot(np.asarray([[length / 2 - tire_length], [-width / 2], [0.0], [1.0]])).flatten()
