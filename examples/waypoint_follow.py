@@ -343,8 +343,7 @@ def main():
     laptime = 0.0
     start = time.time()
 
-    i = 1
-    while not done or i < 1000:
+    while not done:
         action = env.action_space.sample()
         for i, agent_id in enumerate(obs.keys()):
             speed, steer = planner.plan(
@@ -358,7 +357,6 @@ def main():
         obs, step_reward, done, truncated, info = env.step(action)
         laptime += step_reward
         frame = env.render()
-        i += 1
 
     print("Sim elapsed time:", laptime, "Real elapsed time:", time.time() - start)
 
