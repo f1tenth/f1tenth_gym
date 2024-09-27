@@ -7,9 +7,9 @@ import warnings
 from enum import Enum
 import numpy as np
 
-from .kinematic import vehicle_dynamics_ks
-from .single_track import vehicle_dynamics_st
-from .multi_body import init_mb, vehicle_dynamics_mb
+from .kinematic import vehicle_dynamics_ks, get_standardized_state_ks
+from .single_track import vehicle_dynamics_st, get_standardized_state_st
+from .multi_body import init_mb, vehicle_dynamics_mb, get_standardized_state_mb
 from .utils import pid_steer, pid_accl
 
 
@@ -32,7 +32,7 @@ class DynamicModel(Enum):
         else:
             raise ValueError(f"Unknown model type {model}")
 
-    def get_initial_state(self, pose=None, params: dict|None = None):
+    def get_initial_state(self, pose=None, params: dict | None = None):
         # Assert that if self is MB, params is not None
         if self == DynamicModel.MB and params is None:
             raise ValueError("MultiBody model requires parameters to be provided.")
@@ -67,5 +67,20 @@ class DynamicModel(Enum):
             return vehicle_dynamics_st
         elif self == DynamicModel.MB:
             return vehicle_dynamics_mb
+        else:
+            raise ValueError(f"Unknown model type {self}")
+
+    def get_standardized_state_fn(self):
+        """
+        This function returns the standardized state information for the model.
+        This needs to be a function, because the state information is different for each model.
+        Slip is not directly available from the MB model.
+        """
+        if self == DynamicModel.KS:
+            return get_standardized_state_ks
+        elif self == DynamicModel.ST:
+            return get_standardized_state_st
+        elif self == DynamicModel.MB:
+            return get_standardized_state_mb
         else:
             raise ValueError(f"Unknown model type {self}")

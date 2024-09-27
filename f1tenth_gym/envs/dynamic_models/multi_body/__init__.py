@@ -5,7 +5,7 @@ Multi-body model initialization functions
 import numpy as np
 from numba import njit
 
-from .multi_body import vehicle_dynamics_mb
+from .multi_body import vehicle_dynamics_mb, get_standardized_state_mb
 
 
 def init_mb(init_state, params: dict) -> np.ndarray:

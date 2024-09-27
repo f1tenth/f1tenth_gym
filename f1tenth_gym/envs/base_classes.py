@@ -102,6 +102,7 @@ class RaceCar(object):
         self.integrator = integrator
         self.action_type = action_type
         self.model = model
+        self.standard_state_fn = self.model.get_standardized_state_fn()
 
         # state of the vehicle
         self.state = self.model.get_initial_state(params=self.params)
@@ -312,7 +313,7 @@ class RaceCar(object):
         )
 
         # bound yaw angle
-        self.state[4] %= 2 * np.pi
+        self.state[4] %= 2 * np.pi  # TODO: This is a problem waiting to happen
 
         # update scan
         current_scan = RaceCar.scan_simulator.scan(
@@ -355,6 +356,16 @@ class RaceCar(object):
         new_scan = self.ray_cast_agents(current_scan)
 
         agent_scans[agent_index] = new_scan
+
+    @property
+    def standard_state(self) -> dict:
+        """
+        Returns the state of the vehicle as an observation
+
+        Returns:
+            np.ndarray (7, ): state of the vehicle
+        """
+        return self.standard_state_fn(self.state)
 
 
 class Simulator(object):

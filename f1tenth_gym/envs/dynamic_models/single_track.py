@@ -1,5 +1,6 @@
 import numpy as np
 from numba import njit
+from numba.typed import Dict
 
 from .utils import steering_constraint, accl_constraints
 
@@ -150,3 +151,18 @@ def vehicle_dynamics_st(x: np.ndarray, u_init: np.ndarray, params: dict):
         )
 
     return f
+
+
+@njit(cache=True)
+def get_standardized_state_st(x: np.ndarray) -> dict:
+    """[X,Y,DELTA,V_X, V_Y,YAW,YAW_RATE,SLIP]"""
+    d = dict()
+    d["x"] = x[0]
+    d["y"] = x[1]
+    d["delta"] = x[2]
+    d["v_x"] = x[3] * np.cos(x[6])
+    d["v_y"] = x[3] * np.sin(x[6])
+    d["yaw"] = x[4]
+    d["yaw_rate"] = x[5]
+    d["slip"] = x[6]
+    return d
