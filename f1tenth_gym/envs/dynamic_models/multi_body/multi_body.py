@@ -183,7 +183,7 @@ def vehicle_dynamics_mb(x: np.ndarray, u_init: np.ndarray, params: dict):
     if abs(x[3]) < KIN_THRESH:
         beta = 0.0
     else:
-        beta = np.atan(x[10] / x[3])
+        beta = np.arctan(x[10] / x[3])
     vel = np.sqrt(x[3] ** 2 + x[10] ** 2)
 
     # vertical tire forces
@@ -252,24 +252,24 @@ def vehicle_dynamics_mb(x: np.ndarray, u_init: np.ndarray, params: dict):
         alpha_RR = 0.0
     else:
         alpha_LF = (
-            np.atan(
+            np.arctan(
                 (x[10] + params["lf"] * x[5] - x[14] * (params["R_w"] - x[16]))
                 / (x[3] + 0.5 * params["T_f"] * x[5])
             )
             - x[2]
         )
         alpha_RF = (
-            np.atan(
+            np.arctan(
                 (x[10] + params["lf"] * x[5] - x[14] * (params["R_w"] - x[16]))
                 / (x[3] - 0.5 * params["T_f"] * x[5])
             )
             - x[2]
         )
-        alpha_LR = np.atan(
+        alpha_LR = np.arctan(
             (x[10] - params["lr"] * x[5] - x[19] * (params["R_w"] - x[21]))
             / (x[3] + 0.5 * params["T_r"] * x[5])
         )
-        alpha_RR = np.atan(
+        alpha_RR = np.arctan(
             (x[10] - params["lr"] * x[5] - x[19] * (params["R_w"] - x[21]))
             / (x[3] - 0.5 * params["T_r"] * x[5])
         )

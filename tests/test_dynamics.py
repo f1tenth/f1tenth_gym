@@ -190,8 +190,9 @@ class DynamicsTest(unittest.TestCase):
         acc = 0.63 * g
         u = np.array([v_delta, acc])
 
-        f_ks = vehicle_dynamics_ks(
+        f_ks = func_KS(
             x_ks,
+            0,
             u,
             params={
                 "mu": self.mu,
@@ -212,8 +213,9 @@ class DynamicsTest(unittest.TestCase):
                 "v_max": self.v_max,
             },
         )
-        f_st = vehicle_dynamics_st(
+        f_st = func_ST(
             x_st,
+            0,
             u,
             params={
                 "mu": self.mu,
@@ -237,8 +239,9 @@ class DynamicsTest(unittest.TestCase):
 
         start = time.time()
         for i in range(10000):
-            f_st = vehicle_dynamics_st(
+            f_st = func_ST(
                 x_st,
+                0,
                 u,
                 params={
                     "mu": self.mu,

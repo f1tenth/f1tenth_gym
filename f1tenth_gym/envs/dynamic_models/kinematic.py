@@ -160,7 +160,7 @@ def vehicle_dynamics_ks_cog(x: np.ndarray, u_init: np.ndarray, params: dict):
         ]
     )
     # slip angle (beta) from vehicle kinematics
-    beta = np.atan(np.tan(x[2]) * params["lr"] / lwb)
+    beta = np.arctan(np.tan(x[2]) * params["lr"] / lwb)
 
     # system dynamics
     f = [
