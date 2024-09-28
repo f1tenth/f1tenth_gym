@@ -318,7 +318,7 @@ class PyQtEnvRenderer(EnvRenderer):
             ptr.setsize(height * width * 4)
             frame = np.array(ptr).reshape(height, width, 4)  #  Copies the data
             
-            return frame
+            return frame[:, :, :3] # remove alpha channel
 
     def render_points(
         self,
