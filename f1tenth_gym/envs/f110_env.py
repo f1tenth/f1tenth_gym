@@ -143,14 +143,14 @@ class F110Env(gym.Env):
             model=self.model,
             action_type=self.action_type,
         )
-        self.sim.set_map(self.map, config["scale"])
+        self.sim.set_map(self.map, self.config["scale"])
 
         if isinstance(self.map, Track):
             self.track = self.map
         else:
             self.track = Track.from_track_name(
                 self.map,
-                track_scale=config["scale"],
+                track_scale=self.config["scale"],
             )  # load track in gym env for convenience
 
         # observations
@@ -357,6 +357,7 @@ class F110Env(gym.Env):
             "control_input": ["speed", "steering_angle"],
             "observation_config": {"type": None},
             "reset_config": {"type": None},
+            "scale": 1.0,
         }
 
     def configure(self, config: dict) -> None:
