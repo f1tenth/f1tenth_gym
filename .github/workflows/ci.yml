@@ -20,7 +20,10 @@ jobs:
 
     steps:
     - name: Install openGL
-      run: sudo apt install freeglut3-dev
+      run: sudo apt install freeglut3-dev libglib2.0-0 libsm6 libxrender1 libxext6 libxkbcommon-x11-0 libdbus-1-dev
+
+    - name: Set QT to be headless
+      run: export QT_QPA_PLATFORM=offscreen
 
     - uses: actions/checkout@v2
     
