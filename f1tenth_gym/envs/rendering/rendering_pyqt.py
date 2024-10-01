@@ -69,7 +69,7 @@ class PyQtEnvRenderer(EnvRenderer):
         self.render_fps = render_fps
 
         # create the canvas
-        self.app = QtWidgets.QApplication([])
+        self.app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
         self.window = pg.GraphicsLayoutWidget()
         self.window.setWindowTitle("F1Tenth Gym")
         self.window.setGeometry(0, 0, self.render_spec.window_size, self.render_spec.window_size)
@@ -399,3 +399,4 @@ class PyQtEnvRenderer(EnvRenderer):
         Close the rendering environment.
         """
         self.app.exit()
+        
