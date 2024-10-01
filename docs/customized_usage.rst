@@ -109,7 +109,7 @@ You can change the default paramters (identified on concrete floor with the defa
                    'v_max': 20.0,
                    'width': 0.31,
                    'length': 0.58}
-    env = gym.make('f110_gym:f110-v0', params=params_dict)
+    env = gym.make('f110_gym:f110-v0', config={'params': params_dict})
 
 2. Or you could update the parameters of a specific vehicle in the list of vehicles (or all vehicles):
 
