@@ -11,16 +11,20 @@ permissions:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         python-version: ["3.9", "3.10", "3.11", "3.12"]
+    env:
+      QT_QPA_PLATFORM: offscreen
 
     steps:
+    - name: Update apt
+      run: sudo apt update
+
     - name: Install openGL
-      run: sudo apt install freeglut3-dev
+      run: sudo apt install -y freeglut3-dev libglib2.0-0 libsm6 libxrender1 libxext6 libxkbcommon-x11-0 libdbus-1-dev
 
     - uses: actions/checkout@v2
     
