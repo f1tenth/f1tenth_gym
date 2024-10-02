@@ -3,7 +3,6 @@ import logging
 import math
 from typing import Any, Callable, Optional
 import signal
-import os
 
 import cv2
 import numpy as np
@@ -165,7 +164,6 @@ class PyQtEnvRenderer(EnvRenderer):
             signal.signal(signal.SIGINT, signal.SIG_DFL)
             self.window.show()
         elif self.render_mode == "rgb_array":
-            os.environ["QT_QPA_PLATFORM"] = "offscreen"
             self.exporter = ImageExporter(self.canvas)
 
     def update(self, state: dict) -> None:
