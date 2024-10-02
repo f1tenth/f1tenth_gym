@@ -16,8 +16,8 @@ jobs:
       fail-fast: false
       matrix:
         python-version: ["3.9", "3.10", "3.11", "3.12"]
-    env:
-      QT_QPA_PLATFORM: offscreen
+    # env:
+    #   QT_QPA_PLATFORM: offscreen
 
     steps:
     - name: Update apt
