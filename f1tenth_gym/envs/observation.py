@@ -124,11 +124,13 @@ class OriginalObservation(Observation):
             lap_count = self.env.lap_counts[i]
             collision = self.env.sim.collisions[i]
 
-            x, y, theta = agent.state[xi], agent.state[yi], agent.state[yawi]
-            vx, vy = agent.state[vxi], 0.0
-            angvel = (
-                0.0 if len(agent.state) < 7 else agent.state[yaw_ratei]
-            )  # set 0.0 when KST Model
+            std_state = agent.standard_state
+
+            x, y, theta = std_state["x"], std_state["y"], std_state["yaw"]
+
+            vx = std_state["v_x"]
+            vy = std_state["v_y"]
+            angvel = std_state["yaw_rate"]
 
             observations["scans"].append(agent_scan)
             observations["poses_x"].append(x)
@@ -209,11 +211,6 @@ class FeaturesObservation(Observation):
         return obs_space
 
     def observe(self):
-        # state indices
-        xi, yi, deltai, vxi, yawi, yaw_ratei, slipi = range(
-            7
-        )  # 7 largest state size (ST Model)
-
         obs = {}  # dictionary agent_id -> observation dict
 
         for i, agent_id in enumerate(self.env.agent_ids):
@@ -222,17 +219,14 @@ class FeaturesObservation(Observation):
             lap_time = self.env.lap_times[i]
             lap_count = self.env.lap_counts[i]
 
-            x, y, theta = agent.state[xi], agent.state[yi], agent.state[yawi]
-            vlong = agent.state[vxi]
-            delta = agent.state[deltai]
-            beta = (
-                0.0 if len(agent.state) < 7 else agent.state[slipi]
-            )  # set 0.0 when KST Model
-            vx = vlong * np.cos(beta)
-            vy = vlong * np.sin(beta)
-            angvel = (
-                0.0 if len(agent.state) < 7 else agent.state[yaw_ratei]
-            )  # set 0.0 when KST Model
+            std_state = agent.standard_state
+
+            x, y, theta = std_state["x"], std_state["y"], std_state["yaw"]
+            delta = std_state["delta"]
+            beta = std_state["slip"]
+            vx = std_state["v_x"]
+            vy = std_state["v_y"]
+            angvel = std_state["yaw_rate"]
 
             # create agent's observation dict
             agent_obs = {

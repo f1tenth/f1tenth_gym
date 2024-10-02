@@ -91,7 +91,7 @@ class Track:
         return track_spec
 
     @staticmethod
-    def from_track_name(track: str):
+    def from_track_name(track: str, track_scale: float = 1.0) -> Track:
         """
         Load track from track name.
 
@@ -99,6 +99,8 @@ class Track:
         ----------
         track : str
             name of the track
+        track_scale : float, optional
+            scale of the track, by default 1.0
 
         Returns
         -------
@@ -115,12 +117,19 @@ class Track:
             track_spec = Track.load_spec(
                 track=track, filespec=str(track_dir / f"{track_dir.stem}_map.yaml")
             )
+            track_spec.resolution = track_spec.resolution * track_scale
+            track_spec.origin = (
+                track_spec.origin[0] * track_scale,
+                track_spec.origin[1] * track_scale,
+                track_spec.origin[2],
+            )
 
             # load occupancy grid
             map_filename = pathlib.Path(track_spec.image)
             image = Image.open(track_dir / str(map_filename)).transpose(
                 Transpose.FLIP_TOP_BOTTOM
             )
+
             occupancy_map = np.array(image).astype(np.float32)
             occupancy_map[occupancy_map <= 128] = 0.0
             occupancy_map[occupancy_map > 128] = 255.0
@@ -128,7 +137,8 @@ class Track:
             # if exists, load centerline
             if (track_dir / f"{track}_centerline.csv").exists():
                 centerline = Raceline.from_centerline_file(
-                    track_dir / f"{track}_centerline.csv"
+                    track_dir / f"{track}_centerline.csv",
+                    track_scale=track_scale,
                 )
             else:
                 centerline = None
@@ -136,7 +146,8 @@ class Track:
             # if exists, load raceline
             if (track_dir / f"{track}_raceline.csv").exists():
                 raceline = Raceline.from_raceline_file(
-                    track_dir / f"{track}_raceline.csv"
+                    track_dir / f"{track}_raceline.csv",
+                    track_scale=track_scale,
                 )
             else:
                 raceline = centerline

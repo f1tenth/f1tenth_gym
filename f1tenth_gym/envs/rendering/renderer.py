@@ -17,6 +17,7 @@ class RenderSpec:
     show_wheels: bool
     show_info: Optional[bool] = True
     vehicle_palette: Optional[list[str]] = None
+    render_type: Optional[str] = "pygame"
 
     def __init__(
         self,
@@ -27,6 +28,7 @@ class RenderSpec:
         show_wheels: bool = False,
         show_info: bool = True,
         vehicle_palette: list[str] = None,
+        render_type: str = "pygame",
     ) -> None:
         """
         Initialize rendering specification.
@@ -55,6 +57,7 @@ class RenderSpec:
         self.show_wheels = show_wheels
         self.show_info = show_info
         self.vehicle_palette = vehicle_palette or ["#984ea3"]
+        self.render_type = render_type
 
     @staticmethod
     def from_yaml(yaml_file: str | pathlib.Path):

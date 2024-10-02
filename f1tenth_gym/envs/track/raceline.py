@@ -65,11 +65,14 @@ class Raceline:
         # compute spline through waypoints if not provided
         self.spline = spline or CubicSpline2D(x=xs, y=ys)
 
+        self.waypoint_render = None
+
     @staticmethod
     def from_centerline_file(
         filepath: pathlib.Path,
         delimiter: Optional[str] = ",",
         fixed_speed: Optional[float] = 1.0,
+        track_scale: Optional[float] = 1.0,
     ):
         """
         Load raceline from a centerline file.
@@ -82,6 +85,8 @@ class Raceline:
             delimiter used in the file, by default ","
         fixed_speed : float, optional
             fixed speed along the raceline, by default 1.0
+        track_scale : float, optional
+            scaling factor for the track, by default 1.0
 
         Returns
         -------
@@ -94,6 +99,9 @@ class Raceline:
 
         # fit cubic spline to waypoints
         xx, yy = waypoints[:, 0], waypoints[:, 1]
+        # scale waypoints
+        xx, yy = xx * track_scale, yy * track_scale
+        
         # close loop
         xx = np.append(xx, xx[0])
         yy = np.append(yy, yy[0])
@@ -125,7 +133,7 @@ class Raceline:
         )
 
     @staticmethod
-    def from_raceline_file(filepath: pathlib.Path, delimiter: str = ";"):
+    def from_raceline_file(filepath: pathlib.Path, delimiter: str = ";", track_scale: Optional[float] = 1.0) -> Raceline:
         """
         Load raceline from a raceline file.
 
@@ -135,6 +143,8 @@ class Raceline:
             path to the raceline file
         delimiter : str, optional
             delimiter used in the file, by default ";"
+        track_scale : float, optional
+            scaling factor for the track, by default 1.0
 
         Returns
         -------
@@ -143,6 +153,24 @@ class Raceline:
         """
         assert filepath.exists(), f"input filepath does not exist ({filepath})"
         waypoints = np.loadtxt(filepath, delimiter=delimiter).astype(np.float32)
+
+        if track_scale != 1.0:
+            # scale x-y waypoints and recalculate s, psi, and k
+            waypoints[:, 1] *= track_scale
+            waypoints[:, 2] *= track_scale
+            spline = CubicSpline2D(x=waypoints[:, 1], y=waypoints[:, 2])    
+            ss, yaws, ks = [], [], []
+            for (x, y) in zip(waypoints[:, 1], waypoints[:, 2]):
+                i_s, _  = spline.calc_arclength(x, y)
+                yaw = spline.calc_yaw(i_s)
+                k = spline.calc_curvature(i_s)
+                yaws.append(yaw)
+                ks.append(k)
+                ss.append(i_s)
+            waypoints[:, 0] = ss
+            waypoints[:, 3] = yaws
+            waypoints[:, 4] = ks
+        
         assert (
             waypoints.shape[1] == 7
         ), "expected waypoints as [s, x, y, psi, k, vx, ax]"
@@ -166,4 +194,7 @@ class Raceline:
             Environment renderer object.
         """
         points = np.stack([self.xs, self.ys], axis=1)
-        e.render_closed_lines(points, color=(0, 128, 0), size=1)
+        if self.waypoint_render is None:
+            self.waypoint_render = e.render_closed_lines(points, color=(0, 128, 0), size=1)
+        else:
+            self.waypoint_render.updateItems(points)

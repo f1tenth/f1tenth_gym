@@ -26,9 +26,99 @@ import numpy as np
 from f1tenth_gym.envs.dynamic_models import (
     vehicle_dynamics_ks,
     vehicle_dynamics_st,
-    func_KS,
-    func_ST,
 )
+
+
+def func_KS(
+    x,
+    t,
+    u,
+    mu,
+    C_Sf,
+    C_Sr,
+    lf,
+    lr,
+    h,
+    m,
+    I,
+    s_min,
+    s_max,
+    sv_min,
+    sv_max,
+    v_switch,
+    a_max,
+    v_min,
+    v_max,
+):
+    f = vehicle_dynamics_ks(
+        x,
+        u,
+        params={
+            "mu": mu,
+            "C_Sf": C_Sf,
+            "C_Sr": C_Sr,
+            "lf": lf,
+            "lr": lr,
+            "h": h,
+            "m": m,
+            "I": I,
+            "s_min": s_min,
+            "s_max": s_max,
+            "sv_min": sv_min,
+            "sv_max": sv_max,
+            "v_switch": v_switch,
+            "a_max": a_max,
+            "v_min": v_min,
+            "v_max": v_max,
+        },
+    )
+    return f
+
+
+def func_ST(
+    x,
+    t,
+    u,
+    mu,
+    C_Sf,
+    C_Sr,
+    lf,
+    lr,
+    h,
+    m,
+    I,
+    s_min,
+    s_max,
+    sv_min,
+    sv_max,
+    v_switch,
+    a_max,
+    v_min,
+    v_max,
+):
+    f = vehicle_dynamics_st(
+        x,
+        u,
+        params={
+            "mu": mu,
+            "C_Sf": C_Sf,
+            "C_Sr": C_Sr,
+            "lf": lf,
+            "lr": lr,
+            "h": h,
+            "m": m,
+            "I": I,
+            "s_min": s_min,
+            "s_max": s_max,
+            "sv_min": sv_min,
+            "sv_max": sv_max,
+            "v_switch": v_switch,
+            "a_max": a_max,
+            "v_min": v_min,
+            "v_max": v_max,
+        },
+    )
+    return f
 
 
 class DynamicsTest(unittest.TestCase):
@@ -100,8 +190,9 @@ class DynamicsTest(unittest.TestCase):
         acc = 0.63 * g
         u = np.array([v_delta, acc])
 
-        f_ks = vehicle_dynamics_ks(
+        f_ks = func_KS(
             x_ks,
+            0,
             u,
             self.mu,
             self.C_Sf,
@@ -120,8 +211,9 @@ class DynamicsTest(unittest.TestCase):
             self.v_min,
             self.v_max,
         )
-        f_st = vehicle_dynamics_st(
+        f_st = func_ST(
             x_st,
+            0,
             u,
             self.mu,
             self.C_Sf,
@@ -143,8 +235,9 @@ class DynamicsTest(unittest.TestCase):
 
         start = time.time()
         for i in range(10000):
-            f_st = vehicle_dynamics_st(
+            f_st = func_ST(
                 x_st,
+                0,
                 u,
                 self.mu,
                 self.C_Sf,
