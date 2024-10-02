@@ -374,6 +374,7 @@ class F110Env(gym.Env):
             "control_input": ["speed", "steering_angle"],
             "observation_config": {"type": None},
             "reset_config": {"type": None},
+            "scale": 1.0,
         }
 
     def configure(self, config: dict) -> None:

@@ -10,6 +10,7 @@ from PyQt6 import QtWidgets, QtCore
 from PyQt6 import QtGui
 import pyqtgraph as pg
 from pyqtgraph.examples.utils import FrameCounter
+from pyqtgraph.exporters import ImageExporter
 from PIL import ImageColor
 
 from .pyqt_objects import (
@@ -69,7 +70,7 @@ class PyQtEnvRenderer(EnvRenderer):
         self.render_fps = render_fps
 
         # create the canvas
-        self.app = QtWidgets.QApplication([])
+        self.app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
         self.window = pg.GraphicsLayoutWidget()
         self.window.setWindowTitle("F1Tenth Gym")
         self.window.setGeometry(
@@ -159,9 +160,11 @@ class PyQtEnvRenderer(EnvRenderer):
             self.follow_agent_flag: bool = False
             self.agent_to_follow: int = None
 
-        # Allow a KeyboardInterrupt to kill the window without segfaulting
-        signal.signal(signal.SIGINT, signal.SIG_DFL)
-        self.window.show()
+        if self.render_mode in ["human", "human_fast"]:
+            signal.signal(signal.SIGINT, signal.SIG_DFL)
+            self.window.show()
+        elif self.render_mode == "rgb_array":
+            self.exporter = ImageExporter(self.canvas)
 
     def update(self, state: dict) -> None:
         """
@@ -265,31 +268,33 @@ class PyQtEnvRenderer(EnvRenderer):
         Optional[np.ndarray]
             if render_mode is "rgb_array", returns the rendered frame as an array
         """
-        if self.draw_flag:
-            # draw cars
-            for i in range(len(self.agent_ids)):
-                self.cars[i].render()
+        # draw cars
+        for i in range(len(self.agent_ids)):
+            self.cars[i].render()
 
-            # call callbacks
-            for callback_fn in self.callbacks:
-                callback_fn(self)
+        # call callbacks
+        for callback_fn in self.callbacks:
+            callback_fn(self)
 
-            if self.follow_agent_flag:
-                ego_x, ego_y = self.cars[self.agent_to_follow].pose[:2]
-                self.canvas.setXRange(ego_x - 10, ego_x + 10)
-                self.canvas.setYRange(ego_y - 10, ego_y + 10)
-            else:
-                self.canvas.autoRange()
-
-            agent_to_follow_id = (
-                self.agent_ids[self.agent_to_follow]
-                if self.agent_to_follow is not None
-                else None
-            )
-            self.bottom_info_renderer.render(text=f"Focus on: {agent_to_follow_id}")
+        if self.follow_agent_flag:
+            ego_x, ego_y = self.cars[self.agent_to_follow].pose[:2]
+            self.canvas.setXRange(ego_x - 10, ego_x + 10)
+            self.canvas.setYRange(ego_y - 10, ego_y + 10)
+        else:
+            self.canvas.autoRange()
+            
+        agent_to_follow_id = (
+            self.agent_ids[self.agent_to_follow]
+            if self.agent_to_follow is not None
+            else None
+        )
+        self.bottom_info_renderer.render(
+            text=f"Focus on: {agent_to_follow_id}"
+        )
 
         if self.render_spec.show_info:
             self.top_info_renderer.render(text=INSTRUCTION_TEXT)
+
         self.time_renderer.render(text=f"{self.sim_time:.2f}")
         self.clock.update()
         self.app.processEvents()
@@ -297,11 +302,18 @@ class PyQtEnvRenderer(EnvRenderer):
         if self.render_mode in ["human", "human_fast"]:
             assert self.window is not None
 
-        else:
-            # rgb_array
-            # TODO: extract the frame from the canvas
-            frame = None
-            return frame
+        else:  
+            # rgb_array mode => extract the frame from the canvas
+            qImage = self.exporter.export(toBytes=True)
+
+            width = qImage.width()
+            height = qImage.height()
+
+            ptr = qImage.bits()
+            ptr.setsize(height * width * 4)
+            frame = np.array(ptr).reshape(height, width, 4)  #  Copies the data
+            
+            return frame[:, :, :3] # remove alpha channel
 
     def render_points(
         self,
@@ -388,3 +400,4 @@ class PyQtEnvRenderer(EnvRenderer):
         Close the rendering environment.
         """
         self.app.exit()
+        
