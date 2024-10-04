@@ -3,6 +3,7 @@ import cv2
 import numpy as np
 import pygame
 
+from .utils import to_pygame
 from ..collision_models import get_vertices
 from . import RenderSpec
 
@@ -216,6 +217,8 @@ class Car:
         vertices[:, 1] = (vertices[:, 1] - self.origin[1]) / (
             self.resolution * self.ppu
         )
+
+        vertices = to_pygame(vertices, height=display.get_height())
 
         self.rect = pygame.draw.polygon(display, self.color, vertices)
 
