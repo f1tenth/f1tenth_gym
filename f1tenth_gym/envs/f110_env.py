@@ -325,6 +325,30 @@ class F110Env(gym.Env):
         return params
 
     @classmethod
+    def f1fifth_vehicle_params(cls) -> dict:
+        params = {
+            "mu": 1.0489,
+            "C_Sf": 4.718,  # TODO: identify these parameters
+            "C_Sr": 5.4562, # TODO: identify these parameters
+            "lf": 0.2735,
+            "lr": 0.2585,
+            "h": 0.1875,
+            "m": 15.32,
+            "I": 0.6433215993,
+            "s_min": -0.4189,
+            "s_max": 0.4189,
+            "sv_min": -3.2,
+            "sv_max": 3.2,
+            "v_switch": 7.319,
+            "a_max": 9.51,
+            "v_min": -5.0,
+            "v_max": 20.0,
+            "width": 0.54,
+            "length": 0.779,
+        }
+        return params
+
+    @classmethod
     def f1tenth_vehicle_params(cls) -> dict:
         params = {
             "mu": 1.0489,
