@@ -83,7 +83,7 @@ def vehicle_dynamics_st(x: np.ndarray, u_init: np.ndarray, params: dict):
     ACCL = u[1]
 
     # switch to kinematic model for small velocities
-    if V < 0.1:
+    if V < 0.5:
         # wheelbase
         lwb = params["lf"] + params["lr"]
         BETA_HAT = np.arctan(np.tan(DELTA) * params["lr"] / lwb)
