@@ -165,7 +165,7 @@ class Track:
             raise FileNotFoundError(f"It could not load track {track}") from ex
 
     @staticmethod
-    def from_track_path(path: pathlib.Path):
+    def from_track_path(path: pathlib.Path, track_scale: float = 1.0) -> Track:
         """
         Load track from track path.
 
@@ -190,6 +190,12 @@ class Track:
         
             track_spec = Track.load_spec(
                 track=path.stem, filespec=path
+            )
+            track_spec.resolution = track_spec.resolution * track_scale
+            track_spec.origin = (
+                track_spec.origin[0] * track_scale,
+                track_spec.origin[1] * track_scale,
+                track_spec.origin[2],
             )
 
             # load occupancy grid
