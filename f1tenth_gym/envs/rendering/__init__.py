@@ -35,7 +35,7 @@ def make_renderer(
     if render_spec.render_type == "pygame":
         from .rendering_pygame import PygameEnvRenderer as EnvRenderer
     elif render_spec.render_type == "pyqt6":
-        if render_mode == "rgb_array":
+        if "rgb_array" in render_mode:
             os.environ["QT_QPA_PLATFORM"] = "offscreen"
         from .rendering_pyqt import PyQtEnvRenderer as EnvRenderer
     else:
