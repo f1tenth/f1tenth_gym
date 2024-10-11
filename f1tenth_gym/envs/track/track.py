@@ -315,7 +315,7 @@ class Track:
             centerline=refline,
         )
 
-    def frenet_to_cartesian(self, s, ey, ephi):
+    def frenet_to_cartesian(self, s, ey, ephi, use_raceline=False):
         """
         Convert Frenet coordinates to Cartesian coordinates.
 
@@ -328,8 +328,9 @@ class Track:
             y: y-coordinate
             psi: yaw angle
         """
-        x, y = self.centerline.spline.calc_position(s)
-        psi = self.centerline.spline.calc_yaw(s)
+        line = self.raceline if use_raceline else self.centerline
+        x, y = line.spline.calc_position(s)
+        psi = line.spline.calc_yaw(s)
 
         # Adjust x,y by shifting along the normal vector
         x -= ey * np.sin(psi)
@@ -340,7 +341,7 @@ class Track:
 
         return x, y, psi
 
-    def cartesian_to_frenet(self, x, y, phi, s_guess=0):
+    def cartesian_to_frenet(self, x, y, phi, use_raceline=False, s_guess=0):
         """
         Convert Cartesian coordinates to Frenet coordinates.
 
@@ -353,22 +354,25 @@ class Track:
             ey: lateral deviation
             ephi: heading deviation
         """
-        s, ey = self.centerline.spline.calc_arclength_inaccurate(x, y)
-        if s > self.centerline.spline.s[-1]:
+        line = self.raceline if use_raceline else self.centerline
+        s, ey = line.spline.calc_arclength_inaccurate(x, y)
+        if s > line.spline.s[-1]:
             # Wrap around
-            s = s - self.centerline.spline.s[-1]
+            s = s - line.spline.s[-1]
         if s < 0:
             # Negative s means we are behind the start point
-            s = s + self.centerline.spline.s[-1]
+            s = s + line.spline.s[-1]
 
         # Use the normal to calculate the signed lateral deviation
-        normal = self.centerline.spline._calc_normal(s)
-        x_eval, y_eval = self.centerline.spline.calc_position(s)
+        normal = line.spline._calc_normal(s)
+        x_eval, y_eval = line.spline.calc_position(s)
         dx = x - x_eval
         dy = y - y_eval
         distance_sign = np.sign(np.dot([dx, dy], normal))
         ey = ey * distance_sign
 
-        phi = phi - self.centerline.spline.calc_yaw(s)
+        ephi = phi - line.spline.calc_yaw(s)
+        # ephi is unbouded, so we need to wrap it to [-pi, pi]
+        ephi = (ephi + np.pi) % (2 * np.pi) - np.pi
 
-        return s, ey, phi
+        return s, ey, ephi
