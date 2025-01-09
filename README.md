@@ -14,7 +14,7 @@ We recommend installing the simulation inside a virtualenv. You can install the 
 ```bash
 virtualenv gym_env
 source gym_env/bin/activate
-git clone https://github.com/f1tenth/f1tenth_gym.git
+git clone https://github.com/WE-Autopilot/f1tenth_gym.git
 cd f1tenth_gym
 pip install -e .
 ```
