@@ -9,23 +9,40 @@ This project is still under heavy developement.
 You can find the [documentation](https://f1tenth-gym.readthedocs.io/en/latest/) of the environment here.
 
 ## Quickstart
-We recommend installing the simulation inside a virtualenv. You can install the environment by running:
+We recommend installing the simulation inside a venv.  
+You can install the environment any way you like. Instructions to do it with virtualenv are below.
+Make sure to use python version 3.10. We've tested 3.10.11 and 3.10.15 and both have worked.
 
 ```bash
 virtualenv gym_env
 source gym_env/bin/activate
+```
+
+Then clone the repo
+```bash
 git clone https://github.com/WE-Autopilot/f1tenth_gym.git
 cd f1tenth_gym
+```
+
+Set some versions by hand to avoid magic, tracebackless errors.
+```bash
+pip install "pip<24.1"
+pip install "setuptools==65.5.0"
+pip install "wheel<0.40.0"
+```
+
+Then run the gym setup
+```bash
 pip install -e .
 ```
 
-Then you can run a quick waypoint follow example by:
+You can run a quick waypoint follow example by:
 ```bash
 cd examples
-python3 waypoint_follow.py
+python waypoint_follow.py
 ```
 
-A Dockerfile is also provided with support for the GUI with nvidia-docker (nvidia GPU required):
+A Dockerfile is also provided with support for the GUI with nvidia-docker (nvidia GPU required and we haven't tested it at all not even once.):
 ```bash
 docker build -t f1tenth_gym_container -f Dockerfile .
 docker run --gpus all -it -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix f1tenth_gym_container
@@ -33,16 +50,7 @@ docker run --gpus all -it -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix f
 Then the same example can be ran.
 
 ## Known issues
-- Library support issues on Windows. You must use Python 3.8 as of 10-2021
-- On MacOS Big Sur and above, when rendering is turned on, you might encounter the error:
-```
-ImportError: Can't find framework /System/Library/Frameworks/OpenGL.framework.
-```
-You can fix the error by installing a newer version of pyglet:
-```bash
-$ pip3 install pyglet==1.5.20
-```
-And you might see an error similar to
+You might see an error similar to
 ```
 f110-gym 0.2.1 requires pyglet<1.5, but you have pyglet 1.5.20 which is incompatible.
 ```
