@@ -11,7 +11,7 @@ from .kinematic import vehicle_dynamics_ks, get_standardized_state_ks
 from .single_track import vehicle_dynamics_st, get_standardized_state_st
 from .multi_body import init_mb, vehicle_dynamics_mb, get_standardized_state_mb
 from .utils import pid_steer, pid_accl
-
+from typing import Optional
 
 class DynamicModel(Enum):
     KS = 1  # Kinematic Single Track
@@ -32,7 +32,7 @@ class DynamicModel(Enum):
         else:
             raise ValueError(f"Unknown model type {model}")
 
-    def get_initial_state(self, pose=None, params: dict | None = None):
+    def get_initial_state(self, pose=None, params: Optional[dict] = None):
         # Assert that if self is MB, params is not None
         if self == DynamicModel.MB and params is None:
             raise ValueError("MultiBody model requires parameters to be provided.")
