@@ -356,12 +356,8 @@ class Track:
         """
         line = self.raceline if use_raceline else self.centerline
         s, ey = line.spline.calc_arclength_inaccurate(x, y)
-        if s > line.spline.s[-1]:
-            # Wrap around
-            s = s - line.spline.s[-1]
-        if s < 0:
-            # Negative s means we are behind the start point
-            s = s + line.spline.s[-1]
+        # Wrap around
+        s = s % line.spline.s[-1]
 
         # Use the normal to calculate the signed lateral deviation
         normal = line.spline._calc_normal(s)
