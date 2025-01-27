@@ -9,7 +9,6 @@ import numpy as np
 from PyQt6 import QtWidgets, QtCore
 from PyQt6 import QtGui
 import pyqtgraph as pg
-from pyqtgraph.examples.utils import FrameCounter
 from pyqtgraph.exporters import ImageExporter
 from PIL import ImageColor
 
@@ -23,6 +22,32 @@ from .renderer import EnvRenderer, RenderSpec
 # one-line instructions visualized at the top of the screen (if show_info=True)
 INSTRUCTION_TEXT = "Mouse click (L/M/R): Change POV - 'S' key: On/Off"
 
+
+# Replicated from pyqtgraphs' example utils for ci pipelines to pass
+from time import perf_counter
+class FrameCounter(QtCore.QObject):
+    sigFpsUpdate = QtCore.pyqtSignal(object)
+
+    def __init__(self, interval=1000):
+        super().__init__()
+        self.count = 0
+        self.last_update = 0
+        self.interval = interval
+
+    def update(self):
+        self.count += 1
+
+        if self.last_update == 0:
+            self.last_update = perf_counter()
+            self.startTimer(self.interval)
+
+    def timerEvent(self, evt):
+        now = perf_counter()
+        elapsed = now - self.last_update
+        fps = self.count / elapsed
+        self.last_update = now
+        self.count = 0
+        self.sigFpsUpdate.emit(fps)
 
 class PyQtEnvRenderer(EnvRenderer):
     """
