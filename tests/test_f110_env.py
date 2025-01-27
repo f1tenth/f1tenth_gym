@@ -51,14 +51,14 @@ class TestEnvInterface(unittest.TestCase):
             self.assertEqual(base_val, extended_val, f"{par} should be the same")
 
         # check consistency in simulator parameters
-        for par in base_env.sim.params:
-            base_val = base_env.sim.params[par]
-            extended_val = extended_env.sim.params[par]
+        for par in base_env.unwrapped.sim.params:
+            base_val = base_env.unwrapped.sim.params[par]
+            extended_val = extended_env.unwrapped.sim.params[par]
 
             self.assertEqual(base_val, extended_val, f"{par} should be the same")
 
         # check consistency in agent parameters
-        for agent, ext_agent in zip(base_env.sim.agents, extended_env.sim.agents):
+        for agent, ext_agent in zip(base_env.unwrapped.sim.agents, extended_env.unwrapped.sim.agents):
             for par in agent.params:
                 base_val = agent.params[par]
                 extended_val = ext_agent.params[par]
@@ -100,7 +100,7 @@ class TestEnvInterface(unittest.TestCase):
         action_space_low = base_env.action_space.low
         action_space_high = base_env.action_space.high
 
-        params = base_env.sim.params.copy()
+        params = base_env.unwrapped.sim.params.copy()
         new_v_max = 5.0
         params["v_max"] = new_v_max
 
@@ -126,7 +126,7 @@ class TestEnvInterface(unittest.TestCase):
         Test that the acceleration action space is correctly configured.
         """
         base_env = self._make_env(config={"control_input": ["accl", "steering_speed"]})
-        params = base_env.sim.params
+        params = base_env.unwrapped.sim.params
         action_space_low = base_env.action_space.low
         action_space_high = base_env.action_space.high
 
