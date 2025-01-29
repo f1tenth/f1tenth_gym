@@ -328,8 +328,8 @@ class F110Env(gym.Env):
     def f1fifth_vehicle_params(cls) -> dict:
         params = {
             "mu": 1.1,
-            "C_Sf": 1.3507,
-            "C_Sr": 1.3507,
+            "C_Sf": 5.3507,
+            "C_Sr": 5.3507,
             "lf": 0.2725,
             "lr": 0.2585,
             "h": 0.1825,
