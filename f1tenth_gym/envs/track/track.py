@@ -355,20 +355,19 @@ class Track:
             ephi: heading deviation
         """
         line = self.raceline if use_raceline else self.centerline
-        s, ey = line.spline.calc_arclength_inaccurate(x, y)
+        # s, ey = line.spline.calc_arclength_inaccurate(x, y) # inaccurate, but much faster
+        s, ey = line.spline.calc_arclength(x, y, s_guess)
         # Wrap around
         s = s % line.spline.s[-1]
 
         # Use the normal to calculate the signed lateral deviation
-        normal = line.spline._calc_normal(s)
+        yaw = line.spline.calc_yaw(s)
+        normal = np.asarray([-np.sin(yaw), np.cos(yaw)])
         x_eval, y_eval = line.spline.calc_position(s)
         dx = x - x_eval
         dy = y - y_eval
         distance_sign = np.sign(np.dot([dx, dy], normal))
         ey = ey * distance_sign
 
-        ephi = phi - line.spline.calc_yaw(s)
-        # ephi is unbouded, so we need to wrap it to [-pi, pi]
-        ephi = (ephi + np.pi) % (2 * np.pi) - np.pi
-
-        return s, ey, ephi
+        phi = phi - yaw
+        return s, ey, np.arctan2(np.sin(phi), np.cos(phi))
