@@ -282,7 +282,7 @@ def main():
         speed, steer = planner.plan(obs['poses_x'][0], obs['poses_y'][0], obs['poses_theta'][0], work['tlad'], work['vgain'])
         obs, step_reward, done, info = env.step(np.array([[steer, speed]]))
         laptime += step_reward
-        env.render(mode='human')
+        env.render(mode='human_fast')
         
     print('Sim elapsed time:', laptime, 'Real elapsed time:', time.time()-start)
 
