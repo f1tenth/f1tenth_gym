@@ -1,12 +1,23 @@
+# build instance
 build/
-gym/f110_gym.egg-info
+docs/_build/
+
+# python instance
 __pycache__
 *.pyc
+*.mypy_cache/
+
+# mac extras
 .DS_Store
+
+# dev extras
 .vscode/
+.venv/
+.python-version
+
+# gym extras
 gym/f110_gym/unittest/maps/
 gym/f110_gym/unittest/centerline/
-docs/_build/
-*.mypy_cache/
+gym/f110_gym.egg-info
 flycheck_*
-.venv/
+

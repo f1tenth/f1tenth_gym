@@ -92,8 +92,8 @@ You can install the environment any way you like. Instructions to do it with vir
 Make sure to use python version 3.10. We've tested 3.10.11 and 3.10.15 and both have worked.
 
 ```bash
-virtualenv gym_env
-source gym_env/bin/activate
+virtualenv .venv
+source .venv/bin/activate
 ```
 
 Then clone the repo
