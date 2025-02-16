@@ -1,0 +1,9 @@
+setup.py
+./__init__.py
+./lidar.py
+./setup.py
+weap_util.egg-info/PKG-INFO
+weap_util.egg-info/SOURCES.txt
+weap_util.egg-info/dependency_links.txt
+weap_util.egg-info/requires.txt
+weap_util.egg-info/top_level.txt

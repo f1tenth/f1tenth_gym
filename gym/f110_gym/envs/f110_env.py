@@ -150,6 +150,12 @@ class F110Env(gym.Env):
         except:
             self.integrator = Integrator.RK4
 
+        # grab the fov
+        try:
+            self.sim_car_fov = kwargs['fov']
+        except:
+            self.sim_car_fov = 2 * np.pi
+
         # radius to consider done
         self.start_thresh = 0.5  # 10cm
 
@@ -181,7 +187,7 @@ class F110Env(gym.Env):
         self.start_rot = np.eye(2)
 
         # initiate stuff
-        self.sim = Simulator(self.params, self.num_agents, self.seed, time_step=self.timestep, integrator=self.integrator)
+        self.sim = Simulator(self.params, self.num_agents, self.seed, self.sim_car_fov, time_step=self.timestep, integrator=self.integrator)
         self.sim.set_map(self.map_path, self.map_ext)
 
         # stateful observations for rendering

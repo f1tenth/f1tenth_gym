@@ -66,7 +66,7 @@ class RaceCar(object):
     scan_angles = None
     side_distances = None
 
-    def __init__(self, params, seed, is_ego=False, time_step=0.01, num_beams=1080, fov=4.7, integrator=Integrator.Euler):
+    def __init__(self, params, seed, is_ego=False, time_step=0.01, num_beams=1080, fov=2*np.pi, integrator=Integrator.Euler):
         """
         Init function
 
@@ -456,7 +456,7 @@ class Simulator(object):
 
     """
 
-    def __init__(self, params, num_agents, seed, time_step=0.01, ego_idx=0, integrator=Integrator.RK4):
+    def __init__(self, params, num_agents, seed, fov, time_step=0.01, ego_idx=0, integrator=Integrator.RK4):
         """
         Init function
 
@@ -483,10 +483,10 @@ class Simulator(object):
         # initializing agents
         for i in range(self.num_agents):
             if i == ego_idx:
-                ego_car = RaceCar(params, self.seed, is_ego=True, time_step=self.time_step, integrator=integrator)
+                ego_car = RaceCar(params, self.seed, is_ego=True, time_step=self.time_step, integrator=integrator, fov=fov)
                 self.agents.append(ego_car)
             else:
-                agent = RaceCar(params, self.seed, is_ego=False, time_step=self.time_step, integrator=integrator)
+                agent = RaceCar(params, self.seed, is_ego=False, time_step=self.time_step, integrator=integrator, fov=fov)
                 self.agents.append(agent)
 
     def set_map(self, map_path, map_ext):

@@ -1,4 +1,3 @@
-from distutils.core import setup
 from setuptools import setup
 
 setup(name='f110_gym',
@@ -6,9 +5,9 @@ setup(name='f110_gym',
       author='Hongrui Zheng',
       author_email='billyzheng.bz@gmail.com',
       url='https://f1tenth.org',
-      package_dir={'': 'gym'},
+      package_dir={'': '.'},
       install_requires=['gym==0.19.0',
-		        'numpy<=1.22.0,>=1.18.0',
+		            'numpy<=1.22.0,>=1.18.0',
                         'Pillow>=9.0.1',
                         'scipy>=1.7.3',
                         'numba>=0.55.2',
