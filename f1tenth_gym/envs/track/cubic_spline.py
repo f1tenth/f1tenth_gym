@@ -150,12 +150,16 @@ class CubicSpline2D:
         return heading
 
     def _calc_kappa_from_xy(self, x, y):
-        dx_dt = np.gradient(x, 2)
-        dy_dt = np.gradient(y, 2)
-        d2x_dt2 = np.gradient(dx_dt, 2)
-        d2y_dt2 = np.gradient(dy_dt, 2)
-        curvature = -(d2x_dt2 * dy_dt - dx_dt * d2y_dt2) / (dx_dt * dx_dt + dy_dt * dy_dt)**1.5
-        return curvature
+        # For more stable gradients, extend x and y by two (edge_order 2) elements on each side
+        # The elements are taken from the other side of the array
+        x_extended = np.concatenate((x[-2:], x, x[:2]))
+        y_extended = np.concatenate((y[-2:], y, y[:2]))
+        dx_dt = np.gradient(x_extended, edge_order=2)
+        dy_dt = np.gradient(y_extended, edge_order=2)
+        d2x_dt2 = np.gradient(dx_dt, edge_order=2)
+        d2y_dt2 = np.gradient(dy_dt, edge_order=2)
+        curvature = (dx_dt * d2y_dt2 - d2x_dt2 * dy_dt) / (dx_dt * dx_dt + dy_dt * dy_dt)**1.5
+        return curvature[2:-2]
 
     def calc_position(self, s: float) -> np.ndarray:
         """
