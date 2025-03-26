@@ -138,3 +138,39 @@ class TestTrack(unittest.TestCase):
         # rename the backup track dir to its original name
         track_backup_dir = find_track_dir(tmp_dir.stem)
         track_backup_dir.rename(track_dir)
+
+    def test_frenet_to_cartesian(self):
+        track_name = "Spielberg"
+        track = Track.from_track_name(track_name)
+
+        # Check frenet to cartesian conversion
+        # using the track's xs, ys
+        for s, x, y in zip(
+            track.centerline.ss, track.centerline.xs, track.centerline.ys
+        ):
+            x_, y_, _ = track.frenet_to_cartesian(s, 0, 0)
+            self.assertAlmostEqual(x, x_, places=4)
+            self.assertAlmostEqual(y, y_, places=4)
+
+    def test_frenet_to_cartesian_to_frenet(self):
+        track_name = "Spielberg"
+        track = Track.from_track_name(track_name)
+
+        # check frenet to cartesian conversion
+        s_ = 0
+        for s in np.linspace(0, 1, 10):
+            x, y, psi = track.frenet_to_cartesian(s, 0, 0)
+            s_, d, _ = track.cartesian_to_frenet(x, y, psi, s_guess=s_)
+            self.assertAlmostEqual(s, s_, places=4)
+            self.assertAlmostEqual(d, 0, places=4)
+
+        # check frenet to cartesian conversion
+        # with non-zero lateral offset
+        s_ = 0
+        for s in np.linspace(0, 1, 10):
+            d = np.random.uniform(-1.0, 1.0)
+            x, y, psi = track.frenet_to_cartesian(s, d, 0)
+            s_, d_, _ = track.cartesian_to_frenet(x, y, psi, s_guess=s_)
+            # Handle edge case where we are checking for s=0 but s_ is the last s (same point, but different s)
+            self.assertTrue(np.isclose(s, s_, atol=1e-4) or np.isclose(s + track.centerline.spline.s[-1], s_, atol=1e-4))
+            self.assertAlmostEqual(d, d_, places=4)
