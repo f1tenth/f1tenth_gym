@@ -1,4 +1,6 @@
 from __future__ import annotations
+import time
+import uuid
 import pathlib
 from dataclasses import dataclass
 from typing import Tuple, Optional
@@ -314,6 +316,45 @@ class Track:
             raceline=refline,
             centerline=refline,
         )
+
+    def save_raceline(self, outdir: pathlib.Path):
+        """
+        Save track raceline.
+
+        Parameters
+        ----------
+        outdir : pathlib.Path
+            output directory
+        """
+        raceline_filepath = outdir / f"{self.spec.name}_raceline.csv"
+        with open(raceline_filepath, "w") as raceline_csv:
+            raceline_csv.write("# " + str(uuid.uuid4()) + "\n") # same as TUM opt
+            raceline_csv.write('# {}\n'.format(time.strftime('%Y-%m-%d %H:%M:%S'))) # TUM opt uses ggv hash, but no ggv here
+            raceline_csv.write("# s_m; x_m; y_m; psi_rad; kappa_radpm; vx_mps; ax_mps2\n")
+            for i in range(len(self.raceline.ss)):
+                raceline_csv.write(
+                    f"{self.raceline.ss[i]}; {self.raceline.xs[i]}; {self.raceline.ys[i]}; {self.raceline.yaws[i]}; {self.raceline.ks[i]}; {self.raceline.vxs[i]}; {self.raceline.axs[i]}\n"
+                )
+
+    def save_centerline(self, outdir: pathlib.Path, half_width: float):
+        """
+        Save track raceline.
+
+        Parameters
+        ----------
+        outdir : pathlib.Path
+            output directory
+        half_width : float
+            half width of the track
+        """
+        raceline_filepath = outdir / f"{self.spec.name}_raceline.csv"
+        with open(raceline_filepath, "w") as raceline_csv:
+            raceline_csv.write("# " + str(uuid.uuid4()) + "\n") # same as TUM opt
+            raceline_csv.write("# x_m, y_m, w_tr_right_m, w_tr_left_m\n")
+            for i in range(len(self.centerline.ss)):
+                raceline_csv.write(
+                    f"{self.centerline.xs[i]}, {self.centerline.ys[i]}, {half_width}, {half_width}\n"
+                )
 
     def frenet_to_cartesian(self, s, ey, ephi, use_raceline=False):
         """
