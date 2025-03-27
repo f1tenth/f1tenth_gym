@@ -471,6 +471,36 @@ class F110Env(gym.Env):
         self.poses_theta = self.sim.agent_poses[:, 2]
         self.collisions = self.sim.collisions
 
+    def _get_reward(self):
+        """
+        Get the reward for the current step
+        """
+        # reward for progress compared to last step
+        # penalty for each crashed agent
+        # Purely collaborative reward if more than 1 agent
+
+        if not hasattr(self, "last_s"):
+            self.last_s = [0.0] * self.num_agents
+
+        reward = 0.0
+        for i in range(self.num_agents):
+            current_s, _ = (
+                self.track.centerline.spline.calc_arclength_inaccurate(
+                    self.poses_x[i], self.poses_y[i]
+                )
+            )
+
+            prog = current_s - self.last_s[i]
+            if prog > 0.9 * self.track.centerline.spline.s[-1]:
+                prog = (self.track.centerline.spline.s[-1] - self.last_s) + current_s
+            reward += prog
+
+            if self.collisions[i]:
+                reward -= 1.
+
+            self.last_s[i] = current_s
+        return reward
+
     def step(self, action):
         """
         Step function for the gym env
@@ -492,7 +522,6 @@ class F110Env(gym.Env):
         obs = self.observation_type.observe()
 
         # times
-        reward = self.timestep
         self.current_time = self.current_time + self.timestep
 
         # update data member
@@ -515,6 +544,9 @@ class F110Env(gym.Env):
         done, toggle_list = self._check_done()
         truncated = False
         info = {"checkpoint_done": toggle_list}
+
+        # calc reward
+        reward = self._get_reward()
 
         return obs, reward, done, truncated, info
 
