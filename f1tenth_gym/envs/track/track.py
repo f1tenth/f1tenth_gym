@@ -256,22 +256,7 @@ class Track:
         margin_perc = 0.1
 
         spline = CubicSpline2D(x=x, y=y)
-        ss, xs, ys, yaws, ks, vxs = [], [], [], [], [], []
-        for i_s in np.arange(0, spline.s[-1], ds):
-            xi, yi = spline.calc_position(i_s)
-            yaw = spline.calc_yaw(i_s)
-            k = spline.calc_curvature(i_s)
-
-            # find closest waypoint
-            closest = np.argmin(np.hypot(x - xi, y - yi))
-            v = velx[closest]
-
-            xs.append(xi)
-            ys.append(yi)
-            yaws.append(yaw)
-            ks.append(k)
-            ss.append(i_s)
-            vxs.append(v)
+        ss, xs, ys, yaws, ks, vxs = spline.ss, spline.xs, spline.ys, spline.psis, spline.ks, velx
 
         refline = Raceline(
             ss=np.array(ss).astype(np.float32),
@@ -315,6 +300,67 @@ class Track:
             occupancy_map=occupancy_map,
             raceline=refline,
             centerline=refline,
+        )
+    
+    def from_raceline_file(filepath: pathlib.Path, delimiter: str = ";", skip_rows: int = 3, track_scale: float = 1.0) -> Track:
+        """
+        Creates a Track object from a raceline file of the format [s, x, y, psi, k, vx, ax].
+        
+        Args:
+            filepath (pathlib.Path): path to the raceline file
+            delimiter (str, optional): delimiter used in the file. Defaults to ";".
+            skip_rows (int, optional): number of rows to skip. Defaults to 3.
+            track_scale (float, optional): scale of the track. Defaults to 1.0.
+        
+        Returns:
+            Track: track object
+        """
+        raceline = Raceline.from_raceline_file(filepath, delimiter, skip_rows, track_scale)
+        xs = raceline.xs
+        ys = raceline.ys
+        resolution = 0.05
+        margin_perc = 0.1
+
+        min_x, max_x = np.min(xs), np.max(xs)
+        min_y, max_y = np.min(ys), np.max(ys)
+        x_range = max_x - min_x
+        y_range = max_y - min_y
+        occupancy_map = 255.0 * np.ones(
+            (
+                int((1 + 2 * margin_perc) * x_range / resolution),
+                int((1 + 2 * margin_perc) * y_range / resolution),
+            ),
+            dtype=np.float32,
+        )
+        # origin is the bottom left corner
+        origin = (min_x - margin_perc * x_range, min_y - margin_perc * y_range, 0.0)
+
+        track_spec = TrackSpec(
+            name=None,
+            image=None,
+            resolution=resolution,
+            origin=origin,
+            negate=False,
+            occupied_thresh=0.65,
+            free_thresh=0.196,
+        )
+
+        track_spec = TrackSpec(
+            name=None,
+            image=None,
+            resolution=0.05,
+            origin=(0.0, 0.0, 0.0),
+            negate=False,
+            occupied_thresh=0.65,
+            free_thresh=0.196,
+        )
+        return Track(
+            spec=track_spec,
+            filepath=None,
+            ext=None,
+            occupancy_map=occupancy_map,
+            raceline=raceline,
+            centerline=raceline,
         )
 
     def save_raceline(self, outdir: pathlib.Path):

@@ -133,9 +133,9 @@ class Raceline:
         )
 
     @staticmethod
-    def from_raceline_file(filepath: pathlib.Path, delimiter: str = ";", track_scale: Optional[float] = 1.0) -> Raceline:
+    def from_raceline_file(filepath: pathlib.Path, delimiter: str = ";", skip_rows: int = 3, track_scale: Optional[float] = 1.0) -> Raceline:
         """
-        Load raceline from a raceline file.
+        Load raceline from a raceline file of the format [s, x, y, psi, k, vx, ax].
 
         Parameters
         ----------
@@ -151,22 +151,19 @@ class Raceline:
         Raceline
             raceline object
         """
+        if type(filepath) is str:
+            filepath = pathlib.Path(filepath)
+
         assert filepath.exists(), f"input filepath does not exist ({filepath})"
-        waypoints = np.loadtxt(filepath, delimiter=delimiter).astype(np.float32)
+        waypoints = np.loadtxt(filepath, delimiter=delimiter, skiprows=
+        skip_rows).astype(np.float32)
 
         if track_scale != 1.0:
             # scale x-y waypoints and recalculate s, psi, and k
             waypoints[:, 1] *= track_scale
             waypoints[:, 2] *= track_scale
             spline = CubicSpline2D(x=waypoints[:, 1], y=waypoints[:, 2])    
-            ss, yaws, ks = [], [], []
-            for (x, y) in zip(waypoints[:, 1], waypoints[:, 2]):
-                i_s, _  = spline.calc_arclength(x, y)
-                yaw = spline.calc_yaw(i_s)
-                k = spline.calc_curvature(i_s)
-                yaws.append(yaw)
-                ks.append(k)
-                ss.append(i_s)
+            ss, yaws, ks = spline.ss, spline.psis, spline.ks
             waypoints[:, 0] = ss
             waypoints[:, 3] = yaws
             waypoints[:, 4] = ks
