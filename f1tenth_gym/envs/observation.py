@@ -249,13 +249,90 @@ class FeaturesObservation(Observation):
 
             # cast to match observation space
             for key in obs[agent_id].keys():
-                if isinstance(obs[agent_id][key], np.ndarray) or isinstance(
-                    obs[agent_id][key], list) or isinstance(
-                    obs[agent_id][key], float
+                if (
+                    isinstance(obs[agent_id][key], np.ndarray)
+                    or isinstance(obs[agent_id][key], list)
+                    or isinstance(obs[agent_id][key], float)
                 ):
                     obs[agent_id][key] = np.array(obs[agent_id][key], dtype=np.float32)
 
         return obs
+
+
+class VectorObservation(Observation):
+    def __init__(self, env, features: List[str]):
+        super().__init__(env)
+        self.features = features
+
+    def space(self):
+        scan_size = self.env.unwrapped.sim.agents[0].scan_simulator.num_beams
+        large_num = 1e30  # large number to avoid unbounded obs space (ie., low=-inf or high=inf)
+
+        num_agents = len(self.env.unwrapped.agent_ids)
+        assert num_agents == 1, "Vector observation only supports single agent"
+
+        obs_size_dict = {
+            "scan": scan_size,
+            "pose_x": 1,
+            "pose_y": 1,
+            "pose_theta": 1,
+            "linear_vel_x": 1,
+            "linear_vel_y": 1,
+            "ang_vel_z": 1,
+            "delta": 1,
+            "beta": 1,
+            "collision": 1,
+            "lap_time": 1,
+            "lap_count": 1,
+        }
+
+        complete_space_size = sum([obs_size_dict[k] for k in self.features])
+
+        obs_space = gym.spaces.Box(
+            low=-large_num,
+            high=large_num,
+            shape=(complete_space_size,),
+            dtype=float,
+        )
+        return obs_space
+
+    def observe(self):
+        scan = self.env.unwrapped.sim.agent_scans[0]
+        agent = self.env.unwrapped.sim.agents[0]
+        lap_time = self.env.unwrapped.lap_times[0]
+        lap_count = self.env.unwrapped.lap_counts[0]
+
+        std_state = agent.standard_state
+
+        x, y, theta = std_state["x"], std_state["y"], std_state["yaw"]
+        delta = std_state["delta"]
+        beta = std_state["slip"]
+        vx = std_state["v_x"]
+        vy = std_state["v_y"]
+        angvel = std_state["yaw_rate"]
+
+        # create agent's observation dict
+        agent_obs = {
+            "scan": scan,
+            "pose_x": x,
+            "pose_y": y,
+            "pose_theta": theta,
+            "linear_vel_x": vx,
+            "linear_vel_y": vy,
+            "ang_vel_z": angvel,
+            "delta": delta,
+            "beta": beta,
+            "collision": int(agent.in_collision),
+            "lap_time": lap_time,
+            "lap_count": lap_count,
+        }
+
+        # add agent's observation to multi-agent observation
+        vec_obs = []
+        for k in self.features:
+            vec_obs.extend(list(agent_obs[k]))
+
+        return np.array(vec_obs)
 
 
 def observation_factory(env, type: str | None, **kwargs) -> Observation:
@@ -291,5 +368,10 @@ def observation_factory(env, type: str | None, **kwargs) -> Observation:
             "beta",
         ]
         return FeaturesObservation(env, features=features)
+    elif type == "rl":
+        features = [
+            "scan",
+        ]
+        return VectorObservation(env, features=features)
     else:
         raise ValueError(f"Invalid observation type {type}.")

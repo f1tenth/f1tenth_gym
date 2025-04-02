@@ -391,6 +391,7 @@ class Simulator(object):
         params,
         num_agents,
         seed,
+        num_beams,
         action_type: CarAction,
         integrator=Integrator,
         model=DynamicModel.ST,
@@ -429,6 +430,7 @@ class Simulator(object):
             car = RaceCar(
                 params,
                 self.seed,
+                num_beams=num_beams,
                 is_ego=bool(i == ego_idx),
                 time_step=self.time_step,
                 integrator=integrator,

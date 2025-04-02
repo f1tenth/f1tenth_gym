@@ -100,6 +100,7 @@ class F110Env(gym.Env):
         self.model = DynamicModel.from_string(self.config["model"])
         self.observation_config = self.config["observation_config"]
         self.action_type = CarAction(self.config["control_input"], params=self.params)
+        self.num_beams = self.config["num_beams"]
 
         # radius to consider done
         self.start_thresh = 0.5  # 10cm
@@ -138,6 +139,7 @@ class F110Env(gym.Env):
             integrator=self.integrator,
             model=self.model,
             action_type=self.action_type,
+            num_beams=self.num_beams,
         )
         self.sim.set_map(self.map, self.config["scale"])
 
@@ -399,6 +401,7 @@ class F110Env(gym.Env):
             "observation_config": {"type": None},
             "reset_config": {"type": None},
             "scale": 1.0,
+            "num_beams": 1080,
         }
 
     def configure(self, config: dict) -> None:
