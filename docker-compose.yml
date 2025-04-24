@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  f1tenth_gym:
+    build:
+      context: .  # Asume que el Dockerfile está en el mismo directorio
+      dockerfile: Dockerfile
+    image: f1tenth_gym:latest
+    container_name: f1tenth_gym_container
+    volumes:
+      - .:/f1tenth_gym  # Monta el código local para desarrollo interactivo
+      - /tmp/.X11-unix:/tmp/.X11-unix
+    environment:
+      - DISPLAY=${DISPLAY}
+      - LIBGL_ALWAYS_INDIRECT=1
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=all
+    runtime: nvidia  # Requiere nvidia-docker2 o Docker >= 19.03 con soporte de GPU
+    network_mode: host  # Útil para acceso a simuladores locales tipo ROS o GUI X11
+    stdin_open: true
+    tty: true

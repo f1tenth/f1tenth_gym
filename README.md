@@ -74,6 +74,82 @@ git clone https://github.com/f1tenth/f1tenth_gym.git
 cd f1tenth_gym
 pip install -e .
 ```
+
+## 🐧 Running on WSL2 with Docker Compose
+If you're using Windows with WSL2, you can run this project smoothly using Docker Compose and an X Server for graphical rendering.
+
+1️⃣ Install an X Server on Windows
+To render the simulator's graphics (e.g., PyOpenGL, Pyglet, pygame), you'll need an X Server installed on your host system.
+
+Recommended options:
+
+🧩 VcXsrv (free, common choice)
+
+💠 X410 (paid, very stable)
+
+🌀 GWSL (free, GUI-oriented)
+
+You can read a guide here:
+👉 https://www.guide2wsl.com/x11/
+
+✅ While launching your X Server, make sure to:
+
+Disable access control
+
+Disable native OpenGL
+
+Allow network connections
+
+2️⃣ Set up your WSL environment
+Add the following lines to your ~/.bashrc or ~/.zshrc to make graphical apps work inside Docker containers:
+
+```bash
+export DISPLAY=host.docker.internal:0.0
+export LIBGL_ALWAYS_INDIRECT=1
+```
+
+Then, reload your shell:
+
+```bash
+source ~/.bashrc  # or ~/.zshrc
+```
+
+Optional Test: make sure your X Server is working with:
+
+```bash
+sudo apt install x11-apps
+xclock
+```
+If a clock appears, you're good to go 🕒✅
+
+3️⃣ Build and launch the container
+We provide a ready-to-use Docker Compose file. To build and start the environment:
+
+```bash
+docker-compose build --no-cache
+docker-compose up -d
+docker-compose exec f1tenth_gym bash
+```
+
+4️⃣ Run the simulator
+Once inside the container, navigate to the examples and launch the simulation:
+
+```bash
+cd examples
+python3 waypoint_follow.py
+```
+
+### 🛠️ Troubleshooting
+If the container fails to connect to the display, run this from WSL:
+
+```bash
+xhost +local:
+```
+
+If you see NoSuchDisplayException, double-check that the DISPLAY variable matches your host’s IP or use host.docker.internal.
+
+
+
 ## Citing
 If you find this Gym environment useful, please consider citing:
 
