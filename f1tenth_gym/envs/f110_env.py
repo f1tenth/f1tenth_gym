@@ -189,8 +189,8 @@ class F110Env(gym.Env):
     def fullscale_vehicle_params(cls) -> dict:
         params = {
             "mu": 1.0489,
-            "C_Sf": 4.718,
-            "C_Sr": 5.4562,
+            "C_Sf": 20.98,
+            "C_Sr": 20.98,
             "lf": 0.88392,
             "lr": 1.50876,
             "h": 0.074,
