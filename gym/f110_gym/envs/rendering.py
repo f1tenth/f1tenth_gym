@@ -38,6 +38,7 @@ import yaml
 
 # helpers
 from f110_gym.envs.collision_models import get_vertices
+from f110_gym.envs.raceline import Raceline
 
 # zooming constants
 ZOOM_IN_FACTOR = 1.2
@@ -51,7 +52,7 @@ class EnvRenderer(pyglet.window.Window):
     """
     A window class inherited from pyglet.window.Window, handles the camera/projection interaction, resizing window, and rendering the environment
     """
-    def __init__(self, width, height, *args, **kwargs):
+    def __init__(self, width, height, points_in_foreground, *args, **kwargs):
         """
         Class constructor
 
@@ -67,6 +68,8 @@ class EnvRenderer(pyglet.window.Window):
                       depth_size=16,
                       double_buffer=True)
         super().__init__(width, height, config=conf, resizable=True, vsync=False, *args, **kwargs)
+
+        self.points_in_foreground = points_in_foreground
 
         # gl init
         glClearColor(9/255, 32/255, 87/255, 1.)
@@ -94,11 +97,10 @@ class EnvRenderer(pyglet.window.Window):
 
         # current score label
         self.score_label = pyglet.text.Label(
-                'Lap Time: {laptime:.2f}, Ego Lap Count: {count:.0f}'.format(
-                    laptime=0.0, count=0.0),
+                'Lap Time: {laptime:.2f}, Ego Lap Count: {count:.0f}'.format(laptime=0.0, count=0.0),
                 font_size=36,
                 x=0,
-                y=-800,
+                y=0,
                 anchor_x='center',
                 anchor_y='center',
                 # width=0.01,
@@ -107,6 +109,23 @@ class EnvRenderer(pyglet.window.Window):
                 batch=self.batch)
 
         self.fps_display = pyglet.window.FPSDisplay(self)
+
+    def update_raceline(self, raceline: Raceline):
+        """
+        Update the renderer to display the raceline in green.
+
+        Args:
+            raceline (Raceline): The raceline object containing the optimal path points
+
+        Returns:
+            None
+        """
+        # Check if raceline is provided
+        if raceline is None:
+            raise ValueError('Raceline not provided to the renderer')
+
+        for x, y in zip(raceline.x, raceline.y):
+            self.draw_point(x, y, color=(0, 255, 0))
 
     def update_map(self, map_path, map_ext):
         """
@@ -132,6 +151,7 @@ class EnvRenderer(pyglet.window.Window):
                 print(ex)
 
         # load map image
+        # INFO: do we need to flip the image? yes, to make the (x,y) origin bottom left
         map_img = np.array(Image.open(map_path + map_ext).transpose(Image.FLIP_TOP_BOTTOM)).astype(np.float64)
         map_height = map_img.shape[0]
         map_width = map_img.shape[1]
@@ -295,6 +315,36 @@ class EnvRenderer(pyglet.window.Window):
         # Remove default modelview matrix
         glPopMatrix()
 
+    def draw_point(self, x, y, color=(255, 0, 0), size=1.0):
+        """
+        Draw a point at the given coordinates
+
+        Args:
+            x (float): x-coordinate in world space
+            y (float): y-coordinate in world space
+            color (tuple): RGB color values (0-255)
+            size (float): diameter of the point in pixels
+
+        Returns:
+            pyglet.graphics.vertex_list: The created vertex list
+        """
+        # Scale the point coordinates by 50 (same scaling used for map points)
+        scaled_x = 50.0 * x
+        scaled_y = 50.0 * y
+
+        # Set the point size
+        glPointSize(size)
+
+        # Create a foreground group with higher order value
+        foreground = pyglet.graphics.OrderedGroup(1)
+
+        # Add the point to the batch
+        point = self.batch.add(1, GL_POINTS, foreground if self.points_in_foreground else None,
+                               ('v3f/stream', [scaled_x, scaled_y, 0.0]),
+                               ('c3B/stream', color))
+
+        return point
+
     def update_obs(self, obs):
         """
         Updates the renderer with the latest observation from the gym environment, including the agent poses, and the information text.
@@ -306,10 +356,15 @@ class EnvRenderer(pyglet.window.Window):
             None
         """
 
+        # to draw a point, use the following line. This call changes also all the other points' sizes already present in the batch
+        # point = self.draw_point(1.0, 2.0, size=10.0)
+
         self.ego_idx = obs['ego_idx']
         poses_x = obs['poses_x']
         poses_y = obs['poses_y']
         poses_theta = obs['poses_theta']
+
+        background = pyglet.graphics.OrderedGroup(0)
 
         num_agents = len(poses_x)
         if self.poses is None:
@@ -318,12 +373,14 @@ class EnvRenderer(pyglet.window.Window):
                 if i == self.ego_idx:
                     vertices_np = get_vertices(np.array([0., 0., 0.]), CAR_LENGTH, CAR_WIDTH)
                     vertices = list(vertices_np.flatten())
-                    car = self.batch.add(4, GL_QUADS, None, ('v2f', vertices), ('c3B', [172, 97, 185, 172, 97, 185, 172, 97, 185, 172, 97, 185]))
+                    car = self.batch.add(4, GL_QUADS, background if self.points_in_foreground else None,
+                                         ('v2f', vertices), ('c3B', [172, 97, 185, 172, 97, 185, 172, 97, 185, 172, 97, 185]))
                     self.cars.append(car)
                 else:
                     vertices_np = get_vertices(np.array([0., 0., 0.]), CAR_LENGTH, CAR_WIDTH)
                     vertices = list(vertices_np.flatten())
-                    car = self.batch.add(4, GL_QUADS, None, ('v2f', vertices), ('c3B', [99, 52, 94, 99, 52, 94, 99, 52, 94, 99, 52, 94]))
+                    car = self.batch.add(4, GL_QUADS, background if self.points_in_foreground else None,
+                                         ('v2f', vertices), ('c3B', [99, 52, 94, 99, 52, 94, 99, 52, 94, 99, 52, 94]))
                     self.cars.append(car)
 
         poses = np.stack((poses_x, poses_y, poses_theta)).T
@@ -333,4 +390,5 @@ class EnvRenderer(pyglet.window.Window):
             self.cars[j].vertices = vertices
         self.poses = poses
 
-        self.score_label.text = 'Lap Time: {laptime:.2f}, Ego Lap Count: {count:.0f}'.format(laptime=obs['lap_times'][0], count=obs['lap_counts'][obs['ego_idx']])
+        self.score_label.text = 'Lap Time: {laptime:.2f}, Ego Lap Count: {count:.0f}'.format(
+            laptime=obs['lap_times'][obs['ego_idx']], count=obs['lap_counts'][obs['ego_idx']])

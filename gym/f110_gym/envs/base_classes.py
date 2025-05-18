@@ -31,7 +31,7 @@ from enum import Enum
 import warnings
 
 import numpy as np
-from numba import njit
+# from numba import njit
 
 from f110_gym.envs.dynamic_models import vehicle_dynamics_st, pid
 from f110_gym.envs.laser_models import ScanSimulator2D, check_ttc_jit, ray_cast
@@ -90,7 +90,10 @@ class RaceCar(object):
         self.fov = fov
         self.integrator = integrator
         if self.integrator is Integrator.RK4:
-            warnings.warn(f"Chosen integrator is RK4. This is different from previous versions of the gym.")
+            print(f"Chosen integrator is RK4.")
+        else:
+            print(f"Chosen integrator is Euler.")
+            warnings.warn("Euler integration is not as accurate as RK4, consider using RK4 for better accuracy.")
 
         # state is [x, y, steer_angle, vel, yaw_angle, yaw_rate, slip_angle]
         self.state = np.zeros((7, ))
@@ -240,9 +243,12 @@ class RaceCar(object):
         
         in_collision = check_ttc_jit(current_scan, self.state[3], self.scan_angles, self.cosines, self.side_distances, self.ttc_thresh)
 
+        # state is [x, y, steer_angle, vel, yaw_angle, yaw_rate, slip_angle]
+
         # if in collision stop vehicle
         if in_collision:
-            self.state[3:] = 0.
+            self.state[3] = 0.
+            self.state[5:] = 0.
             self.accel = 0.0
             self.steer_angle_vel = 0.0
 
@@ -266,18 +272,17 @@ class RaceCar(object):
         # state is [x, y, steer_angle, vel, yaw_angle, yaw_rate, slip_angle]
 
         # steering delay
-        steer = 0.
-        if self.steer_buffer.shape[0] < self.steer_buffer_size:
-            steer = 0.
-            self.steer_buffer = np.append(raw_steer, self.steer_buffer)
-        else:
-            steer = self.steer_buffer[-1]
-            self.steer_buffer = self.steer_buffer[:-1]
-            self.steer_buffer = np.append(raw_steer, self.steer_buffer)
-
+        # steer = 0.
+        # if self.steer_buffer.shape[0] < self.steer_buffer_size:
+        #     steer = 0.
+        #     self.steer_buffer = np.append(raw_steer, self.steer_buffer)
+        # else:
+        #     steer = self.steer_buffer[-1]
+        #     self.steer_buffer = self.steer_buffer[:-1]
+        #     self.steer_buffer = np.append(raw_steer, self.steer_buffer)
 
         # steering angle velocity input to steering velocity acceleration input
-        accl, sv = pid(vel, steer, self.state[3], self.state[2], self.params['sv_max'], self.params['a_max'], self.params['v_max'], self.params['v_min'])
+        accl, sv = pid(vel, raw_steer, self.state[3], self.state[2], self.params['sv_max'], self.params['a_max'], self.params['v_max'], self.params['v_min'])
         
         if self.integrator is Integrator.RK4:
             # RK4 integration

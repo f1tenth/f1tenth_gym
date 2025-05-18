@@ -1,46 +1,28 @@
-# MIT License
+# TODO: - check all todos
+#       - convert env to `gymnasium`
+#         - test reset method
+#       - add raceline to the env and draw it on the renderer (test pp on it)
+#         - improve reward considering distance to the raceline
 
-# Copyright (c) 2020 Joseph Auckley, Matthew O'Kelly, Aman Sinha, Hongrui Zheng
-
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-
-# The above copyright notice and this permission notice shall be included in all
-# copies or substantial portions of the Software.
-
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-# SOFTWARE.
-
-'''
-Author: Hongrui Zheng
-'''
 
 # gym imports
-import gym
-from gym import error, spaces, utils
-from gym.utils import seeding
+import gymnasium as gym
 
 # base classes
 from f110_gym.envs.base_classes import Simulator, Integrator
+from f110_gym.envs.raceline import Raceline
+from f110_gym import ThrottledPrinter
 
 # others
 import numpy as np
 import os
 import time
+import yaml
+from PIL import Image
 
 # gl
 import pyglet
 pyglet.options['debug_gl'] = False
-from pyglet import gl
 
 # constants
 
@@ -90,14 +72,19 @@ class F110Env(gym.Env):
 
             ego_idx (int, default=0): ego's index in list of agents
     """
-    metadata = {'render.modes': ['human', 'human_fast']}
+    metadata = {'render_modes': ['human', 'human_fast'], 'render_fps': 300}
 
     # rendering
     renderer = None
     current_obs = None
     render_callbacks = []
 
-    def __init__(self, **kwargs):        
+    def __init__(self, **kwargs):
+        self.throttled_printer = ThrottledPrinter(min_interval=0.5)
+
+        self.render_mode = kwargs['render_mode']
+        print('Render mode:', self.render_mode)
+
         # kwargs extraction
         try:
             self.seed = kwargs['seed']
@@ -105,33 +92,65 @@ class F110Env(gym.Env):
             self.seed = 12345
         try:
             self.map_name = kwargs['map']
-            # different default maps
-            if self.map_name == 'berlin':
-                self.map_path = os.path.dirname(os.path.abspath(__file__)) + '/maps/berlin.yaml'
-            elif self.map_name == 'skirk':
-                self.map_path = os.path.dirname(os.path.abspath(__file__)) + '/maps/skirk.yaml'
-            elif self.map_name == 'levine':
-                self.map_path = os.path.dirname(os.path.abspath(__file__)) + '/maps/levine.yaml'
-            else:
-                self.map_path = self.map_name + '.yaml'
+            self.map_path = self.map_name + '.yaml'
         except:
-            self.map_path = os.path.dirname(os.path.abspath(__file__)) + '/maps/vegas.yaml'
+            raise ValueError('Map name not provided. Please provide a map name.')
 
         try:
             self.map_ext = kwargs['map_ext']
         except:
             self.map_ext = '.png'
 
+        if not os.path.exists(self.map_name + '.yaml') or not os.path.exists(self.map_name + self.map_ext):
+            raise FileNotFoundError(f"Map file {self.map_name + '.yaml'} or image file {self.map_name + self.map_ext} "
+                                    f"not found.")
+        with open(self.map_name + '.yaml', 'r') as file:
+            try:
+                map_yaml = yaml.safe_load(file)
+                self.resolution = map_yaml['resolution']
+                self.origin_x = map_yaml['origin'][0]
+                self.origin_y = map_yaml['origin'][1]
+            except yaml.YAMLError as exc:
+                print(exc)
+                raise ValueError(f"Error loading map file {self.map_name + '.yaml'}")
+
+        self.map_img = np.array(Image.open(self.map_name + self.map_ext).transpose(Image.FLIP_TOP_BOTTOM))
+        # grayscale -> binary
+        self.map_img[self.map_img <= 128.] = 0.
+        self.map_img[self.map_img > 128.] = 255.
+
+        try:
+            self.raceline_path = kwargs['raceline_path']
+        except:
+            raise ValueError("Raceline path not provided. Please provide a raceline path.")
+
         try:
             self.params = kwargs['params']
         except:
-            self.params = {'mu': 1.0489, 'C_Sf': 4.718, 'C_Sr': 5.4562, 'lf': 0.15875, 'lr': 0.17145, 'h': 0.074, 'm': 3.74, 'I': 0.04712, 's_min': -0.4189, 's_max': 0.4189, 'sv_min': -3.2, 'sv_max': 3.2, 'v_switch': 7.319, 'a_max': 9.51, 'v_min':-5.0, 'v_max': 20.0, 'width': 0.31, 'length': 0.58}
+            self.params = {'mu': 1.0489,
+                           'C_Sf': 4.718,
+                           'C_Sr': 5.4562,
+                           'lf': 0.15875,
+                           'lr': 0.17145,
+                           'h': 0.074,
+                           'm': 3.74,
+                           'I': 0.04712,
+                           's_min': -0.46,
+                           's_max': 0.46,
+                           'sv_min': -3.2,
+                           'sv_max': 3.2,
+                           'v_switch': 7.319,
+                           'a_max': 9.51,
+                           'v_min':-5.0,
+                           'v_max': 20.0,
+                           'width': 0.31,
+                           'length': 0.58}
 
         # simulation parameters
         try:
             self.num_agents = kwargs['num_agents']
         except:
-            self.num_agents = 2
+            self.num_agents = 1
 
         try:
             self.timestep = kwargs['timestep']
@@ -139,10 +158,10 @@ class F110Env(gym.Env):
             self.timestep = 0.01
 
         # default ego index
-        try:
-            self.ego_idx = kwargs['ego_idx']
-        except:
-            self.ego_idx = 0
+        # try:
+        #     self.ego_idx = kwargs['ego_idx']
+        # except:
+        self.ego_idx = 0
 
         # default integrator
         try:
@@ -150,92 +169,155 @@ class F110Env(gym.Env):
         except:
             self.integrator = Integrator.RK4
 
-        # radius to consider done
-        self.start_thresh = 0.5  # 10cm
+        try:
+            self.points_in_foreground = kwargs['points_in_foreground']
+        except:
+            self.points_in_foreground = False
 
-        # env states
+        # state is [x, y, steer_angle, vel, yaw_angle, yaw_rate, slip_angle]
+        # Create a single row vector for one agent
+        single_agent_low = np.array(
+            [-np.inf, -np.inf, self.params['s_min'], self.params['v_min'], 0.0, self.params['sv_min'], -np.inf], dtype=np.float32)
+        single_agent_high = np.array(
+            [+np.inf, +np.inf, self.params['s_max'], self.params['v_max'], 2 * np.pi, self.params['sv_max'], +np.inf], dtype=np.float32)
+
+        # Duplicate for all agents to match the shape (num_agents, 7)
+        obs_low = np.tile(single_agent_low, (self.num_agents, 1))
+        obs_high = np.tile(single_agent_high, (self.num_agents, 1))
+
+        # Now create the observation space with the proper dimensions
+        self.observation_space = gym.spaces.Box(
+            low=obs_low,
+            high=obs_high,
+            shape=(self.num_agents, 7),
+            dtype=np.float32
+        )
+
+        single_agent_low = np.array([-np.inf, self.params['s_min']], dtype=np.float32)
+        single_agent_high = np.array([+np.inf, self.params['s_max']], dtype=np.float32)
+
+        action_low = np.tile(single_agent_low, (self.num_agents, 1))
+        action_high = np.tile(single_agent_high, (self.num_agents, 1))
+
+        self.action_space = gym.spaces.Box(
+            low=action_low,
+            high=action_high,
+            shape=(self.num_agents, 2),
+            dtype=np.float32
+        )
+
         self.poses_x = []
         self.poses_y = []
         self.poses_theta = []
         self.collisions = np.zeros((self.num_agents, ))
-        # TODO: collision_idx not used yet
-        # self.collision_idx = -1 * np.ones((self.num_agents, ))
-
-        # loop completion
-        self.near_start = True
-        self.num_toggles = 0
+        self.off_track = np.zeros((self.num_agents, ))
 
         # race info
         self.lap_times = np.zeros((self.num_agents, ))
         self.lap_counts = np.zeros((self.num_agents, ))
-        self.current_time = 0.0
-
-        # finish line info
-        self.num_toggles = 0
-        self.near_start = True
-        self.near_starts = np.array([True]*self.num_agents)
-        self.toggle_list = np.zeros((self.num_agents,))
-        self.start_xs = np.zeros((self.num_agents, ))
-        self.start_ys = np.zeros((self.num_agents, ))
-        self.start_thetas = np.zeros((self.num_agents, ))
-        self.start_rot = np.eye(2)
 
         # initiate stuff
         self.sim = Simulator(self.params, self.num_agents, self.seed, time_step=self.timestep, integrator=self.integrator)
         self.sim.set_map(self.map_path, self.map_ext)
 
+        self.raceline = Raceline(self.raceline_path)
+        self.previous_s = None
+        self.ego_lap_count = 0
+
         # stateful observations for rendering
         self.render_obs = None
 
-    def __del__(self):
+    def _get_obs(self):
+        """
+        Get the current observation of the environment
+
+        Args:
+            None
+
+        Returns:
+            obs (np.ndarray): current observation of the environment
+        """
+        obs = np.zeros((self.num_agents, 7), dtype=np.float32)
+        for i in range(self.num_agents):
+            obs[i, :] = self.sim.agents[i].state
+
+        return obs
+
+    def _get_info(self):
+        """
+        Get the current information of the environment
+
+        Args:
+            None
+
+        Returns:
+            info (dict): current information of the environment
+        """
+        info = {
+            'collisions': self.collisions
+        }
+        return info
+
+    def close(self):
         """
         Finalizer, does cleanup
         """
         pass
 
-    def _check_done(self):
+    def is_inside_track(self, x, y):
+        """
+        Checks if a given (x, y) coordinate is inside the track (free space).
+
+        Args:
+            x (float): x-coordinate in world space
+            y (float): y-coordinate in world space
+
+        Returns:
+            bool: True if the point is inside the track (free space), False otherwise
+        """
+        # Convert to pixel coordinates
+        x_pixel = int((x - self.origin_x) / self.resolution)
+        y_pixel = int((y - self.origin_y) / self.resolution)
+
+        # Check if the pixel is within the bounds of the map image
+        if 0 <= x_pixel < self.map_img.shape[1] and 0 <= y_pixel < self.map_img.shape[0]:
+            return self.map_img[y_pixel, x_pixel] != 0
+        else:
+            return False
+
+    def _check_done(self, s):
         """
         Check if the current rollout is done
         
         Args:
-            None
-
-        Returns:
-            done (bool): whether the rollout is done
-            toggle_list (list[int]): each agent's toggle list for crossing the finish zone
+            obs (np.array): observation of the current step
         """
 
-        # this is assuming 2 agents
-        # TODO: switch to maybe s-based
-        left_t = 2
-        right_t = 2
-        
-        poses_x = np.array(self.poses_x)-self.start_xs
-        poses_y = np.array(self.poses_y)-self.start_ys
-        delta_pt = np.dot(self.start_rot, np.stack((poses_x, poses_y), axis=0))
-        temp_y = delta_pt[1,:]
-        idx1 = temp_y > left_t
-        idx2 = temp_y < -right_t
-        temp_y[idx1] -= left_t
-        temp_y[idx2] = -right_t - temp_y[idx2]
-        temp_y[np.invert(np.logical_or(idx1, idx2))] = 0
+        # This check is being done only for ego
+        lap_info = self.raceline.is_lap_completed(s)
+        lap_completed = lap_info['lap_completed']
+        lap_time = lap_info['lap_time']
+        lap_orientation = lap_info['lap_orientation']
 
-        dist2 = delta_pt[0, :]**2 + temp_y**2
-        closes = dist2 <= 0.1
+        if lap_completed and lap_orientation == 'forward':
+            self.ego_lap_count += 1
+
         for i in range(self.num_agents):
-            if closes[i] and not self.near_starts[i]:
-                self.near_starts[i] = True
-                self.toggle_list[i] += 1
-            elif not closes[i] and self.near_starts[i]:
-                self.near_starts[i] = False
-                self.toggle_list[i] += 1
-            self.lap_counts[i] = self.toggle_list[i] // 2
-            if self.toggle_list[i] < 4:
-                self.lap_times[i] = self.current_time
+            self.off_track[i] = 0.
+            if not self.is_inside_track(self.poses_x[i], self.poses_y[i]):
+                self.off_track[i] = 1.
+                self.throttled_printer.print(f"Agent {i} is off track: ({self.poses_x[i]}, {self.poses_y[i]})", 'yellow')
+
+            if F110Env.renderer is not None:
+                F110Env.renderer.draw_point(self.poses_x[i], self.poses_y[i], size=10)
+
+        done_collisions = bool(self.collisions[self.ego_idx])
+        done_laps_ego = bool(self.ego_lap_count >= 2)
+        done_off_track_ego = bool(self.off_track[self.ego_idx])
+
+        done = (self.collisions[self.ego_idx]) or self.ego_lap_count >= 2 or self.off_track[self.ego_idx] == 1.
         
-        done = (self.collisions[self.ego_idx]) or np.all(self.toggle_list >= 4)
-        
-        return bool(done), self.toggle_list >= 4
+        return bool(done), done_collisions, done_laps_ego, done_off_track_ego, lap_info
 
     def _update_state(self, obs_dict):
         """
@@ -260,18 +342,51 @@ class F110Env(gym.Env):
             action (np.ndarray(num_agents, 2))
 
         Returns:
-            obs (dict): observation of the current step
+            obs (np.array): observation of the current step
             reward (float, default=self.timestep): step reward, currently is physics timestep
             done (bool): if the simulation is done
-            info (dict): auxillary information dictionary
+            info (dict): auxiliary information dictionary
         """
         
         # call simulation step
         obs = self.sim.step(action)
+
+        # reward = self.timestep
+        reward = -1
+        
+        # update data member
+        self._update_state(obs)
+
+        observation = self._get_obs()
+        # state is [x, y, steer_angle, vel, yaw_angle, yaw_rate, slip_angle]
+        x, y = observation[self.ego_idx, 0], observation[self.ego_idx, 1]
+
+        s, d, status = self.raceline.get_nearest_index(x, y, self.previous_s)
+
+        # check done
+        done, done_collisions, done_laps_ego, done_off_track_ego, lap_info = self._check_done(s)
+
+        # reward = ... # TODO: based on raceline `s` and `d`
+        terminated = done # if not recoverable off track or laps completed
+        truncated = False  # if time limit is reached
+
+        # temporary reward system
+        if terminated:
+            if done_collisions or done_off_track_ego:
+                reward -= 100
+            if done_laps_ego:
+                reward += 100
+
+        info = self._get_info()
+        info.update({'legacy_obs': obs})
+        info.update(lap_info)
+
+        self.previous_s = s
+
+        self.lap_times[self.ego_idx] = lap_info['lap_time'] if lap_info['lap_completed'] else 0
+        self.lap_counts[self.ego_idx] = self.ego_lap_count
         obs['lap_times'] = self.lap_times
         obs['lap_counts'] = self.lap_counts
-
-        F110Env.current_obs = obs
 
         self.render_obs = {
             'ego_idx': obs['ego_idx'],
@@ -280,22 +395,13 @@ class F110Env(gym.Env):
             'poses_theta': obs['poses_theta'],
             'lap_times': obs['lap_times'],
             'lap_counts': obs['lap_counts']
-            }
+        }
 
-        # times
-        reward = self.timestep
-        self.current_time = self.current_time + self.timestep
-        
-        # update data member
-        self._update_state(obs)
+        F110Env.current_obs = obs
 
-        # check done
-        done, toggle_list = self._check_done()
-        info = {'checkpoint_done': toggle_list}
+        return observation, reward, terminated, truncated, info
 
-        return obs, reward, done, info
-
-    def reset(self, poses):
+    def reset(self, seed=None, options=None):
         """
         Reset the gym environment by given poses
 
@@ -308,37 +414,55 @@ class F110Env(gym.Env):
             done (bool): if the simulation is done
             info (dict): auxillary information dictionary
         """
-        # reset counters and data members
-        self.current_time = 0.0
-        self.collisions = np.zeros((self.num_agents, ))
-        self.num_toggles = 0
-        self.near_start = True
-        self.near_starts = np.array([True]*self.num_agents)
-        self.toggle_list = np.zeros((self.num_agents,))
 
-        # states after reset
-        self.start_xs = poses[:, 0]
-        self.start_ys = poses[:, 1]
-        self.start_thetas = poses[:, 2]
-        self.start_rot = np.array([[np.cos(-self.start_thetas[self.ego_idx]), -np.sin(-self.start_thetas[self.ego_idx])], [np.sin(-self.start_thetas[self.ego_idx]), np.cos(-self.start_thetas[self.ego_idx])]])
+        super().reset(seed=seed)
+
+        poses = np.zeros((self.num_agents, 3))
+        if options is not None:
+            if 'pose' in options:
+                poses = options['pose']
+            elif 'poses' in options:
+                poses = options['poses']
+
+        # check that poses are valid and not off track
+        for i in range(self.num_agents):
+            if not self.is_inside_track(float(poses[i, 0]), float(poses[i, 1])):
+                raise gym.error.Error(f"Agent {i} pose is off track: ({poses[i, 0]}, {poses[i, 1]})")
+
+        # reset counters and data members
+        self.poses_x = []
+        self.poses_y = []
+        self.poses_theta = []
+        self.collisions = np.zeros((self.num_agents,))
+        self.off_track = np.zeros((self.num_agents,))
+
+        self.lap_times = np.zeros((self.num_agents,))
+        self.lap_counts = np.zeros((self.num_agents,))
+
+        self.render_obs = None
 
         # call reset to simulator
         self.sim.reset(poses)
 
         # get no input observations
         action = np.zeros((self.num_agents, 2))
-        obs, reward, done, info = self.step(action)
+        obs, _, _, _, info = self.step(action)
 
         self.render_obs = {
-            'ego_idx': obs['ego_idx'],
-            'poses_x': obs['poses_x'],
-            'poses_y': obs['poses_y'],
-            'poses_theta': obs['poses_theta'],
-            'lap_times': obs['lap_times'],
-            'lap_counts': obs['lap_counts']
+            'ego_idx': info['legacy_obs']['ego_idx'],
+            'poses_x': info['legacy_obs']['poses_x'],
+            'poses_y': info['legacy_obs']['poses_y'],
+            'poses_theta': info['legacy_obs']['poses_theta'],
+            'lap_times': info['legacy_obs']['lap_times'],
+            'lap_counts': info['legacy_obs']['lap_counts']
             }
+
+        s, _, _ = self.raceline.get_nearest_index(obs[self.ego_idx, 0], obs[self.ego_idx, 1], previous_s=None)
+        self.raceline.reset(s)
+        self.previous_s = None
+        self.ego_lap_count = 0
         
-        return obs, reward, done, info
+        return obs, info
 
     def update_map(self, map_path, map_ext):
         """
@@ -376,7 +500,7 @@ class F110Env(gym.Env):
 
         F110Env.render_callbacks.append(callback_func)
 
-    def render(self, mode='human'):
+    def render(self):
         """
         Renders the environment with pyglet. Use mouse scroll in the window to zoom in/out, use mouse click drag to pan. Shows the agents, the map, current fps (bottom left corner), and the race information near as text.
 
@@ -388,13 +512,16 @@ class F110Env(gym.Env):
         Returns:
             None
         """
-        assert mode in ['human', 'human_fast']
+
+        if self.render_mode is None:
+            return
         
         if F110Env.renderer is None:
             # first call, initialize everything
             from f110_gym.envs.rendering import EnvRenderer
-            F110Env.renderer = EnvRenderer(WINDOW_W, WINDOW_H)
+            F110Env.renderer = EnvRenderer(WINDOW_W, WINDOW_H, self.points_in_foreground)
             F110Env.renderer.update_map(self.map_name, self.map_ext)
+            F110Env.renderer.update_raceline(self.raceline)
             
         F110Env.renderer.update_obs(self.render_obs)
 
@@ -404,7 +531,7 @@ class F110Env(gym.Env):
         F110Env.renderer.dispatch_events()
         F110Env.renderer.on_draw()
         F110Env.renderer.flip()
-        if mode == 'human':
-            time.sleep(0.005)
-        elif mode == 'human_fast':
+        if self.render_mode == 'human':
+            time.sleep(1.0 / self.metadata['render_fps'])
+        elif self.render_mode == 'human_fast':
             pass
