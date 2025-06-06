@@ -392,6 +392,7 @@ class F110Env(gym.Env):
             "params": cls.f1tenth_vehicle_params(),
             "num_agents": 2,
             "timestep": 0.01,
+            "integrator_timestep": 0.01,
             "ego_idx": 0,
             "integrator": "rk4",
             "model": "st",

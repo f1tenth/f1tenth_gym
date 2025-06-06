@@ -3,11 +3,13 @@
 Zirui branch TODO list:
 - [ ] verify collision
 - [ ] scan toggle
+- [ ] scan plot
 - [ ] separate time step and integrater time step
 - [ ] add frenet
 - [ ] use correct loop count
 - [ ] simplify observation
 - [ ] simplify reset
+- [ ] control_buffer_size
 
 ## Quickstart
 We recommend installing the simulation inside a virtualenv. You can install the environment by running:
