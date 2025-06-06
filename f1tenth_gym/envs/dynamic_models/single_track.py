@@ -16,7 +16,7 @@ def vehicle_dynamics_st(x: np.ndarray, u_init: np.ndarray, params: dict):
                 x1: y position in global coordinates
                 x2: steering angle of front wheels
                 x3: velocity in x direction
-                x4:yaw angle
+                x4: yaw angle
                 x5: yaw rate
                 x6: slip angle at vehicle center
             u (numpy.ndarray (2, )): control input vector (u1, u2)
