@@ -9,9 +9,11 @@ Zirui branch TODO list:
 - [ ] separate time step and integrater time step
 - [ ] add frenet
 - [ ] use correct loop count
-- [x] simplify std_state observation
+- [x] simplify std_state and observation
 - [ ] simplify reset
-- [ ] control_buffer_size
+- [ ] control_buffer_size in config
+- [ ] use class attribute for config, not dict
+- [ ] save dynamic param and default gym config in separate yaml file
 
 ## Quickstart
 We recommend installing the simulation inside a virtualenv. You can install the environment by running:

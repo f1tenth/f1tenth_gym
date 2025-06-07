@@ -314,10 +314,10 @@ def main():
             "timestep": 0.01,
             "integrator": "rk4",
             "control_input": ["speed", "steering_angle"],
-            "model": "mb", # "ks", "st", "mb"
-            "observation_config": {"type": "dynamic_state"},
-            # "params": F110Env.f1tenth_vehicle_params(),
-            "params": F110Env.fullscale_vehicle_params(),
+            "model": "st", # "ks", "st", "mb"
+            "observation_config": {"type": "direct"},
+            "params": F110Env.f1tenth_vehicle_params(),
+            # "params": F110Env.fullscale_vehicle_params(),
             "reset_config": {"type": "rl_random_static"},
             "scale": 10.0,
             "enable_rendering": 0,
@@ -329,10 +329,10 @@ def main():
     planner = PurePursuitPlanner(
         track=track,
         wb=(
-            # F110Env.f1tenth_vehicle_params()["lf"]
-            # + F110Env.f1tenth_vehicle_params()["lr"]
-            F110Env.fullscale_vehicle_params()["lf"]
-            + F110Env.fullscale_vehicle_params()["lr"]
+            F110Env.f1tenth_vehicle_params()["lf"]
+            + F110Env.f1tenth_vehicle_params()["lr"]
+            # F110Env.fullscale_vehicle_params()["lf"]
+            # + F110Env.fullscale_vehicle_params()["lr"]
         ),
     )
 
