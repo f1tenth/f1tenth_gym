@@ -1,7 +1,6 @@
 from abc import abstractmethod
 from enum import Enum
 
-
 class IntegratorType(Enum):
     RK4 = 1
     Euler = 2
@@ -21,7 +20,7 @@ class Integrator:
         self._integrator_type = None
 
     @abstractmethod
-    def integrate(self, f, x, u, dt, params):
+    def integrate(self, f, x, u, dt, *args):
         raise NotImplementedError("integrate method not implemented")
 
     @property
@@ -34,17 +33,17 @@ class RK4Integrator(Integrator):
         super().__init__()
         self._integrator_type = "rk4"
 
-    def integrate(self, f, x, u, dt, params):
-        k1 = f(x, u, params)
+    def integrate(self, f, x, u, dt, *args):
+        k1 = f(x, u, *args)
 
         k2_state = x + dt * (k1 / 2)
-        k2 = f(k2_state, u, params)
+        k2 = f(k2_state, u, *args)
 
         k3_state = x + dt * (k2 / 2)
-        k3 = f(k3_state, u, params)
+        k3 = f(k3_state, u, *args)
 
         k4_state = x + dt * k3
-        k4 = f(k4_state, u, params)
+        k4 = f(k4_state, u, *args)
 
         # dynamics integration
         x = x + dt * (1 / 6) * (k1 + 2 * k2 + 2 * k3 + k4)
@@ -56,7 +55,6 @@ class EulerIntegrator(Integrator):
         super().__init__()
         self._integrator_type = "euler"
 
-    def integrate(self, f, x, u, dt, params):
-        dstate = f(x, u, params)
-        x = x + dt * dstate
+    def integrate(self, f, x, u, dt, *args):
+        x = x + dt * f(x, u, *args)
         return x

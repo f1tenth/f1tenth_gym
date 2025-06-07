@@ -314,11 +314,13 @@ def main():
             "timestep": 0.01,
             "integrator": "rk4",
             "control_input": ["speed", "steering_angle"],
-            "model": "mb",
-            "observation_config": {"type": "kinematic_state"},
+            "model": "mb", # "ks", "st", "mb"
+            "observation_config": {"type": "dynamic_state"},
+            # "params": F110Env.f1tenth_vehicle_params(),
             "params": F110Env.fullscale_vehicle_params(),
             "reset_config": {"type": "rl_random_static"},
             "scale": 10.0,
+            "enable_rendering": 0,
         },
         render_mode="human",
     )
@@ -327,6 +329,8 @@ def main():
     planner = PurePursuitPlanner(
         track=track,
         wb=(
+            # F110Env.f1tenth_vehicle_params()["lf"]
+            # + F110Env.f1tenth_vehicle_params()["lr"]
             F110Env.fullscale_vehicle_params()["lf"]
             + F110Env.fullscale_vehicle_params()["lr"]
         ),
@@ -342,19 +346,25 @@ def main():
 
     laptime = 0.0
     start = time.time()
+    times = []
 
     while not done:
         action = env.action_space.sample()
         for i, agent_id in enumerate(obs.keys()):
             speed, steer = planner.plan(
-                obs[agent_id]["pose_x"],
-                obs[agent_id]["pose_y"],
-                obs[agent_id]["pose_theta"],
+                obs[agent_id]["std_state"][0],
+                obs[agent_id]["std_state"][1],
+                obs[agent_id]["std_state"][4],
                 work["tlad"],
                 work["vgain"],
             )
             action[i] = np.array([steer, speed])
+        t1 = time.time()
         obs, step_reward, done, truncated, info = env.step(action)
+        times.append(1/(time.time() - t1))
+        if len(times) > 10000:
+            print("FPS:", np.mean(times))
+            times = []
         laptime += step_reward
         frame = env.render()
 

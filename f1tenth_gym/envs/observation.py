@@ -125,12 +125,10 @@ class OriginalObservation(Observation):
             collision = self.env.unwrapped.sim.collisions[i]
 
             std_state = agent.standard_state
-
-            x, y, theta = std_state["x"], std_state["y"], std_state["yaw"]
-
-            vx = std_state["v_x"]
-            vy = std_state["v_y"]
-            angvel = std_state["yaw_rate"]
+            x, y, theta = std_state[0], std_state[1], std_state[4]
+            vx = std_state[3] * np.cos(std_state[6])
+            vy = std_state[3] * np.sin(std_state[6])
+            angvel = std_state[5]
 
             observations["scans"].append(agent_scan)
             observations["poses_x"].append(x)
@@ -162,36 +160,15 @@ class FeaturesObservation(Observation):
         scan_size = self.env.unwrapped.sim.agents[0].scan_simulator.num_beams
         scan_range = self.env.unwrapped.sim.agents[0].scan_simulator.max_range
         large_num = 1e30  # large number to avoid unbounded obs space (ie., low=-inf or high=inf)
-
+        
         complete_space = {}
         for agent_id in self.env.unwrapped.agent_ids:
             agent_dict = {
                 "scan": gym.spaces.Box(
                     low=0.0, high=scan_range, shape=(scan_size,), dtype=np.float32
                 ),
-                "pose_x": gym.spaces.Box(
-                    low=-large_num, high=large_num, shape=(), dtype=np.float32
-                ),
-                "pose_y": gym.spaces.Box(
-                    low=-large_num, high=large_num, shape=(), dtype=np.float32
-                ),
-                "pose_theta": gym.spaces.Box(
-                    low=-large_num, high=large_num, shape=(), dtype=np.float32
-                ),
-                "linear_vel_x": gym.spaces.Box(
-                    low=-large_num, high=large_num, shape=(), dtype=np.float32
-                ),
-                "linear_vel_y": gym.spaces.Box(
-                    low=-large_num, high=large_num, shape=(), dtype=np.float32
-                ),
-                "ang_vel_z": gym.spaces.Box(
-                    low=-large_num, high=large_num, shape=(), dtype=np.float32
-                ),
-                "delta": gym.spaces.Box(
-                    low=-large_num, high=large_num, shape=(), dtype=np.float32
-                ),
-                "beta": gym.spaces.Box(
-                    low=-large_num, high=large_num, shape=(), dtype=np.float32
+                "std_state": gym.spaces.Box(
+                    low=-large_num, high=large_num, shape=(7,), dtype=np.float32
                 ),
                 "collision": gym.spaces.Box(
                     low=0.0, high=1.0, shape=(), dtype=np.float32
@@ -204,7 +181,7 @@ class FeaturesObservation(Observation):
                 ),
             }
             complete_space[agent_id] = gym.spaces.Dict(
-                {k: agent_dict[k] for k in self.features}
+                agent_dict
             )
 
         obs_space = gym.spaces.Dict(complete_space)
@@ -219,41 +196,21 @@ class FeaturesObservation(Observation):
             lap_time = self.env.unwrapped.lap_times[i]
             lap_count = self.env.unwrapped.lap_counts[i]
 
-            std_state = agent.standard_state
-
-            x, y, theta = std_state["x"], std_state["y"], std_state["yaw"]
-            delta = std_state["delta"]
-            beta = std_state["slip"]
-            vx = std_state["v_x"]
-            vy = std_state["v_y"]
-            angvel = std_state["yaw_rate"]
-
             # create agent's observation dict
             agent_obs = {
                 "scan": scan,
-                "pose_x": x,
-                "pose_y": y,
-                "pose_theta": theta,
-                "linear_vel_x": vx,
-                "linear_vel_y": vy,
-                "ang_vel_z": angvel,
-                "delta": delta,
-                "beta": beta,
-                "collision": int(agent.in_collision),
+                "std_state": agent.standard_state,
+                "collision": agent.in_collision,
                 "lap_time": lap_time,
                 "lap_count": lap_count,
             }
 
             # add agent's observation to multi-agent observation
-            obs[agent_id] = {k: agent_obs[k] for k in self.features}
+            obs[agent_id] = agent_obs
 
             # cast to match observation space
             for key in obs[agent_id].keys():
-                if isinstance(obs[agent_id][key], np.ndarray) or isinstance(
-                    obs[agent_id][key], list) or isinstance(
-                    obs[agent_id][key], float
-                ):
-                    obs[agent_id][key] = np.array(obs[agent_id][key], dtype=np.float32)
+                obs[agent_id][key] = np.array(obs[agent_id][key], dtype=np.float32)
 
         return obs
 

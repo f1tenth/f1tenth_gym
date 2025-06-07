@@ -21,7 +21,7 @@
 # SOFTWARE.
 
 """
-Author: Hongrui Zheng
+Author: Hongrui Zheng, Zirui Zang
 """
 
 # gym imports
@@ -128,7 +128,7 @@ class F110Env(gym.Env):
         self.start_ys = np.zeros((self.num_agents,))
         self.start_thetas = np.zeros((self.num_agents,))
         self.start_rot = np.eye(2)
-
+        
         # initiate stuff
         self.sim = Simulator(
             self.params,
@@ -177,13 +177,14 @@ class F110Env(gym.Env):
         self.metadata["render_fps"] = int(1.0 / self.timestep)
         if self.render_mode == "human_fast":
             self.metadata["render_fps"] *= 10  # boost fps by 10x
-        self.renderer, self.render_spec = make_renderer(
-            params=self.params,
-            track=self.track,
-            agent_ids=self.agent_ids,
-            render_mode=render_mode,
-            render_fps=self.metadata["render_fps"],
-        )
+        if self.config["enable_rendering"]:
+            self.renderer, self.render_spec = make_renderer(
+                params=self.params,
+                track=self.track,
+                agent_ids=self.agent_ids,
+                render_mode=render_mode,
+                render_fps=self.metadata["render_fps"],
+            )
 
     @classmethod
     def fullscale_vehicle_params(cls) -> dict:
@@ -206,7 +207,7 @@ class F110Env(gym.Env):
             # maximum curvature change
             "kappa_dot_max": 0.4,
             # maximum curvature rate rate
-            "kappa_dot_dot_max": 20,
+            "kappa_dot_dot_max": 20.0,
             # Longitudinal constraints
             "v_switch": 4.755,
             "a_max": 11.5,
@@ -276,21 +277,21 @@ class F110Env(gym.Env):
             "R_w": 0.344,
             # split of brake and engine torque
             "T_sb": 0.76,
-            "T_se": 1,
+            "T_se": 1.0,
             # suspension parameters
             # [rad/m]  DF
             "D_f": -0.6233595800524934,
             # [rad/m]  DR
             "D_r": -0.20997375328083986,
             # [needs conversion if nonzero]  EF
-            "E_f": 0,
+            "E_f": 0.0,
             # [needs conversion if nonzero]  ER
-            "E_r": 0,
+            "E_r": 0.0,
             # tire parameters from ADAMS handbook
             # longitudinal coefficients
             "tire_p_cx1": 1.6411,  # Shape factor Cfx for longitudinal force
             "tire_p_dx1": 1.1739,  # Longitudinal friction Mux at Fznom
-            "tire_p_dx3": 0,  # Variation of friction Mux with camber
+            "tire_p_dx3": 0.0,  # Variation of friction Mux with camber
             "tire_p_ex1": 0.46403,  # Longitudinal curvature Efx at Fznom
             "tire_p_kx1": 22.303,  # Longitudinal slip stiffness Kfx/Fz at Fznom
             "tire_p_hx1": 0.0012297,  # Horizontal shift Shx at Fznom
@@ -399,7 +400,9 @@ class F110Env(gym.Env):
             "control_input": ["speed", "steering_angle"],
             "observation_config": {"type": None},
             "reset_config": {"type": None},
-            "scale": 1.0,
+            "enable_rendering": True,
+            "enable_scan": True,
+            "control_delay_buffer_size": 0,
         }
 
     def configure(self, config: dict) -> None:
@@ -500,17 +503,18 @@ class F110Env(gym.Env):
         self._update_state()
 
         # rendering observation
-        self.render_obs = {
-            "ego_idx": self.sim.ego_idx,
-            "poses_x": self.sim.agent_poses[:, 0],
-            "poses_y": self.sim.agent_poses[:, 1],
-            "poses_theta": self.sim.agent_poses[:, 2],
-            "steering_angles": self.sim.agent_steerings,
-            "lap_times": self.lap_times,
-            "lap_counts": self.lap_counts,
-            "collisions": self.sim.collisions,
-            "sim_time": self.current_time,
-        }
+        if self.config["enable_rendering"]:
+            self.render_obs = {
+                "ego_idx": self.sim.ego_idx,
+                "poses_x": self.sim.agent_poses[:, 0],
+                "poses_y": self.sim.agent_poses[:, 1],
+                "poses_theta": self.sim.agent_poses[:, 2],
+                "steering_angles": self.sim.agent_steerings,
+                "lap_times": self.lap_times,
+                "lap_counts": self.lap_counts,
+                "collisions": self.sim.collisions,
+                "sim_time": self.current_time,
+            }
 
         # check done
         done, toggle_list = self._check_done()
@@ -614,8 +618,8 @@ class F110Env(gym.Env):
         Args:
             callback_func (function (EnvRenderer) -> None): custom function to called during render()
         """
-
-        self.renderer.add_renderer_callback(callback_func)
+        if self.config["enable_rendering"]:
+            self.renderer.add_renderer_callback(callback_func)
 
     def render(self, mode="human"):
         """
@@ -631,7 +635,7 @@ class F110Env(gym.Env):
         """
         # NOTE: separate render (manage render-mode) from render_frame (actual rendering with pyglet)
 
-        if self.render_mode not in self.metadata["render_modes"]:
+        if self.render_mode not in self.metadata["render_modes"] or not self.config["enable_rendering"]:
             return
 
         self.renderer.update(state=self.render_obs)

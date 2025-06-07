@@ -102,6 +102,11 @@ class RaceCar(object):
         self.integrator = integrator
         self.action_type = action_type
         self.model = model
+        if self.model == DynamicModel.MB:
+            from .dynamic_models.multi_body.multi_body import sequential_param_keys
+            self.sequential_param_keys = sequential_param_keys
+        else:
+            self.sequential_param_keys = None
         self.standard_state_fn = self.model.get_standardized_state_fn()
 
         # state of the vehicle
@@ -308,9 +313,31 @@ class RaceCar(object):
         u_np = np.array([sv, accl])
 
         f_dynamics = self.model.f_dynamics
-        self.state = self.integrator.integrate(
-            f=f_dynamics, x=self.state, u=u_np, dt=self.time_step, params=self.params
-        )
+        if self.model == DynamicModel.MB:
+            self.state = self.integrator.integrate(
+                f_dynamics, self.state, u_np, self.time_step, [self.params[key] for key in self.sequential_param_keys]
+            )
+        else:
+            self.state = self.integrator.integrate(
+                f_dynamics, self.state, u_np, self.time_step, *[self.params['mu'],
+                                                                self.params['C_Sf'],
+                                                                self.params['C_Sr'],
+                                                                self.params['lf'],
+                                                                self.params['lr'],
+                                                                self.params['h'],
+                                                                self.params['m'],
+                                                                self.params['I'],
+                                                                self.params['s_min'],
+                                                                self.params['s_max'],
+                                                                self.params['sv_min'],
+                                                                self.params['sv_max'],
+                                                                self.params['v_switch'],
+                                                                self.params['a_max'],
+                                                                self.params['v_min'],
+                                                                self.params['v_max'],
+                                                                self.params['width'],
+                                                                self.params['length']]
+            )
 
         # bound yaw angle
         self.state[4] %= 2 * np.pi  # TODO: This is a problem waiting to happen
@@ -358,14 +385,17 @@ class RaceCar(object):
         agent_scans[agent_index] = new_scan
 
     @property
-    def standard_state(self) -> dict:
+    def standard_state(self) -> np.ndarray:
         """
         Returns the state of the vehicle as an observation
 
         Returns:
             np.ndarray (7, ): state of the vehicle
         """
-        return self.standard_state_fn(self.state)
+        # t1 = time.time()
+        standard_state = self.standard_state_fn(self.state)
+        # print(time.time() - t1)
+        return standard_state
 
 
 class Simulator(object):

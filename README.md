@@ -1,13 +1,15 @@
 # The F1TENTH Gym environment
 
 Zirui branch TODO list:
+- [x] clip lidar after adding noise, put lidar noise in config
+- [x] remove unnecessary use of dictionary. model st is 50% faster, mb is 150% faster.
+- [x] toggle renderer
 - [ ] verify collision
 - [ ] scan toggle
-- [ ] scan plot
 - [ ] separate time step and integrater time step
 - [ ] add frenet
 - [ ] use correct loop count
-- [ ] simplify observation
+- [x] simplify std_state observation
 - [ ] simplify reset
 - [ ] control_buffer_size
 

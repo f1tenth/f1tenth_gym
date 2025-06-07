@@ -244,7 +244,7 @@ def get_scan(
         # make sure it stays in the range [0, theta_dis)
         while theta_index >= theta_dis:
             theta_index -= theta_dis
-
+        
     return scan
 
 
@@ -512,6 +512,7 @@ class ScanSimulator2D(object):
         if self.map_height is None:
             raise ValueError("Map is not set for scan simulator.")
 
+            
         scan = get_scan(
             pose,
             self.theta_dis,
@@ -533,10 +534,9 @@ class ScanSimulator2D(object):
         )
 
         if rng is not None:
-            noise = rng.normal(0.0, std_dev, size=self.num_beams)
-            scan += noise
-
-        return scan
+            scan = scan + rng.normal(0.0, std_dev, size=self.num_beams)
+            
+        return np.clip(scan, 0.0, self.max_range)
 
     def get_increment(self):
         return self.angle_increment
