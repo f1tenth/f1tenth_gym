@@ -62,6 +62,7 @@ class RaceCar(object):
 
     def __init__(
         self,
+        config,
         params,
         seed,
         action_type: CarAction,
@@ -73,7 +74,6 @@ class RaceCar(object):
         fov=4.7,
     ):
         """
-        TODO rewrite it
 
         Init function
 
@@ -98,7 +98,8 @@ class RaceCar(object):
         self.is_ego = is_ego
         self.time_step = time_step
         self.num_beams = num_beams
-        self.fov = fov
+        self.config = config
+        self.fov = fov # TODO
         self.integrator = integrator
         self.action_type = action_type
         self.model = model
@@ -281,7 +282,7 @@ class RaceCar(object):
 
         return in_collision
 
-    def update_pose(self, raw_steer, vel):
+    def update_dynamic(self, raw_steer, vel):
         """
         Steps the vehicle's physical simulation
 
@@ -319,7 +320,7 @@ class RaceCar(object):
             )
         else:
             self.state = self.integrator.integrate(
-                f_dynamics, self.state, u_np, self.time_step, *[self.params['mu'],
+                f_dynamics, self.state, u_np, self.time_step, self.params['mu'],
                                                                 self.params['C_Sf'],
                                                                 self.params['C_Sr'],
                                                                 self.params['lf'],
@@ -336,16 +337,19 @@ class RaceCar(object):
                                                                 self.params['v_min'],
                                                                 self.params['v_max'],
                                                                 self.params['width'],
-                                                                self.params['length']]
+                                                                self.params['length']
             )
 
         # bound yaw angle
         self.state[4] %= 2 * np.pi  # TODO: This is a problem waiting to happen
 
-        # update scan
-        current_scan = RaceCar.scan_simulator.scan(
-            np.append(self.state[0:2], self.state[4]), self.scan_rng
-        )
+        if self.config['enable_scan']:
+            # update scan
+            current_scan = RaceCar.scan_simulator.scan(
+                np.append(self.state[0:2], self.state[4]), self.scan_rng
+            )
+        else:
+            current_scan = np.zeros((self.num_beams,))
 
         return current_scan
 
@@ -364,7 +368,7 @@ class RaceCar(object):
     def update_scan(self, agent_scans, agent_index):
         """
         Steps the vehicle's laser scan simulation
-        Separated from update_pose because needs to update scan based on NEW poses of agents in the environment
+        Separated from update_dynamic because needs to update scan based on NEW poses of agents in the environment
 
         Args:
             agent scans list (modified in-place),
@@ -418,6 +422,7 @@ class Simulator(object):
 
     def __init__(
         self,
+        config,
         params,
         num_agents,
         seed,
@@ -447,6 +452,7 @@ class Simulator(object):
         self.time_step = time_step
         self.ego_idx = ego_idx
         self.params = params
+        self.config = config
         self.agent_poses = np.empty((self.num_agents, 3))
         self.agent_steerings = np.empty((self.num_agents,))
         self.agents: list[RaceCar] = []
@@ -457,6 +463,7 @@ class Simulator(object):
         # initializing agents
         for i in range(self.num_agents):
             car = RaceCar(
+                config,
                 params,
                 self.seed,
                 is_ego=bool(i == ego_idx),
@@ -542,15 +549,16 @@ class Simulator(object):
         # looping over agents
         for i, agent in enumerate(self.agents):
             # update each agent's pose
-            current_scan = agent.update_pose(control_inputs[i, 0], control_inputs[i, 1])
+            current_scan = agent.update_dynamic(control_inputs[i, 0], control_inputs[i, 1])
             self.agent_scans[i, :] = current_scan
 
             # update sim's information of agent poses
             self.agent_poses[i, :] = np.append(agent.state[0:2], agent.state[4])
             self.agent_steerings[i] = agent.state[2]
-
-        # check collisions between all agents
-        self.check_collision()
+            
+        if self.config['enable_scan']:
+            # check collisions between all agents
+            self.check_collision()
 
         for i, agent in enumerate(self.agents):
             # update agent's information on other agents
@@ -560,11 +568,12 @@ class Simulator(object):
             agent.update_opp_poses(opp_poses)
 
             # update each agent's current scan based on other agents
-            agent.update_scan(self.agent_scans, i)
+            if self.config['enable_scan']:
+                agent.update_scan(self.agent_scans, i)
 
-            # update agent collision with environment
-            if agent.in_collision:
-                self.collisions[i] = 1.0
+                # update agent collision with environment
+                if agent.in_collision:
+                    self.collisions[i] = 1.0
 
     def reset(self, poses):
         """

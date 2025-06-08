@@ -319,8 +319,9 @@ def main():
             "params": F110Env.f1tenth_vehicle_params(),
             # "params": F110Env.fullscale_vehicle_params(),
             "reset_config": {"type": "rl_random_static"},
-            "scale": 10.0,
+            "map_scale": 10.0,
             "enable_rendering": 0,
+            "enable_scan": 0,
         },
         render_mode="human",
     )

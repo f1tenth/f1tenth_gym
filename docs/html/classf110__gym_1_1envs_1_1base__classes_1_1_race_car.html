@@ -106,7 +106,7 @@ Public Member Functions</h2></td></tr>
 <tr class="separator:a7d15e74a1b82646675d60ce02cdce6b5"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a4577a30fd8879de7df1d0ace7702f450"><td class="memItemLeft" align="right" valign="top">def&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classf110__gym_1_1envs_1_1base__classes_1_1_race_car.html#a4577a30fd8879de7df1d0ace7702f450">check_ttc</a> (self)</td></tr>
 <tr class="separator:a4577a30fd8879de7df1d0ace7702f450"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ae12c14c1353e6aab2f72036593d85518"><td class="memItemLeft" align="right" valign="top">def&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classf110__gym_1_1envs_1_1base__classes_1_1_race_car.html#ae12c14c1353e6aab2f72036593d85518">update_pose</a> (self, raw_steer, vel)</td></tr>
+<tr class="memitem:ae12c14c1353e6aab2f72036593d85518"><td class="memItemLeft" align="right" valign="top">def&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classf110__gym_1_1envs_1_1base__classes_1_1_race_car.html#ae12c14c1353e6aab2f72036593d85518">update_dynamic</a> (self, raw_steer, vel)</td></tr>
 <tr class="separator:ae12c14c1353e6aab2f72036593d85518"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a4800c5ac90ba93b79a0338e5e34ead43"><td class="memItemLeft" align="right" valign="top">def&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classf110__gym_1_1envs_1_1base__classes_1_1_race_car.html#a4800c5ac90ba93b79a0338e5e34ead43">update_opp_poses</a> (self, opp_poses)</td></tr>
 <tr class="separator:a4800c5ac90ba93b79a0338e5e34ead43"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -457,13 +457,13 @@ Returns:
 </div>
 </div>
 <a id="ae12c14c1353e6aab2f72036593d85518"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ae12c14c1353e6aab2f72036593d85518">&#9670;&nbsp;</a></span>update_pose()</h2>
+<h2 class="memtitle"><span class="permalink"><a href="#ae12c14c1353e6aab2f72036593d85518">&#9670;&nbsp;</a></span>update_dynamic()</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">def f110_gym.envs.base_classes.RaceCar.update_pose </td>
+          <td class="memname">def f110_gym.envs.base_classes.RaceCar.update_dynamic </td>
           <td>(</td>
           <td class="paramtype">&#160;</td>
           <td class="paramname"><em>self</em>, </td>
@@ -514,7 +514,7 @@ Returns:
       </table>
 </div><div class="memdoc">
 <pre class="fragment">Steps the vehicle's laser scan simulation
-Separated from update_pose because needs to update scan based on NEW poses of agents in the environment
+Separated from update_dynamic because needs to update scan based on NEW poses of agents in the environment
 
 Args:
     None

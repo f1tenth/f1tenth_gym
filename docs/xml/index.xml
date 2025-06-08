@@ -254,7 +254,7 @@
     <member refid="classf110__gym_1_1envs_1_1base__classes_1_1_race_car_1a0fa587dc3c1a12c9217f0bd093c1bc08" kind="function"><name>reset</name></member>
     <member refid="classf110__gym_1_1envs_1_1base__classes_1_1_race_car_1a7d15e74a1b82646675d60ce02cdce6b5" kind="function"><name>ray_cast_agents</name></member>
     <member refid="classf110__gym_1_1envs_1_1base__classes_1_1_race_car_1a4577a30fd8879de7df1d0ace7702f450" kind="function"><name>check_ttc</name></member>
-    <member refid="classf110__gym_1_1envs_1_1base__classes_1_1_race_car_1ae12c14c1353e6aab2f72036593d85518" kind="function"><name>update_pose</name></member>
+    <member refid="classf110__gym_1_1envs_1_1base__classes_1_1_race_car_1ae12c14c1353e6aab2f72036593d85518" kind="function"><name>update_dynamic</name></member>
     <member refid="classf110__gym_1_1envs_1_1base__classes_1_1_race_car_1a4800c5ac90ba93b79a0338e5e34ead43" kind="function"><name>update_opp_poses</name></member>
     <member refid="classf110__gym_1_1envs_1_1base__classes_1_1_race_car_1a356ec05a0a0c056f4d43f5fb0451c83d" kind="function"><name>update_scan</name></member>
   </compound>

@@ -5,7 +5,7 @@ Zirui branch TODO list:
 - [x] remove unnecessary use of dictionary. model st is 50% faster, mb is 150% faster.
 - [x] toggle renderer
 - [ ] verify collision
-- [ ] scan toggle
+- [x] scan toggle
 - [ ] separate time step and integrater time step
 - [ ] add frenet
 - [ ] use correct loop count

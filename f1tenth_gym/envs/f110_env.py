@@ -101,9 +101,6 @@ class F110Env(gym.Env):
         self.observation_config = self.config["observation_config"]
         self.action_type = CarAction(self.config["control_input"], params=self.params)
 
-        # radius to consider done
-        self.start_thresh = 0.5  # 10cm
-
         # env states
         self.poses_x = []
         self.poses_y = []
@@ -131,6 +128,7 @@ class F110Env(gym.Env):
         
         # initiate stuff
         self.sim = Simulator(
+            self.config,
             self.params,
             self.num_agents,
             self.seed,
@@ -139,14 +137,14 @@ class F110Env(gym.Env):
             model=self.model,
             action_type=self.action_type,
         )
-        self.sim.set_map(self.map, self.config["scale"])
+        self.sim.set_map(self.map, self.config["map_scale"])
 
         if isinstance(self.map, Track):
             self.track = self.map
         else:
             self.track = Track.from_track_name(
                 self.map,
-                track_scale=self.config["scale"],
+                track_scale=self.config["map_scale"],
             )  # load track in gym env for convenience
 
         # observations
@@ -389,19 +387,19 @@ class F110Env(gym.Env):
         return {
             "seed": 12345,
             "map": "Spielberg",
-            "scale": 1.0,
+            "map_scale": 1.0,
             "params": cls.f1tenth_vehicle_params(),
             "num_agents": 2,
             "timestep": 0.01,
             "integrator_timestep": 0.01,
             "ego_idx": 0,
             "integrator": "rk4",
-            "model": "st",
+            "model": "st", # "ks", "st", "mb"
             "control_input": ["speed", "steering_angle"],
             "observation_config": {"type": None},
             "reset_config": {"type": None},
             "enable_rendering": True,
-            "enable_scan": True,
+            "enable_scan": True, # no lidar scan and collision if False
             "control_delay_buffer_size": 0,
         }
 
