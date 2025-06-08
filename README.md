@@ -12,8 +12,7 @@ Zirui branch TODO list:
 - [x] simplify std_state and observation
 - [ ] simplify reset
 - [ ] control_buffer_size in config
-- [ ] use class attribute for config, not dict
-- [ ] save dynamic param and default gym config in separate yaml file
+- [ ] double check dynamics result
 
 ## Quickstart
 We recommend installing the simulation inside a virtualenv. You can install the environment by running:
