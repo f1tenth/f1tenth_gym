@@ -302,7 +302,7 @@ def main():
         "mass": 3.463388126201571,
         "lf": 0.15597534362552312,
         "tlad": 0.82461887897713965 * 10,
-        "vgain": 1.0,
+        "vgain": 0.5,
     }
 
     num_agents = 1
@@ -312,6 +312,7 @@ def main():
             "map": "Spielberg_blank",
             "num_agents": num_agents,
             "timestep": 0.01,
+            "integrator_timestep": 0.005,
             "integrator": "rk4",
             "control_input": ["speed", "steering_angle"],
             "model": "st", # "ks", "st", "mb"
@@ -319,9 +320,9 @@ def main():
             "params": F110Env.f1tenth_vehicle_params(),
             # "params": F110Env.fullscale_vehicle_params(),
             "reset_config": {"type": "rl_random_static"},
-            "map_scale": 10.0,
-            "enable_rendering": 0,
-            "enable_scan": 0,
+            "map_scale": 1.0,
+            "enable_rendering": 1,
+            "enable_scan": 1,
         },
         render_mode="human",
     )

@@ -66,12 +66,10 @@ class RaceCar(object):
         params,
         seed,
         action_type: CarAction,
-        integrator=EulerIntegrator(),
+        integrator,
         model=DynamicModel.ST,
         is_ego=False,
         time_step=0.01,
-        num_beams=1080,
-        fov=4.7,
     ):
         """
 
@@ -94,12 +92,14 @@ class RaceCar(object):
 
         # initialization
         self.params = params
+        self.config = config
         self.seed = seed
         self.is_ego = is_ego
         self.time_step = time_step
-        self.num_beams = num_beams
-        self.config = config
-        self.fov = fov # TODO
+        self.num_beams = config['lidar_num_beams']
+        self.fov = config['lidar_fov']
+        self.lidar_noise = config['lidar_noise_std']
+        self.lidar_max_range = config['lidar_range']
         self.integrator = integrator
         self.action_type = action_type
         self.model = model
@@ -122,7 +122,7 @@ class RaceCar(object):
 
         # steering delay buffer
         self.steer_buffer = np.empty((0,))
-        self.steer_buffer_size = 2
+        self.steer_buffer_size = self.config['control_delay_buffer_size']
 
         # collision identifier
         self.in_collision = False
@@ -133,20 +133,20 @@ class RaceCar(object):
         # initialize scan sim
         if RaceCar.scan_simulator is None:
             self.scan_rng = np.random.default_rng(seed=self.seed)
-            RaceCar.scan_simulator = ScanSimulator2D(num_beams, fov)
+            RaceCar.scan_simulator = ScanSimulator2D(self.num_beams, self.fov, std_dev=self.lidar_noise, max_range=self.lidar_max_range)
 
             scan_ang_incr = RaceCar.scan_simulator.get_increment()
 
             # angles of each scan beam, distance from lidar to edge of car at each beam, and precomputed cosines of each angle
-            RaceCar.cosines = np.zeros((num_beams,))
-            RaceCar.scan_angles = np.zeros((num_beams,))
-            RaceCar.side_distances = np.zeros((num_beams,))
+            RaceCar.cosines = np.zeros((self.num_beams,))
+            RaceCar.scan_angles = np.zeros((self.num_beams,))
+            RaceCar.side_distances = np.zeros((self.num_beams,))
 
             dist_sides = params["width"] / 2.0
             dist_fr = (params["lf"] + params["lr"]) / 2.0
 
-            for i in range(num_beams):
-                angle = -fov / 2.0 + i * scan_ang_incr
+            for i in range(self.num_beams):
+                angle = -self.fov / 2.0 + i * scan_ang_incr
                 RaceCar.scan_angles[i] = angle
                 RaceCar.cosines[i] = np.cos(angle)
 
@@ -316,28 +316,28 @@ class RaceCar(object):
         f_dynamics = self.model.f_dynamics
         if self.model == DynamicModel.MB:
             self.state = self.integrator.integrate(
-                f_dynamics, self.state, u_np, self.time_step, [self.params[key] for key in self.sequential_param_keys]
+                f_dynamics, self.state, u_np, [self.params[key] for key in self.sequential_param_keys]
             )
         else:
             self.state = self.integrator.integrate(
-                f_dynamics, self.state, u_np, self.time_step, self.params['mu'],
-                                                                self.params['C_Sf'],
-                                                                self.params['C_Sr'],
-                                                                self.params['lf'],
-                                                                self.params['lr'],
-                                                                self.params['h'],
-                                                                self.params['m'],
-                                                                self.params['I'],
-                                                                self.params['s_min'],
-                                                                self.params['s_max'],
-                                                                self.params['sv_min'],
-                                                                self.params['sv_max'],
-                                                                self.params['v_switch'],
-                                                                self.params['a_max'],
-                                                                self.params['v_min'],
-                                                                self.params['v_max'],
-                                                                self.params['width'],
-                                                                self.params['length']
+                f_dynamics, self.state, u_np, self.params['mu'],
+                                                self.params['C_Sf'],
+                                                self.params['C_Sr'],
+                                                self.params['lf'],
+                                                self.params['lr'],
+                                                self.params['h'],
+                                                self.params['m'],
+                                                self.params['I'],
+                                                self.params['s_min'],
+                                                self.params['s_max'],
+                                                self.params['sv_min'],
+                                                self.params['sv_max'],
+                                                self.params['v_switch'],
+                                                self.params['a_max'],
+                                                self.params['v_min'],
+                                                self.params['v_max'],
+                                                self.params['width'],
+                                                self.params['length']
             )
 
         # bound yaw angle

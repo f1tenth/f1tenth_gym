@@ -432,11 +432,12 @@ class ScanSimulator2D(object):
         max_range (float, default=30.0): maximum range of the laser
     """
 
-    def __init__(self, num_beams, fov, eps=0.0001, theta_dis=2000, max_range=30.0):
+    def __init__(self, num_beams, fov, eps=0.0001, theta_dis=2000, std_dev=0.01, max_range=30.0):
         # initialization
         self.num_beams = num_beams
         self.fov = fov
         self.eps = eps
+        self.std_dev = std_dev
         self.theta_dis = theta_dis
         self.max_range = max_range
         self.angle_increment = self.fov / (self.num_beams - 1)
@@ -493,14 +494,13 @@ class ScanSimulator2D(object):
 
         return True
 
-    def scan(self, pose, rng, std_dev=0.01):
+    def scan(self, pose, rng):
         """
         Perform simulated 2D scan by pose on the given map
 
             Args:
                 pose (numpy.ndarray (3, )): pose of the scan frame (x, y, theta)
                 rng (numpy.random.Generator): random number generator to use for whitenoise in scan, or None
-                std_dev (float, default=0.01): standard deviation of the generated whitenoise in the scan
 
             Returns:
                 scan (numpy.ndarray (n, )): data array of the laserscan, n=num_beams
@@ -534,7 +534,7 @@ class ScanSimulator2D(object):
         )
 
         if rng is not None:
-            scan = scan + rng.normal(0.0, std_dev, size=self.num_beams)
+            scan = scan + rng.normal(0.0, self.std_dev, size=self.num_beams)
             
         return np.clip(scan, 0.0, self.max_range)
 

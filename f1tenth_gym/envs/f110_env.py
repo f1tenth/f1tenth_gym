@@ -96,7 +96,9 @@ class F110Env(gym.Env):
         self.num_agents = self.config["num_agents"]
         self.timestep = self.config["timestep"]
         self.ego_idx = self.config["ego_idx"]
-        self.integrator = IntegratorType.from_string(self.config["integrator"])
+        self.integrator = IntegratorType.from_string(self.config["integrator"], 
+                                                     self.timestep, 
+                                                     self.config["integrator_timestep"])
         self.model = DynamicModel.from_string(self.config["model"])
         self.observation_config = self.config["observation_config"]
         self.action_type = CarAction(self.config["control_input"], params=self.params)
@@ -399,8 +401,12 @@ class F110Env(gym.Env):
             "observation_config": {"type": None},
             "reset_config": {"type": None},
             "enable_rendering": True,
-            "enable_scan": True, # no lidar scan and collision if False
-            "control_delay_buffer_size": 0,
+            "enable_scan": True, # NOTE no lidar scan and collision if False
+            "lidar_fov" : 4.712389,
+            "lidar_num_beams": 360,
+            "lidar_range": 30.0,
+            "lidar_noise_std": 0.01,
+            "control_delay_buffer_size": 1
         }
 
     def configure(self, config: dict) -> None:

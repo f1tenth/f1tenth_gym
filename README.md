@@ -6,12 +6,12 @@ Zirui branch TODO list:
 - [x] toggle renderer
 - [ ] verify collision
 - [x] scan toggle
-- [ ] separate time step and integrater time step
+- [x] separate time step and integrater time step
 - [ ] add frenet
 - [ ] use correct loop count
 - [x] simplify std_state and observation
 - [ ] simplify reset
-- [ ] control_buffer_size in config
+- [x] control_buffer_size, lidar fov, lidar nums in config
 - [ ] double check dynamics result
 
 ## Quickstart
