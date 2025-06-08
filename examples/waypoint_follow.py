@@ -312,15 +312,15 @@ def main():
             "map": "Spielberg_blank",
             "num_agents": num_agents,
             "timestep": 0.01,
-            "integrator_timestep": 0.005,
+            "integrator_timestep": 0.01,
             "integrator": "rk4",
             "control_input": ["speed", "steering_angle"],
-            "model": "st", # "ks", "st", "mb"
+            "model": "mb", # "ks", "st", "mb"
             "observation_config": {"type": "direct"},
-            "params": F110Env.f1tenth_vehicle_params(),
-            # "params": F110Env.fullscale_vehicle_params(),
+            # "params": F110Env.f1tenth_vehicle_params(),
+            "params": F110Env.fullscale_vehicle_params(),
             "reset_config": {"type": "rl_random_static"},
-            "map_scale": 1.0,
+            "map_scale": 10.0,
             "enable_rendering": 1,
             "enable_scan": 1,
         },
@@ -331,10 +331,10 @@ def main():
     planner = PurePursuitPlanner(
         track=track,
         wb=(
-            F110Env.f1tenth_vehicle_params()["lf"]
-            + F110Env.f1tenth_vehicle_params()["lr"]
-            # F110Env.fullscale_vehicle_params()["lf"]
-            # + F110Env.fullscale_vehicle_params()["lr"]
+            # F110Env.f1tenth_vehicle_params()["lf"]
+            # + F110Env.f1tenth_vehicle_params()["lr"]
+            F110Env.fullscale_vehicle_params()["lf"]
+            + F110Env.fullscale_vehicle_params()["lr"]
         ),
     )
 
@@ -353,6 +353,7 @@ def main():
     while not done:
         action = env.action_space.sample()
         for i, agent_id in enumerate(obs.keys()):
+            print('agent_id', agent_id)
             speed, steer = planner.plan(
                 obs[agent_id]["std_state"][0],
                 obs[agent_id]["std_state"][1],
@@ -363,6 +364,7 @@ def main():
             action[i] = np.array([steer, speed])
         t1 = time.time()
         obs, step_reward, done, truncated, info = env.step(action)
+        print(obs['agent_0']['state'])
         times.append(1/(time.time() - t1))
         if len(times) > 10000:
             print("FPS:", np.mean(times))

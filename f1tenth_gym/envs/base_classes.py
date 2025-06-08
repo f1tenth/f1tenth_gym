@@ -122,7 +122,7 @@ class RaceCar(object):
 
         # steering delay buffer
         self.steer_buffer = np.empty((0,))
-        self.steer_buffer_size = self.config['control_delay_buffer_size']
+        self.steer_buffer_size = self.config['steer_delay_buffer_size']
 
         # collision identifier
         self.in_collision = False
@@ -196,7 +196,7 @@ class RaceCar(object):
         """
         RaceCar.scan_simulator.set_map(map, map_scale)
 
-    def reset(self, pose):
+    def reset(self, pose, option='pose'):
         """
         Resets the vehicle to a pose
 
@@ -211,8 +211,11 @@ class RaceCar(object):
         self.steer_angle_vel = 0.0
         # clear collision indicator
         self.in_collision = False
-        # init state from pose
-        self.state = self.model.get_initial_state(pose=pose, params=self.params)
+        if option == 'pose':
+            # init state from pose
+            self.state = self.model.get_initial_state(pose=pose, params=self.params)
+        elif option == 'state':
+            self.state = pose
 
         self.steer_buffer = np.empty((0,))
         # reset scan random generator
@@ -575,7 +578,7 @@ class Simulator(object):
                 if agent.in_collision:
                     self.collisions[i] = 1.0
 
-    def reset(self, poses):
+    def reset(self, poses, option='pose'):
         """
         Resets the simulation environment by given poses
 
@@ -593,4 +596,4 @@ class Simulator(object):
 
         # loop over poses to reset
         for i in range(self.num_agents):
-            self.agents[i].reset(poses[i, :])
+            self.agents[i].reset(poses[i, :], option=option)

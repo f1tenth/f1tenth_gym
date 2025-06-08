@@ -406,7 +406,7 @@ class F110Env(gym.Env):
             "lidar_num_beams": 360,
             "lidar_range": 30.0,
             "lidar_noise_std": 0.01,
-            "control_delay_buffer_size": 1
+            "steer_delay_buffer_size": 1
         }
 
     def configure(self, config: dict) -> None:
@@ -556,13 +556,31 @@ class F110Env(gym.Env):
         # states after reset
         if options is not None and "poses" in options:
             poses = options["poses"]
+            option = "pose"
+        elif options is not None and "state" in options:
+            poses = options["state"]
+            option = "state"
         else:
             poses = self.reset_fn.sample()
+            option = "pose"
 
-        assert isinstance(poses, np.ndarray) and poses.shape == (
-            self.num_agents,
-            3,
-        ), "Initial poses must be a numpy array of shape (num_agents, 3)"
+        if option == 'pose':
+            assert isinstance(poses, np.ndarray) and poses.shape == (
+                self.num_agents,
+                3,
+            ), "Initial poses must be a numpy array of shape (num_agents, 3)"
+        elif option == 'state':
+            assert isinstance(poses, np.ndarray) and poses.shape == (
+                self.num_agents,
+                self.model.state_dim,
+            ), f"Initial full state must be a numpy array of shape (num_agents, {self.model.state_dim})"       
+        else:
+            raise ValueError(
+                "Invalid reset option."
+            )
+        
+        # call reset to simulator
+        self.sim.reset(poses, option=option)
 
         self.start_xs = poses[:, 0]
         self.start_ys = poses[:, 1]
@@ -580,11 +598,8 @@ class F110Env(gym.Env):
             ]
         )
 
-        # call reset to simulator
-        self.sim.reset(poses)
-
         # get no input observations
-        action = np.zeros((self.num_agents, 2))
+        action = np.zeros((self.num_agents, self.model.control_dim))
         obs, _, _, _, info = self.step(action)
 
         return obs, info

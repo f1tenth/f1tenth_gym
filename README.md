@@ -10,7 +10,7 @@ Zirui branch TODO list:
 - [ ] add frenet
 - [ ] use correct loop count
 - [x] simplify std_state and observation
-- [ ] simplify reset
+- [x] add option "state" in reset
 - [x] control_buffer_size, lidar fov, lidar nums in config
 - [ ] double check dynamics result
 
