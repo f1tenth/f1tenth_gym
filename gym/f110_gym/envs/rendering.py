@@ -47,6 +47,8 @@ ZOOM_OUT_FACTOR = 1/ZOOM_IN_FACTOR
 CAR_LENGTH = 0.58
 CAR_WIDTH = 0.31
 
+from pyglet.window import NoSuchConfigException
+
 class EnvRenderer(pyglet.window.Window):
     """
     A window class inherited from pyglet.window.Window, handles the camera/projection interaction, resizing window, and rendering the environment
@@ -62,11 +64,16 @@ class EnvRenderer(pyglet.window.Window):
         Returns:
             None
         """
-        conf = Config(sample_buffers=1,
-                      samples=4,
-                      depth_size=16,
-                      double_buffer=True)
-        super().__init__(width, height, config=conf, resizable=True, vsync=False, *args, **kwargs)
+        try:
+            conf = Config(sample_buffers=1,
+                        samples=4,
+                        depth_size=16,
+                        double_buffer=True)
+            super().__init__(width, height, config=conf, resizable=True, vsync=False, *args, **kwargs)
+        except NoSuchConfigException:
+            # In virtual screen, this conf cannot find a screen, and raise this config error
+            print("\nWARNING: Cannot find a configed screen, back to system default. Please check your system's variable by 'echo $DISPLAY'")
+            super().__init__(width, height, resizable=True, vsync=False, *args, **kwargs)
 
         # gl init
         glClearColor(9/255, 32/255, 87/255, 1.)
