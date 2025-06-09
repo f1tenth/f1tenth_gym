@@ -192,6 +192,6 @@ class Raceline:
         """
         points = np.stack([self.xs, self.ys], axis=1)
         if self.waypoint_render is None:
-            self.waypoint_render = e.render_closed_lines(points, color=(0, 128, 0), size=1)
+            self.waypoint_render = e.render_closed_lines(points, color=(0, 128, 0), size=2)
         else:
             self.waypoint_render.updateItems(points)

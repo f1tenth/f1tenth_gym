@@ -93,7 +93,7 @@ class PyQtEnvRenderer(EnvRenderer):
         self.render_spec = render_spec
         self.render_mode = render_mode
         self.render_fps = render_fps
-
+        
         # create the canvas
         self.app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
         self.window = pg.GraphicsLayoutWidget()
@@ -104,7 +104,7 @@ class PyQtEnvRenderer(EnvRenderer):
         self.canvas: pg.PlotItem = self.window.addPlot()
 
         # Disable interactivity
-        self.canvas.setMouseEnabled(x=False, y=False)  # Disable mouse panning & zooming
+        self.canvas.setMouseEnabled(x=True, y=True)  # Disable mouse panning & zooming
         self.canvas.hideButtons()  # Disable corner auto-scale button
         self.canvas.setMenuEnabled(False)  # Disable right-click context menu
 
@@ -293,18 +293,20 @@ class PyQtEnvRenderer(EnvRenderer):
         Optional[np.ndarray]
             if render_mode is "rgb_array", returns the rendered frame as an array
         """
-        # draw cars
-        for i in range(len(self.agent_ids)):
-            self.cars[i].render()
+        
 
         # call callbacks
         for callback_fn in self.callbacks:
             callback_fn(self)
+        
+        # draw cars
+        for i in range(len(self.agent_ids)):
+            self.cars[i].render()
 
         if self.follow_agent_flag:
             ego_x, ego_y = self.cars[self.agent_to_follow].pose[:2]
-            self.canvas.setXRange(ego_x - 10, ego_x + 10)
-            self.canvas.setYRange(ego_y - 10, ego_y + 10)
+            self.canvas.setXRange(ego_x - 10 / self.render_spec.zoom_in_factor, ego_x + 10 / self.render_spec.zoom_in_factor)
+            self.canvas.setYRange(ego_y - 10 / self.render_spec.zoom_in_factor, ego_y + 10 / self.render_spec.zoom_in_factor)
         else:
             self.canvas.autoRange()
             

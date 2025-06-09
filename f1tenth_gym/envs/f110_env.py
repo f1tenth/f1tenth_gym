@@ -406,7 +406,8 @@ class F110Env(gym.Env):
             "lidar_num_beams": 360,
             "lidar_range": 30.0,
             "lidar_noise_std": 0.01,
-            "steer_delay_buffer_size": 1
+            "steer_delay_buffer_size": 1,
+            "compute_frenet": False,
         }
 
     def configure(self, config: dict) -> None:
