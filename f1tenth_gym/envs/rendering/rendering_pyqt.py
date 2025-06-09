@@ -293,54 +293,68 @@ class PyQtEnvRenderer(EnvRenderer):
         Optional[np.ndarray]
             if render_mode is "rgb_array", returns the rendered frame as an array
         """
-        
+        if self.draw_flag:
+            # call callbacks
+            for callback_fn in self.callbacks:
+                callback_fn(self)
+            
+            # draw cars
+            for i in range(len(self.agent_ids)):
+                self.cars[i].render()
 
-        # call callbacks
-        for callback_fn in self.callbacks:
-            callback_fn(self)
-        
-        # draw cars
-        for i in range(len(self.agent_ids)):
-            self.cars[i].render()
+            if self.follow_agent_flag:
+                ego_x, ego_y = self.cars[self.agent_to_follow].pose[:2]
+                self.canvas.setXRange(ego_x - 10 / self.render_spec.zoom_in_factor, ego_x + 10 / self.render_spec.zoom_in_factor)
+                self.canvas.setYRange(ego_y - 10 / self.render_spec.zoom_in_factor, ego_y + 10 / self.render_spec.zoom_in_factor)
+            else:
+                self.canvas.autoRange()
+                
+            agent_to_follow_id = (
+                self.agent_ids[self.agent_to_follow]
+                if self.agent_to_follow is not None
+                else None
+            )
+            self.bottom_info_renderer.render(
+                text=f"Focus on: {agent_to_follow_id}"
+            )
 
-        if self.follow_agent_flag:
-            ego_x, ego_y = self.cars[self.agent_to_follow].pose[:2]
-            self.canvas.setXRange(ego_x - 10 / self.render_spec.zoom_in_factor, ego_x + 10 / self.render_spec.zoom_in_factor)
-            self.canvas.setYRange(ego_y - 10 / self.render_spec.zoom_in_factor, ego_y + 10 / self.render_spec.zoom_in_factor)
+            if self.render_spec.show_info:
+                self.top_info_renderer.render(text=INSTRUCTION_TEXT)
+
+            self.time_renderer.render(text=f"{self.sim_time:.2f}")
+            self.clock.update()
+            self.app.processEvents()
+
+            if self.render_mode in ["human", "human_fast"]:
+                assert self.window is not None
+
+            else:  
+                # rgb_array mode => extract the frame from the canvas
+                qImage = self.exporter.export(toBytes=True)
+
+                width = qImage.width()
+                height = qImage.height()
+
+                ptr = qImage.bits()
+                ptr.setsize(height * width * 4)
+                frame = np.array(ptr).reshape(height, width, 4)  #  Copies the data
+                
+                return frame[:, :, :3] # remove alpha channel
         else:
-            self.canvas.autoRange()
-            
-        agent_to_follow_id = (
-            self.agent_ids[self.agent_to_follow]
-            if self.agent_to_follow is not None
-            else None
-        )
-        self.bottom_info_renderer.render(
-            text=f"Focus on: {agent_to_follow_id}"
-        )
+            self.clock.update()
+            self.app.processEvents()
 
-        if self.render_spec.show_info:
-            self.top_info_renderer.render(text=INSTRUCTION_TEXT)
+            # if draw_flag is False, we just return the current frame without rendering anything
+            if self.render_mode == "rgb_array":
+                qImage = self.exporter.export(toBytes=True)
 
-        self.time_renderer.render(text=f"{self.sim_time:.2f}")
-        self.clock.update()
-        self.app.processEvents()
+                width = qImage.width()
+                height = qImage.height()
 
-        if self.render_mode in ["human", "human_fast"]:
-            assert self.window is not None
-
-        else:  
-            # rgb_array mode => extract the frame from the canvas
-            qImage = self.exporter.export(toBytes=True)
-
-            width = qImage.width()
-            height = qImage.height()
-
-            ptr = qImage.bits()
-            ptr.setsize(height * width * 4)
-            frame = np.array(ptr).reshape(height, width, 4)  #  Copies the data
-            
-            return frame[:, :, :3] # remove alpha channel
+                ptr = qImage.bits()
+                ptr.setsize(height * width * 4)
+                frame = np.array(ptr).reshape(height, width, 4)
+                return frame[:, :, :3]  # remove alpha channel
 
     def render_points(
         self,
