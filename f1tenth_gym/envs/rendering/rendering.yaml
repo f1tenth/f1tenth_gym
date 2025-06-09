@@ -4,7 +4,7 @@ zoom_in_factor: 0.5   # [float] zoom in factor. 1.0 is no zoom, >1.0 is zoom in,
 show_wheels: True     # [bool] it toggles the visualization of the vehicle wheels
 car_tickness: 1       # [px] thickness of the car
 show_info: True       # [bool] it toggles the visualization of the instruction text
-render_type: "pyqt6"  # [str] rendering type. Options: "pygame", "pyqt6"
+render_type: "pyqt6"  # [str] rendering type. Options: "pygame", "pyqt6" NOTE: pygame not supported until reimplemented
 vehicle_palette:      # [list] cyclic list of colors for the vehicles
   - "#984ea3"
   - "#e41a1c"

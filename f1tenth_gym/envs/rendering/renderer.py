@@ -86,19 +86,30 @@ class EnvRenderer(ABC):
     """
     Abstract class for rendering the environment.
     """
-
     @abstractmethod
-    def update(self, state: Any) -> None:
+    def add_renderer_callback(self, callback_fn):
+        """
+        Add a custom callback for visualization.
+
+        Parameters
+        ----------
+        callback_fn : Callable[[EnvRenderer], None]
+            callback function to be called at every rendering step
+        """
+        raise NotImplementedError()
+    
+    @abstractmethod
+    def update(self, obs: dict) -> None:
         """
         Update the state to be rendered.
         This is called at every rendering call.
 
         Parameters
         ----------
-        state : Any
-            state to be rendered, e.g. a list of vehicle states
+        obs : dict
+            observations from the env to be rendered
         """
-        raise NotImplementedError()
+        raise NotImplementedError()    
 
     @abstractmethod
     def render(self):
@@ -108,50 +119,26 @@ class EnvRenderer(ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    def render_lines(
-        self,
-        points: list | np.ndarray,
-        color: Optional[tuple[int, int, int]] = (0, 0, 255),
-        size: Optional[int] = 1,
-    ):
-        """
-        Render a sequence of lines segments.
-
-        Parameters
-        ----------
-        points : list | np.ndarray
-            list of points to render
-        color : tuple[int, int, int], optional
-            color as rgb tuple, by default blue (0, 0, 255)
-        size : int, optional
-            size of the line, by default 1
-        """
-        raise NotImplementedError()
-
-    @abstractmethod
-    def render_closed_lines(
-        self,
-        points: list | np.ndarray,
-        color: Optional[tuple[int, int, int]] = (0, 0, 255),
-        size: Optional[int] = 1,
-    ):
-        """
-        Render a closed loop of lines (draw a line between the last and the first point).
-
-        Parameters
-        ----------
-        points : list | np.ndarray
-            list of points to render
-        color : tuple[int, int, int], optional
-            color as rgb tuple, by default blue (0, 0, 255)
-        size : int, optional
-            size of the line, by default 1
-        """
-        raise NotImplementedError()
-
-    @abstractmethod
     def close(self):
         """
         Close the rendering window.
+        """
+        raise NotImplementedError()
+
+class ObjectRenderer(ABC):
+    
+    @abstractmethod
+    def __init__(self):
+        """
+        Initialize the point renderer.
+        This should set up the necessary parameters for rendering points.
+        """
+        raise NotImplementedError()
+    
+    @abstractmethod
+    def update(self):
+        """
+        Update the point renderer with new data.
+        This is called at every rendering call.
         """
         raise NotImplementedError()

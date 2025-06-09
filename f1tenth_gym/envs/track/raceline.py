@@ -65,7 +65,7 @@ class Raceline:
         # compute spline through waypoints if not provided
         self.spline = spline or CubicSpline2D(x=xs, y=ys)
 
-        self.waypoint_render = None
+        self.waypoint_renderer = None
 
     @staticmethod
     def from_centerline_file(
@@ -191,7 +191,7 @@ class Raceline:
             Environment renderer object.
         """
         points = np.stack([self.xs, self.ys], axis=1)
-        if self.waypoint_render is None:
-            self.waypoint_render = e.render_closed_lines(points, color=(0, 128, 0), size=2)
+        if self.waypoint_renderer is None:
+            self.waypoint_renderer = e.get_closed_lines_renderer(points, color=(0, 128, 0), size=2)
         else:
-            self.waypoint_render.updateItems(points)
+            self.waypoint_renderer.update(points)

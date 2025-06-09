@@ -12,16 +12,24 @@ import pyqtgraph as pg
 from pyqtgraph.exporters import ImageExporter
 from PIL import ImageColor
 
-from .pyqt_objects import (
-    Car,
-    TextObject,
-)
+from .pyqt_objects import *
 from ..track import Track
-from .renderer import EnvRenderer, RenderSpec
+from .renderer import EnvRenderer, ObjectRenderer, RenderSpec
 
 # one-line instructions visualized at the top of the screen (if show_info=True)
 INSTRUCTION_TEXT = "Mouse click (L/M/R): Change POV - 'S' key: On/Off"
 
+# import sys
+# import warnings
+
+# def warn_with_traceback(message, category, filename, lineno, file=None, line=None):
+#     import traceback
+#     log = file if hasattr(file, 'write') else sys.stderr
+#     traceback.print_stack(file=log)
+#     warnings.defaultaction = 'always'
+#     return warnings.showwarning(message, category, filename, lineno, file, line)
+
+# warnings.showwarning = warn_with_traceback
 
 # Replicated from pyqtgraphs' example utils for ci pipelines to pass
 from time import perf_counter
@@ -125,12 +133,12 @@ class PyQtEnvRenderer(EnvRenderer):
 
         # fps and time renderer
         self.clock = FrameCounter()
-        self.fps_renderer = TextObject(parent=self.canvas, position="bottom_left")
-        self.time_renderer = TextObject(parent=self.canvas, position="bottom_right")
-        self.bottom_info_renderer = TextObject(
+        self.fps_renderer = TextRenderer(parent=self.canvas, position="bottom_left")
+        self.time_renderer = TextRenderer(parent=self.canvas, position="bottom_right")
+        self.bottom_info_renderer = TextRenderer(
             parent=self.canvas, position="bottom_center"
         )
-        self.top_info_renderer = TextObject(parent=self.canvas, position="top_center")
+        self.top_info_renderer = TextRenderer(parent=self.canvas, position="top_center")
 
         if self.render_mode in ["human", "human_fast"]:
             self.clock.sigFpsUpdate.connect(
@@ -191,17 +199,17 @@ class PyQtEnvRenderer(EnvRenderer):
         elif self.render_mode == "rgb_array":
             self.exporter = ImageExporter(self.canvas)
 
-    def update(self, state: dict) -> None:
+    def update(self, obs: dict) -> None:
         """
-        Update the simulation state to be rendered.
+        Update the simulation obs to be rendered.
 
         Parameters
         ----------
-            state: simulation state as dictionary
+            obs: simulation obs as dictionary
         """
         if self.cars is None:
             self.cars = [
-                Car(
+                CarRenderer(
                     car_length=self.params["length"],
                     car_width=self.params["width"],
                     color=self.car_colors[ic],
@@ -213,12 +221,12 @@ class PyQtEnvRenderer(EnvRenderer):
                 for ic in range(len(self.agent_ids))
             ]
 
-        # update cars state and zoom level (updating points-per-unit)
-        for i in range(len(self.agent_ids)):
-            self.cars[i].update(state, i)
+        # update cars obs and zoom level (updating points-per-unit)
+        for i, id in enumerate(self.agent_ids):
+            self.cars[i].update(obs, id)
 
         # update time
-        self.sim_time = state["sim_time"]
+        self.sim_time = obs[self.agent_ids[0]]["sim_time"]
 
     def add_renderer_callback(self, callback_fn: Callable[[EnvRenderer], None]) -> None:
         """
@@ -356,89 +364,35 @@ class PyQtEnvRenderer(EnvRenderer):
                 frame = np.array(ptr).reshape(height, width, 4)
                 return frame[:, :, :3]  # remove alpha channel
 
-    def render_points(
+    def get_points_renderer(
         self,
         points: list | np.ndarray,
         color: Optional[tuple[int, int, int]] = (0, 0, 255),
         size: Optional[int] = 1,
-    ) -> pg.PlotDataItem:
-        """
-        Render a sequence of xy points on screen.
+    ) -> ObjectRenderer:
+        return PointsRenderer(self, points, color, size)
 
-        Parameters
-        ----------
-        points : list | np.ndarray
-            list of points to render
-        color : Optional[tuple[int, int, int]], optional
-            color as rgb tuple, by default blue (0, 0, 255)
-        size : Optional[int], optional
-            size of the points in pixels, by default 1
-        """
-        return self.canvas.plot(
-            points[:, 0],
-            points[:, 1],
-            pen=None,
-            symbol="o",
-            symbolPen=pg.mkPen(color=color, width=0),
-            symbolBrush=pg.mkBrush(color=color, width=0),
-            symbolSize=size,
-        )
-
-    def render_lines(
+    def get_lines_renderer(
         self,
         points: list | np.ndarray,
         color: Optional[tuple[int, int, int]] = (0, 0, 255),
         size: Optional[int] = 1,
-    ) -> pg.PlotDataItem:
-        """
-        Render a sequence of lines segments.
+    ) -> ObjectRenderer:
+        return LinesRenderer(self, points, color, size)
 
-        Parameters
-        ----------
-        points : list | np.ndarray
-            list of points to render
-        color : Optional[tuple[int, int, int]], optional
-            color as rgb tuple, by default blue (0, 0, 255)
-        size : Optional[int], optional
-            size of the line, by default 1
-        """
-        pen = pg.mkPen(color=pg.mkColor(*color), width=size)
-        return self.canvas.plot(
-            points[:, 0], points[:, 1], pen=pen, fillLevel=None, antialias=True
-        )  ## setting pen=None disables line drawing
-
-    def render_closed_lines(
+    def get_closed_lines_renderer(
         self,
         points: list | np.ndarray,
         color: Optional[tuple[int, int, int]] = (0, 0, 255),
         size: Optional[int] = 1,
-    ) -> pg.PlotDataItem:
-        """
-        Render a sequence of lines segments forming a closed loop (draw a line between the last and the first point).
-
-        Parameters
-        ----------
-        points : list | np.ndarray
-            list of 2d points to render
-        color : Optional[tuple[int, int, int]], optional
-            color as rgb tuple, by default blue (0, 0, 255)
-        size : Optional[int], optional
-            size of the line, by default 1
-        """
-        # Append the first point to the end to close the loop
-        points = np.vstack([points, points[0]])
-
-        pen = pg.mkPen(color=pg.mkColor(*color), width=size)
-        pen.setCapStyle(pg.QtCore.Qt.PenCapStyle.RoundCap)
-        pen.setJoinStyle(pg.QtCore.Qt.PenJoinStyle.RoundJoin)
-
-        return self.canvas.plot(
-            points[:, 0], points[:, 1], pen=pen, cosmetic=True, antialias=True
-        )  ## setting pen=None disables line drawing
+    ) -> ObjectRenderer:
+        return ClosedLinesRenderer(self, points, color, size)
 
     def close(self) -> None:
         """
         Close the rendering environment.
         """
         self.app.exit()
+        
+
         

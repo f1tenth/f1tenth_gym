@@ -60,6 +60,9 @@ class DirectObservation(Observation):
                 "lap_count": gym.spaces.Box(
                     low=0.0, high=large_num, shape=(), dtype=np.float32
                 ),
+                "sim_time": gym.spaces.Box(
+                    low=0.0, high=large_num, shape=(), dtype=np.float32
+                ),
             }
             complete_space[agent_id] = gym.spaces.Dict(
                 agent_dict
@@ -74,8 +77,6 @@ class DirectObservation(Observation):
         for i, agent_id in enumerate(self.env.unwrapped.agent_ids):
             scan = self.env.unwrapped.sim.agent_scans[i]
             agent = self.env.unwrapped.sim.agents[i]
-            lap_time = self.env.unwrapped.lap_times[i]
-            lap_count = self.env.unwrapped.lap_counts[i]
 
             # create agent's observation dict
             agent_obs = {
@@ -83,17 +84,17 @@ class DirectObservation(Observation):
                 "std_state": agent.standard_state,
                 "state": agent.state,
                 "collision": agent.in_collision,
-                "lap_time": lap_time,
-                "lap_count": lap_count,
+                "lap_time": self.env.unwrapped.lap_times[i],
+                "lap_count": self.env.unwrapped.lap_counts[i],
+                "sim_time": self.env.unwrapped.sim_time,
             }
 
             # add agent's observation to multi-agent observation
             obs[agent_id] = agent_obs
-
+            
             # cast to match observation space
             for key in obs[agent_id].keys():
                 obs[agent_id][key] = np.array(obs[agent_id][key], dtype=np.float32)
-
         return obs
 
 class OriginalObservation(Observation):
@@ -162,6 +163,9 @@ class OriginalObservation(Observation):
                 "lap_counts": gym.spaces.Box(
                     low=0.0, high=large_num, shape=(num_agents,), dtype=np.float32
                 ),
+                "sim_time": gym.spaces.Box(
+                    low=0.0, high=large_num, shape=(), dtype=np.float32
+                ),
             }
         )
 
@@ -185,6 +189,7 @@ class OriginalObservation(Observation):
             "collisions": [],
             "lap_times": [],
             "lap_counts": [],
+            "sim_time": [],
         }
 
         for i, agent in enumerate(self.env.unwrapped.sim.agents):
@@ -209,6 +214,7 @@ class OriginalObservation(Observation):
             observations["collisions"].append(collision)
             observations["lap_times"].append(lap_time)
             observations["lap_counts"].append(lap_count)
+            observations["sim_time"].append(self.env.unwrapped.sim_time)
 
         # cast to match observation space
         for key in observations.keys():

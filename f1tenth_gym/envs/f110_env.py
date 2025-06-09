@@ -116,7 +116,7 @@ class F110Env(gym.Env):
         # race info
         self.lap_times = np.zeros((self.num_agents,))
         self.lap_counts = np.zeros((self.num_agents,))
-        self.current_time = 0.0
+        self.sim_time = 0.0
 
         # finish line info
         self.num_toggles = 0
@@ -170,7 +170,7 @@ class F110Env(gym.Env):
 
         # stateful observations for rendering
         # add choice of colors (same, random, ...)
-        self.render_obs = None
+        self.obs = None
         self.render_mode = render_mode
 
         # match render_fps to integration timestep
@@ -465,7 +465,7 @@ class F110Env(gym.Env):
                 self.toggle_list[i] += 1
             self.lap_counts[i] = self.toggle_list[i] // 2
             if self.toggle_list[i] < 4:
-                self.lap_times[i] = self.current_time
+                self.lap_times[i] = self.sim_time
 
         done = (self.collisions[self.ego_idx]) or np.all(self.toggle_list >= 4)
 
@@ -498,35 +498,35 @@ class F110Env(gym.Env):
         self.sim.step(action)
 
         # observation
-        obs = self.observation_type.observe()
+        self.obs = self.observation_type.observe()
 
         # times
         reward = self.timestep
-        self.current_time = self.current_time + self.timestep
+        self.sim_time = self.sim_time + self.timestep
 
         # update data member
         self._update_state()
 
         # rendering observation
-        if self.config["enable_rendering"]:
-            self.render_obs = {
-                "ego_idx": self.sim.ego_idx,
-                "poses_x": self.sim.agent_poses[:, 0],
-                "poses_y": self.sim.agent_poses[:, 1],
-                "poses_theta": self.sim.agent_poses[:, 2],
-                "steering_angles": self.sim.agent_steerings,
-                "lap_times": self.lap_times,
-                "lap_counts": self.lap_counts,
-                "collisions": self.sim.collisions,
-                "sim_time": self.current_time,
-            }
+        # if self.config["enable_rendering"]:
+        #     self.render_obs = {
+        #         "ego_idx": self.sim.ego_idx,
+        #         "poses_x": self.sim.agent_poses[:, 0],
+        #         "poses_y": self.sim.agent_poses[:, 1],
+        #         "poses_theta": self.sim.agent_poses[:, 2],
+        #         "steering_angles": self.sim.agent_steerings,
+        #         "lap_times": self.lap_times,
+        #         "lap_counts": self.lap_counts,
+        #         "collisions": self.sim.collisions,
+        #         "sim_time": self.sim_time,
+        #     }
 
         # check done
         done, toggle_list = self._check_done()
         truncated = False
         info = {"checkpoint_done": toggle_list}
 
-        return obs, reward, done, truncated, info
+        return self.obs, reward, done, truncated, info
 
     def reset(self, seed=None, options=None):
         """
@@ -547,7 +547,7 @@ class F110Env(gym.Env):
         super().reset(seed=seed)
 
         # reset counters and data members
-        self.current_time = 0.0
+        self.sim_time = 0.0
         self.collisions = np.zeros((self.num_agents,))
         self.num_toggles = 0
         self.near_start = True
@@ -658,7 +658,7 @@ class F110Env(gym.Env):
         if self.render_mode not in self.metadata["render_modes"] or not self.config["enable_rendering"]:
             return
 
-        self.renderer.update(state=self.render_obs)
+        self.renderer.update(obs=self.obs)
         return self.renderer.render()
 
     def close(self):

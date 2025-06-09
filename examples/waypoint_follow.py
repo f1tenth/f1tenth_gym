@@ -207,11 +207,11 @@ class PurePursuitPlanner:
         if self.lookahead_point is not None:
             points = self.lookahead_point[:2][None]  # shape (1, 2)~
             if self.lookahead_point_render is None:
-                self.lookahead_point_render = e.render_points(
-                    points, color=(0, 0, 128), size=2
+                self.lookahead_point_render = e.get_points_renderer(
+                    points, color=(200, 0, 0), size=5
                 )
             else:
-                self.lookahead_point_render.setData(points)
+                self.lookahead_point_render.update(points)
 
     def render_local_plan(self, e):
         """
@@ -220,11 +220,14 @@ class PurePursuitPlanner:
         if self.current_index is not None:
             points = self.waypoints[self.current_index : self.current_index + 10, :2]
             if self.local_plan_render is None:
-                self.local_plan_render = e.render_lines(
+                self.local_plan_render = e.get_lines_renderer(
                     points, color=(0, 128, 0), size=1
                 )
             else:
-                self.local_plan_render.updateItems(points)
+                self.local_plan_render.update(points)
+                
+    def get_render_callbacks(self):
+        return [self.render_lookahead_point, self.render_local_plan]
 
     def _get_current_waypoint(
         self, waypoints, lookahead_distance, position, theta
@@ -339,8 +342,8 @@ def main():
     )
 
     env.unwrapped.add_render_callback(track.raceline.render_waypoints)
-    env.unwrapped.add_render_callback(planner.render_local_plan)
-    env.unwrapped.add_render_callback(planner.render_lookahead_point)
+    for r in planner.get_render_callbacks():
+        env.unwrapped.add_render_callback(r)
 
     obs, info = env.reset()
     done = False

@@ -1,9 +1,8 @@
 from __future__ import annotations
 import numpy as np
-import pyqtgraph as pg
-
 # from PyQt6.QtWidgets import QGraphicsRectItem, QGraphicsPolygonItem
 # from PyQt6 import QtGui
+from pyqtgraph.opengl import GLLinePlotItem
 
 from .renderer import RenderSpec, EnvRenderer, ObjectRenderer
 from ..collision_models import get_vertices, get_trmtx
@@ -218,6 +217,106 @@ class TextRenderer(ObjectRenderer):
         """
         self.text_label.setText(text)
 
+class CarRendererGL:
+    """
+    Car renderer using PyQtGraph OpenGL backend.
+    """
+    def __init__(
+        self,
+        render_spec,
+        map_origin: tuple[float, float],
+        resolution: float,
+        car_length: float,
+        car_width: float,
+        color: Optional[list[int]] = None,
+        wheel_size: float = 0.2,
+        parent=None,  # parent is GLViewWidget
+    ):
+        self.car_length = car_length
+        self.car_width = car_width
+        self.wheel_size = wheel_size
+        self.car_thickness = render_spec.car_tickness
+        self.show_wheels = render_spec.show_wheels
+
+        self.origin = map_origin
+        self.resolution = resolution
+        self.color = color or (0, 0, 0)
+        self.pose = (0, 0, 0)
+        self.steering = 0
+
+        self.tire_width = 0.1
+        self.tire_length = self.wheel_size
+
+        # Construct chassis
+        vertices = self._get_chassis_vertices(self.pose)
+        self.chassis = GLLinePlotItem(
+            pos=vertices,
+            color=self._color_rgba(self.color),
+            width=self.car_thickness,
+            antialias=True,
+            mode='line_strip'
+        )
+        parent.addItem(self.chassis)
+
+        # Optional wheels
+        if self.show_wheels:
+            fl = self._get_tire_vertices(self.pose, 'fl', self.steering)
+            self.fl_wheel = GLLinePlotItem(
+                pos=fl,
+                color=(0, 0, 0, 1),
+                width=self.car_thickness,
+                antialias=True,
+                mode='line_strip'
+            )
+            parent.addItem(self.fl_wheel)
+
+            fr = self._get_tire_vertices(self.pose, 'fr', self.steering)
+            self.fr_wheel = GLLinePlotItem(
+                pos=fr,
+                color=(0, 0, 0, 1),
+                width=self.car_thickness,
+                antialias=True,
+                mode='line_strip'
+            )
+            parent.addItem(self.fr_wheel)
+
+    def update(self, obs: dict, agent_id: str):
+        state = obs[agent_id]["std_state"].astype(float)
+        self.pose = (state[0], state[1], state[4])
+        if obs[agent_id]["collision"] > 0:
+            self.color = (255, 0, 0)
+        self.steering = state[2]
+
+    def render(self):
+        vertices = self._get_chassis_vertices(self.pose)
+        self.chassis.setData(pos=vertices)
+
+        if self.show_wheels:
+            self.fl_wheel.setData(pos=self._get_tire_vertices(self.pose, 'fl', self.steering))
+            self.fr_wheel.setData(pos=self._get_tire_vertices(self.pose, 'fr', self.steering))
+
+    def _get_chassis_vertices(self, pose):
+        verts = get_vertices(pose, self.car_length, self.car_width)
+        verts = np.array([verts[0], verts[3], verts[2], verts[1], verts[0]])  # closed loop
+        verts = np.hstack([verts, np.zeros((verts.shape[0], 1))])  # z=0
+        return verts
+
+    def _get_tire_vertices(self, pose, wheel_pos, steering):
+        verts = _get_tire_vertices(
+            pose, self.car_length, self.car_width,
+            self.tire_width, self.tire_length,
+            wheel_pos, steering
+        )
+        verts = np.vstack([verts, verts[0]])  # close loop
+        verts = np.hstack([verts, np.zeros((verts.shape[0], 1))])
+        return verts
+
+    def _color_rgba(self, rgb):
+        return (rgb[0] / 255, rgb[1] / 255, rgb[2] / 255, 1.0)
+    
+
+
+
 @njit(cache=True)
 def _get_tire_vertices(pose, length, width, tire_width, tire_length, index, steering):
     """
@@ -272,99 +371,3 @@ def _get_tire_vertices(pose, length, width, tire_width, tire_length, index, stee
         )
 
     return vertices
-    
-class CarRenderer(ObjectRenderer):
-    """
-    Class to display the car.
-    """
-    def __init__(
-        self,
-        render_spec: RenderSpec,
-        map_origin: tuple[float, float],
-        resolution: float,
-        car_length: float,
-        car_width: float,
-        color: list[int] | None = None,
-        wheel_size: float = 0.2,
-        parent: pg.PlotWidget = None,
-    ):
-        self.car_length = car_length
-        self.car_width = car_width
-        self.wheel_size = wheel_size
-        self.car_thickness = render_spec.car_tickness
-        self.show_wheels = render_spec.show_wheels
-
-        self.origin = map_origin
-        self.resolution = resolution
-
-        self.color = color or (0, 0, 0)
-        self.pose = (0, 0, 0)
-        self.steering = 0
-        self.chassis = None
-
-        # Tire params need to be updated
-        self.tire_width = 0.1
-        self.tire_length = self.wheel_size
-
-        vertices = get_vertices(self.pose, self.car_length, self.car_width)
-        # vertices are rl, rr, fr, fl => Reorder to be rl, fl, fr, rr
-        vertices = np.array([vertices[0], vertices[3], vertices[2], vertices[1]])
-        # Append the first point to close the polygon
-        vertices = np.vstack([vertices, vertices[0]])
-        self.chassis : pg.PlotDataItem = parent.plot(vertices[:, 0], vertices[:, 1], pen=pg.mkPen(color=(0,0,0), width=self.car_thickness), fillLevel=0, brush=self.color)
-
-        if self.show_wheels:
-            # Top-left wheel center is at fl - (tire_width/2, tire_length/2)
-            fl_vertices = _get_tire_vertices(self.pose, self.car_length, self.car_width, self.tire_width, self.tire_length, 'fl', self.steering)
-            self.fl_wheel = parent.plot(
-                fl_vertices[:, 0],
-                fl_vertices[:, 1],
-                pen=pg.mkPen(color=(0,0,0), width=self.car_thickness),
-                fillLevel=0,
-                brush=(0,0,0), # Rubber tire => Black
-            )
-
-            # Top-right wheel center is at fr - (tire_width/2, tire_length/2)
-            fr_vertices = _get_tire_vertices(self.pose, self.car_length, self.car_width, self.tire_width, self.tire_length, 'fr', self.steering)
-            self.fr_wheel = parent.plot(
-                fr_vertices[:, 0],
-                fr_vertices[:, 1],
-                pen=pg.mkPen(color=(0,0,0), width=self.car_thickness),
-                fillLevel=0,
-                brush=(0,0,0), # Rubber tire => Black
-            )
-
-    def update(self, obs: dict[str, np.ndarray], id: str):        
-        state = obs[id]["std_state"].astype(float)
-        self.pose = (
-            state[0],
-            state[1],
-            state[4],
-        )
-        self.color = (255, 0, 0) if obs[id]["collision"] > 0 else self.color
-        self.steering = state[2]
-
-    def render(self):
-        vertices = get_vertices(self.pose, self.car_length, self.car_width)
-        # vertices are rl, rr, fr, fl => Reorder to be rl, fl, fr, rr
-        vertices = np.array([vertices[0], vertices[3], vertices[2], vertices[1]])
-        # Append the first point to close the polygon
-        vertices = np.vstack([vertices, vertices[0]])
-
-        self.chassis.setData(vertices[:, 0], vertices[:, 1])
-
-        if self.show_wheels:
-            # Top-left wheel center is at fl - (tire_width/2, tire_length/2)
-            fl_vertices = _get_tire_vertices(self.pose, self.car_length, self.car_width, self.tire_width, self.tire_length, 'fl', self.steering)
-            self.fl_wheel.setData(fl_vertices[:, 0], fl_vertices[:, 1])
-
-            # Top-right wheel center is at fr - (tire_width/2, tire_length/2)
-            fr_vertices = _get_tire_vertices(self.pose, self.car_length, self.car_width, self.tire_width, self.tire_length, 'fr', self.steering)
-            self.fr_wheel.setData(fr_vertices[:, 0], fr_vertices[:, 1])
-            
-
-
-
-
-
-        
