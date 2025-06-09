@@ -66,7 +66,7 @@ class RaceCar(object):
     scan_angles = None
     side_distances = None
 
-    def __init__(self, params, seed, is_ego=False, time_step=0.01, num_beams=1080, fov=4.7, integrator=Integrator.Euler):
+    def __init__(self, params, seed, is_ego=False, time_step=0.01, num_beams=1080, fov=4.7, integrator=Integrator.Euler, lidar_dist=0.0):
         """
         Init function
 
@@ -76,6 +76,7 @@ class RaceCar(object):
             time_step (float, default=0.01): physics sim time step
             num_beams (int, default=1080): number of beams in the laser scan
             fov (float, default=4.7): field of view of the laser
+            lidar_dist (float, default=0): vertical distance between LiDAR and backshaft
 
         Returns:
             None
@@ -89,6 +90,7 @@ class RaceCar(object):
         self.num_beams = num_beams
         self.fov = fov
         self.integrator = integrator
+        self.lidar_dist = lidar_dist
         if self.integrator is Integrator.RK4:
             warnings.warn(f"Chosen integrator is RK4. This is different from previous versions of the gym.")
 
@@ -402,7 +404,11 @@ class RaceCar(object):
             self.state[4] = self.state[4] + 2*np.pi
 
         # update scan
-        current_scan = RaceCar.scan_simulator.scan(np.append(self.state[0:2], self.state[4]), self.scan_rng)
+        scan_x = self.state[0] + self.lidar_dist*np.cos(self.state[4])
+        scan_y = self.state[1] + self.lidar_dist*np.sin(self.state[4])
+        scan_pose = np.array([scan_x, scan_y, self.state[4]])
+        current_scan = RaceCar.scan_simulator.scan(scan_pose, self.scan_rng)
+        # current_scan = RaceCar.scan_simulator.scan(np.append(self.state[0:2],  self.state[4]), self.scan_rng)
 
         return current_scan
 
@@ -456,7 +462,7 @@ class Simulator(object):
 
     """
 
-    def __init__(self, params, num_agents, seed, time_step=0.01, ego_idx=0, integrator=Integrator.RK4):
+    def __init__(self, params, num_agents, seed, time_step=0.01, ego_idx=0, integrator=Integrator.RK4, lidar_dist=0.0):
         """
         Init function
 
@@ -466,6 +472,7 @@ class Simulator(object):
             seed (int): seed of the rng in scan simulation
             time_step (float, default=0.01): physics time step
             ego_idx (int, default=0): ego vehicle's index in list of agents
+            lidar_dist (float, default=0): vertical distance between LiDAR and backshaft
 
         Returns:
             None
@@ -483,10 +490,10 @@ class Simulator(object):
         # initializing agents
         for i in range(self.num_agents):
             if i == ego_idx:
-                ego_car = RaceCar(params, self.seed, is_ego=True, time_step=self.time_step, integrator=integrator)
+                ego_car = RaceCar(params, self.seed, is_ego=True, time_step=self.time_step, integrator=integrator, lidar_dist=lidar_dist)
                 self.agents.append(ego_car)
             else:
-                agent = RaceCar(params, self.seed, is_ego=False, time_step=self.time_step, integrator=integrator)
+                agent = RaceCar(params, self.seed, is_ego=False, time_step=self.time_step, integrator=integrator, lidar_dist=lidar_dist)
                 self.agents.append(agent)
 
     def set_map(self, map_path, map_ext):

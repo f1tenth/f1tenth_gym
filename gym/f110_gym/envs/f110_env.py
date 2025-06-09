@@ -89,6 +89,8 @@ class F110Env(gym.Env):
             timestep (float, default=0.01): physics timestep
 
             ego_idx (int, default=0): ego's index in list of agents
+            
+            lidar_dist (float, default=0): vertical distance between LiDAR and backshaft
     """
     metadata = {'render.modes': ['human', 'human_fast']}
 
@@ -149,6 +151,12 @@ class F110Env(gym.Env):
             self.integrator = kwargs['integrator']
         except:
             self.integrator = Integrator.RK4
+            
+        # default LiDAR position
+        try:
+            self.lidar_dist = kwargs['lidar_dist']
+        except:
+            self.lidar_dist = 0.0
 
         # radius to consider done
         self.start_thresh = 0.5  # 10cm
@@ -181,7 +189,7 @@ class F110Env(gym.Env):
         self.start_rot = np.eye(2)
 
         # initiate stuff
-        self.sim = Simulator(self.params, self.num_agents, self.seed, time_step=self.timestep, integrator=self.integrator)
+        self.sim = Simulator(self.params, self.num_agents, self.seed, time_step=self.timestep, integrator=self.integrator, lidar_dist=self.lidar_dist)
         self.sim.set_map(self.map_path, self.map_ext)
 
         # stateful observations for rendering
