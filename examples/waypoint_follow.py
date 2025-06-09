@@ -312,7 +312,7 @@ def main():
     env = gym.make(
         "f1tenth_gym:f1tenth-v0",
         config={
-            "map": "Spielberg_blank",
+            "map": "Spielberg",
             "num_agents": num_agents,
             "timestep": 0.01,
             "integrator_timestep": 0.01,

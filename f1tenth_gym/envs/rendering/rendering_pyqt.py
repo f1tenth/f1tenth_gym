@@ -19,18 +19,6 @@ from .renderer import EnvRenderer, ObjectRenderer, RenderSpec
 # one-line instructions visualized at the top of the screen (if show_info=True)
 INSTRUCTION_TEXT = "Mouse click (L/M/R): Change POV - 'S' key: On/Off"
 
-# import sys
-# import warnings
-
-# def warn_with_traceback(message, category, filename, lineno, file=None, line=None):
-#     import traceback
-#     log = file if hasattr(file, 'write') else sys.stderr
-#     traceback.print_stack(file=log)
-#     warnings.defaultaction = 'always'
-#     return warnings.showwarning(message, category, filename, lineno, file, line)
-
-# warnings.showwarning = warn_with_traceback
-
 # Replicated from pyqtgraphs' example utils for ci pipelines to pass
 from time import perf_counter
 class FrameCounter(QtCore.QObject):
@@ -252,7 +240,7 @@ class PyQtEnvRenderer(EnvRenderer):
         if event.key() == QtCore.Qt.Key.Key_S:
             logging.debug("Pressed S key -> Enable/disable rendering")
             self.draw_flag = not self.draw_flag
-            self.draw_flag_changed = True
+            # self.draw_flag_changed = True
 
     def mouse_clicked(self, event: QtGui.QMouseEvent) -> None:
         """

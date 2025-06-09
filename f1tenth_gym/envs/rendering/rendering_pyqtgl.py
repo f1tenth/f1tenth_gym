@@ -1,76 +1,194 @@
+import time
 import pyqtgraph.opengl as gl
-from pyqtgraph.Qt import QtWidgets, QtGui
-from PyQt6 import QtCore
+from PyQt6 import QtWidgets, QtCore, QtGui
 import numpy as np
 from ..track import Track
-from .renderer import EnvRenderer, RenderSpec
+from .renderer import EnvRenderer, RenderSpec, ObjectRenderer
 from PIL import ImageColor
+from typing import Any, Callable, Optional
+from .pyqtgl_objects import PointsRenderer, LinesRenderer, ClosedLinesRenderer, CarRenderer
 
 class PyQtEnvRendererGL(EnvRenderer):
-    def __init__(self, params, track, agent_ids, render_spec, render_mode, render_fps):
+    def __init__(
+        self,
+        params: dict[str, Any],
+        track: Track,
+        agent_ids: list[str],
+        render_spec: RenderSpec,
+        render_mode: str,
+        render_fps: int,
+    ):
         super().__init__()
         self.params = params
         self.agent_ids = agent_ids
         self.render_spec = render_spec
         self.render_mode = render_mode
         self.render_fps = render_fps
-
+        
+        fmt = QtGui.QSurfaceFormat()
+        fmt.setSwapInterval(0)  # 0 = no vsync, 1 = vsync
+        QtGui.QSurfaceFormat.setDefaultFormat(fmt)
         self.app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
-        self.window = gl.GLViewWidget()
+        self.view = gl.GLViewWidget()
+        camera_position = QtGui.QVector3D(0, 0, 0)
+        self.view.setCameraPosition(pos=camera_position, distance=40, elevation=90, azimuth=0)
+        self.window = QtWidgets.QMainWindow()
+        self.window.setCentralWidget(self.view)
         self.window.setWindowTitle("F1Tenth Gym - OpenGL")
         self.window.setGeometry(0, 0, self.render_spec.window_size, self.render_spec.window_size)
-        self.window.setCameraPosition(distance=40)
-        self.window.opts['center'] = QtGui.QVector3D(0, 0, 0)
-        self.window.show()
+        
+        self._enable_pan_only()
+        self._init_map(track)
+        self._center_camera_on_map()
+        
+        # FPS label
+        text_rgb = (140, 140, 140)
+        self.fps_label = QtWidgets.QLabel(self.window)
+        font = QtGui.QFont("Arial", 14)
+        self.fps_label.setFont(font)
+        self.fps_label.setStyleSheet(
+            f"color: rgb({text_rgb[0]}, {text_rgb[1]}, {text_rgb[2]}); background-color: transparent; padding: 2px;"
+        )
+        self.fps_label.move(10, 10)
+        self.fps_label.resize(100, 20)
+        self.fps_label.setAttribute(QtCore.Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+        # self.fps_label.raise_()
+        self.fps_label.show()
 
-        self.cars = []
+        # Frame timer
+        self.last_time = time.time()
+        self.frame_count = 0
+
+        self.cars = None
         self.sim_time = None
         self.callbacks = []
-
-        # Load and transform map
-        self._init_map(track)
+        self.draw_flag = True
+        self.window.show()
         
         # Colors
         self.car_colors = [
             tuple(ImageColor.getcolor(c, "RGB")) for c in render_spec.vehicle_palette
         ]
-
+        
     def _init_map(self, track):
-        img = track.occupancy_map
-        img = np.stack([img]*3, axis=-1)
-        img = np.rot90(img, k=1)
-        img = np.flip(img, axis=0)
+        map_image = track.occupancy_map
+        map_image = np.rot90(map_image, k=1)
+        map_image = np.flip(map_image, axis=0)
+        self.map_image = map_image
 
         # Normalize image for OpenGL
-        img = img.astype(np.float32) / 255.0
-        w, h = img.shape[:2]
         self.map_origin = track.spec.origin
         px, py = self.map_origin[0], self.map_origin[1]
         res = self.map_resolution = track.spec.resolution
+        
+        map_rgb = np.stack([map_image]*3, axis=-1)
+        alpha = np.ones((map_rgb.shape[0], map_rgb.shape[1], 1), dtype=np.uint8) * 255
+        map_rgba = np.concatenate((map_rgb, alpha), axis=-1)
+        image_item = gl.GLImageItem(map_rgba)
+        image_item.translate(px, py, -0.01)  # Slightly below the map
+        image_item.scale(res, res, 1)
+        image_item.setGLOptions('translucent') 
+        self.view.addItem(image_item)
+        
+    def _get_map_bounds(self):
+        h, w = self.map_image.shape[:2]
+        sx, sy = self.map_resolution, self.map_resolution
+        ox, oy = self.map_origin[0], self.map_origin[1]
 
-        self.map_item = gl.GLImageItem(img)
-        self.map_item.translate(px, py, 0)
-        self.map_item.scale(res, res, 1)
-        self.window.addItem(self.map_item)
+        min_xy = np.array([ox, oy])
+        max_xy = np.array([ox + w * sx, oy + h * sy])
+        return min_xy, max_xy
+        
+    def _center_camera_on_map(self):
+        min_xy, max_xy = self._get_map_bounds()
+        # Compute center and extent
+        center = (min_xy + max_xy) / 2
+        extent = max(max_xy - min_xy)
+        # Fixed height above map
+        z = extent / 2   # or a constant like 30
+        x, y = center
+        self.view.setCameraPosition(
+            pos=QtGui.QVector3D(x, y, z),             # camera position
+            elevation=90,                              # top-down
+            azimuth=0                                  # no rotation
+        )
+        
+    def _enable_pan_only(self):
+        """Override GLViewWidget events to disable rotation and allow right-click panning."""
+        self.view.pan_active = False
+        self.view.pan_start = QtCore.QPoint()
 
-    def update(self, state):
-        if not self.cars:
-            for i in range(len(self.agent_ids)):
-                color = self.car_colors[i % len(self.car_colors)]
-                car_item = gl.GLScatterPlotItem(pos=np.zeros((1, 3)), color=color + (1.0,), size=5)
-                self.window.addItem(car_item)
-                self.cars.append(car_item)
+        def mousePressEvent(event):
+            if event.button() == QtCore.Qt.MouseButton.LeftButton:
+                self.view.pan_active = True
+                self.view.pan_start = event.pos()
+                event.accept()
+            else:
+                event.ignore()
 
-        for i, car in enumerate(self.cars):
-            x, y, _ = state["poses_x"][i], state["poses_y"][i], state["poses_theta"][i]
-            car.setData(pos=np.array([[x, y, 0]]))
+        def mouseMoveEvent(event):
+            if self.view.pan_active:
+                delta = event.pos() - self.view.pan_start
+                dx = -delta.y() * 0.08
+                dy = -delta.x() * 0.08
+                self.view.pan(dx, dy, 0)
+                self.view.pan_start = event.pos()
+                event.accept()
+            else:
+                event.ignore()
 
-        self.sim_time = state["sim_time"]
+        def mouseReleaseEvent(event):
+            self.view.pan_active = False
+            event.accept()
+
+        self.view.mousePressEvent = mousePressEvent
+        self.view.mouseMoveEvent = mouseMoveEvent
+        self.view.mouseReleaseEvent = mouseReleaseEvent
+
+    def update(self, obs: dict) -> None:
+        """
+        Update the simulation obs to be rendered.
+
+        Parameters
+        ----------
+            obs: simulation obs as dictionary
+        """
+        if self.cars is None:
+            self.cars = [
+                CarRenderer(
+                    env_renderer=self,
+                    car_length=self.params["length"],
+                    car_width=self.params["width"],
+                    color=self.car_colors[ic],
+                    render_spec=self.render_spec,
+                    map_origin=self.map_origin[:2],
+                    resolution=self.map_resolution,
+                )
+                for ic in range(len(self.agent_ids))
+            ]
+
+        # update cars obs and zoom level (updating points-per-unit)
+        for i, id in enumerate(self.agent_ids):
+            self.cars[i].update(obs, id)
+
+        # update time
+        self.sim_time = obs[self.agent_ids[0]]["sim_time"]
 
     def render(self):
-        for callback in self.callbacks:
-            callback(self)
-        self.app.processEvents()
+        if self.draw_flag:
+            start_time = time.time()
+            self._update_fps()
+            # call callbacks
+            for callback_fn in self.callbacks:
+                callback_fn(self)
+            
+            # draw cars
+            for i in range(len(self.agent_ids)):
+                self.cars[i].render()
+            self.app.processEvents()
+            # elapsed = time.time() - start_time
+            # sleep_time = max(0.0, 1/self.render_fps - elapsed)
+            # time.sleep(sleep_time)
         
     def add_renderer_callback(self, callback_fn):
         """
@@ -82,23 +200,42 @@ class PyQtEnvRendererGL(EnvRenderer):
             callback function to be called at every rendering step
         """
         self.callbacks.append(callback_fn)
+    
+    def _update_fps(self):
+        self.frame_count += 1
+        now = time.time()
+        elapsed = now - self.last_time
 
-    def render_points(self, points, color=(0, 0, 255), size=3):
-        color = [c / 255 for c in color] + [1.0]
-        pts = np.hstack([points, np.zeros((len(points), 1))])
-        item = gl.GLScatterPlotItem(pos=pts, color=color, size=size)
-        self.window.addItem(item)
-        return item
+        if elapsed >= 1.0:
+            fps = self.frame_count / elapsed
+            self.fps_label.setText(f"FPS: {fps:.0f}")
+            self.last_time = now
+            self.frame_count = 0
+        self.view.update()
 
-    def render_lines(self, points, color=(0, 0, 255), size=2):
-        color = [c / 255 for c in color] + [1.0]
-        pts = np.hstack([points, np.zeros((len(points), 1))])
-        item = gl.GLLinePlotItem(pos=pts, color=color, width=size, mode='line_strip')
-        self.window.addItem(item)
-        return item
+    def get_points_renderer(
+        self,
+        points: list | np.ndarray,
+        color: Optional[tuple[int, int, int]] = (0, 0, 255),
+        size: Optional[int] = 1,
+    ) -> ObjectRenderer:
+        return PointsRenderer(self, points, color, size)
 
-    def render_closed_lines(self, points, color=(0, 0, 255), size=2):
-        return self.render_lines(np.vstack([points, points[0]]), color, size)
+    def get_lines_renderer(
+        self,
+        points: list | np.ndarray,
+        color: Optional[tuple[int, int, int]] = (0, 0, 255),
+        size: Optional[int] = 1,
+    ) -> ObjectRenderer:
+        return LinesRenderer(self, points, color, size)
+
+    def get_closed_lines_renderer(
+        self,
+        points: list | np.ndarray,
+        color: Optional[tuple[int, int, int]] = (0, 0, 255),
+        size: Optional[int] = 1,
+    ) -> ObjectRenderer:
+        return ClosedLinesRenderer(self, points, color, size)
 
     def close(self):
         self.window.close()
