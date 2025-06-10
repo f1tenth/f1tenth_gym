@@ -2,6 +2,7 @@ window_size: 800      # [px] width and height of the window
 focus_on: agent_0     # [str] agent id to focus on (e.g., agent_0) or null for map view
 zoom_in_factor: 0.5   # [float] zoom in factor. 1.0 is no zoom, >1.0 is zoom in, <1.0 is zoom out
 bigger_car_when_map_centered: True  # [bool] it toggles the size of the car when centered in the map
+render_map_img: True  # [bool] it toggles the visualization of the map image
 show_wheels: True     # [bool] it toggles the visualization of the vehicle wheels
 car_tickness: 1       # [px] thickness of the car
 show_info: True       # [bool] it toggles the visualization of the instruction text

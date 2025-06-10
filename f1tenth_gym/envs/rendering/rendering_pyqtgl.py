@@ -43,7 +43,7 @@ class PyQtEnvRendererGL(EnvRenderer):
         self.window.setWindowTitle("F1Tenth Gym - OpenGL")
         self.window.setGeometry(0, 0, self.render_spec.window_size, self.render_spec.window_size)
         
-        # self._enable_pan_only()
+        self._enable_pan_only()
         self._init_map(track)
         
         # FPS label
@@ -89,11 +89,12 @@ class PyQtEnvRendererGL(EnvRenderer):
         map_rgb = np.stack([map_image]*3, axis=-1)
         alpha = np.ones((map_rgb.shape[0], map_rgb.shape[1], 1), dtype=np.uint8) * 255
         map_rgba = np.concatenate((map_rgb, alpha), axis=-1)
-        image_item = gl.GLImageItem(map_rgba)
+        image_item = gl.GLImageItem(map_rgba, smooth=True)
         image_item.translate(px, py, -0.01)  # Slightly below the map
         image_item.scale(res, res, 1)
         image_item.setGLOptions('translucent') 
-        self.view.addItem(image_item)
+        if self.render_spec.render_map_img:
+            self.view.addItem(image_item)
         
     def _get_map_bounds(self):
         h, w = self.map_image.shape[:2]
@@ -108,8 +109,8 @@ class PyQtEnvRendererGL(EnvRenderer):
         # Compute center and extent
         center = (min_xy + max_xy) / 2
         extent = max(max_xy - min_xy)
-        # if self.config
-        self.car_scale = extent/self.params['width'] / 100
+        if self.render_spec.bigger_car_when_map_centered:
+            self.car_scale = extent/self.params['width'] / 120
         # Fixed height above map
         x, y = center
         self.view.setCameraPosition(
@@ -209,8 +210,8 @@ class PyQtEnvRendererGL(EnvRenderer):
             # call callbacks
             for callback_fn in self.callbacks:
                 callback_fn(self)
-            # if self.agent_to_follow is not None:
-            #     self._center_camera_on_car(self.agent_to_follow)
+            if self.agent_to_follow is not None:
+                self._center_camera_on_car(self.agent_to_follow)
             # draw cars
             for i in range(len(self.agent_ids)):
                 self.cars[i].render(self.car_scale)
