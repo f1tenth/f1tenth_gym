@@ -43,7 +43,7 @@ class PyQtEnvRendererGL(EnvRenderer):
         self.window.setWindowTitle("F1Tenth Gym - OpenGL")
         self.window.setGeometry(0, 0, self.render_spec.window_size, self.render_spec.window_size)
         
-        self._enable_pan_only()
+        # self._enable_pan_only()
         self._init_map(track)
         
         # FPS label
@@ -93,7 +93,7 @@ class PyQtEnvRendererGL(EnvRenderer):
         image_item.translate(px, py, -0.01)  # Slightly below the map
         image_item.scale(res, res, 1)
         image_item.setGLOptions('translucent') 
-        # self.view.addItem(image_item)
+        self.view.addItem(image_item)
         
     def _get_map_bounds(self):
         h, w = self.map_image.shape[:2]
@@ -209,8 +209,8 @@ class PyQtEnvRendererGL(EnvRenderer):
             # call callbacks
             for callback_fn in self.callbacks:
                 callback_fn(self)
-            if self.agent_to_follow is not None:
-                self._center_camera_on_car(self.agent_to_follow)
+            # if self.agent_to_follow is not None:
+            #     self._center_camera_on_car(self.agent_to_follow)
             # draw cars
             for i in range(len(self.agent_ids)):
                 self.cars[i].render(self.car_scale)
