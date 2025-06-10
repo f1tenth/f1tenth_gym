@@ -30,7 +30,9 @@ def make_renderer(
         rendering frames per second, by default 100
     """
     cfg_file = pathlib.Path(__file__).parent.absolute() / "rendering.yaml"
-    render_spec = RenderSpec.from_yaml(cfg_file)
+    
+    render_spec = RenderSpec()
+    render_spec.from_yaml(cfg_file)
 
     if render_spec.render_type == "pygame": 
         from .rendering_pygame import PygameEnvRenderer as EnvRenderer

@@ -30,8 +30,8 @@ class CarRenderer(ObjectRenderer):
         self.rgba = np.array([self.rgba] * 2)
         
         # Define centered rectangle in local coords
-        hl = self.car_length / 2  # half-length
-        hw = self.car_width / 2   # half-width
+        hl = self.car_length / 2 # half-length
+        hw = self.car_width / 2 # half-width
         self.base_rect = np.array([
             [-hl, -hw, 0],
             [ hl, -hw, 0],
@@ -59,8 +59,9 @@ class CarRenderer(ObjectRenderer):
         # Tire params need to be updated
         self.tire_width = 0.1
         self.tire_length = self.wheel_size
+        
     
-    def apply_pose(self, pose):
+    def apply_pose(self, pose, scale=1.0):
         x, y, yaw = pose
         c, s = np.cos(yaw), np.sin(yaw)
         R = np.array([
@@ -68,7 +69,7 @@ class CarRenderer(ObjectRenderer):
             [s,  c, 0],
             [0,  0, 1]
         ])
-        return (self.base_rect @ R.T) + np.array([x, y, 0.01])
+        return ((self.base_rect * scale) @ R.T) + np.array([x, y, 0.01])
         
     def update(self, obs: dict[str, np.ndarray], id: str):        
         state = obs[id]["std_state"].astype(float)
@@ -83,9 +84,9 @@ class CarRenderer(ObjectRenderer):
             self.rgba = np.array([self.rgba] * 2)
         self.steering = state[2]
         
-    def render(self):
+    def render(self, scale=1.0):
         # pass
-        transformed = self.apply_pose(self.pose)
+        transformed = self.apply_pose(self.pose, scale)
         self.mesh.setMeshData(vertexes=transformed, 
                               faces=self.faces,
                               faceColors=self.rgba,

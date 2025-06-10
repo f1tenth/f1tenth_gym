@@ -1,4 +1,4 @@
-import time
+import time, logging
 import pyqtgraph.opengl as gl
 from PyQt6 import QtWidgets, QtCore, QtGui
 import numpy as np
@@ -24,14 +24,20 @@ class PyQtEnvRendererGL(EnvRenderer):
         self.render_spec = render_spec
         self.render_mode = render_mode
         self.render_fps = render_fps
+        if render_spec.focus_on:
+            self.agent_to_follow_setting = self.agent_ids.index(render_spec.focus_on)
+            self.agent_to_follow = self.agent_ids.index(render_spec.focus_on)
+        else:
+            self.agent_to_follow = None
+        self.car_scale = 1.0
         
         fmt = QtGui.QSurfaceFormat()
         fmt.setSwapInterval(0)  # 0 = no vsync, 1 = vsync
         QtGui.QSurfaceFormat.setDefaultFormat(fmt)
         self.app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
         self.view = gl.GLViewWidget()
-        camera_position = QtGui.QVector3D(0, 0, 0)
-        self.view.setCameraPosition(pos=camera_position, distance=40, elevation=90, azimuth=0)
+        self.view.setCameraPosition(pos=QtGui.QVector3D(0, 0, 0), distance=20, elevation=90, azimuth=0)
+        self.view.setBackgroundColor((25, 25, 25))
         self.window = QtWidgets.QMainWindow()
         self.window.setCentralWidget(self.view)
         self.window.setWindowTitle("F1Tenth Gym - OpenGL")
@@ -39,21 +45,20 @@ class PyQtEnvRendererGL(EnvRenderer):
         
         self._enable_pan_only()
         self._init_map(track)
-        self._center_camera_on_map()
         
         # FPS label
-        text_rgb = (140, 140, 140)
-        self.fps_label = QtWidgets.QLabel(self.window)
-        font = QtGui.QFont("Arial", 14)
-        self.fps_label.setFont(font)
-        self.fps_label.setStyleSheet(
-            f"color: rgb({text_rgb[0]}, {text_rgb[1]}, {text_rgb[2]}); background-color: transparent; padding: 2px;"
-        )
-        self.fps_label.move(10, 10)
-        self.fps_label.resize(100, 20)
-        self.fps_label.setAttribute(QtCore.Qt.WidgetAttribute.WA_TransparentForMouseEvents)
-        # self.fps_label.raise_()
-        self.fps_label.show()
+        if self.render_mode in ["human", "human_fast"]:
+            text_rgb = (140, 140, 140)
+            self.fps_label = QtWidgets.QLabel(self.window)
+            font = QtGui.QFont("Arial", 14)
+            self.fps_label.setFont(font)
+            self.fps_label.setStyleSheet(
+                f"color: rgb({text_rgb[0]}, {text_rgb[1]}, {text_rgb[2]}); background-color: transparent; padding: 2px;"
+            )
+            self.fps_label.move(10, 10)
+            self.fps_label.resize(100, 20)
+            self.fps_label.setAttribute(QtCore.Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+            self.fps_label.show()
 
         # Frame timer
         self.last_time = time.time()
@@ -88,13 +93,12 @@ class PyQtEnvRendererGL(EnvRenderer):
         image_item.translate(px, py, -0.01)  # Slightly below the map
         image_item.scale(res, res, 1)
         image_item.setGLOptions('translucent') 
-        self.view.addItem(image_item)
+        # self.view.addItem(image_item)
         
     def _get_map_bounds(self):
         h, w = self.map_image.shape[:2]
         sx, sy = self.map_resolution, self.map_resolution
         ox, oy = self.map_origin[0], self.map_origin[1]
-
         min_xy = np.array([ox, oy])
         max_xy = np.array([ox + w * sx, oy + h * sy])
         return min_xy, max_xy
@@ -104,11 +108,26 @@ class PyQtEnvRendererGL(EnvRenderer):
         # Compute center and extent
         center = (min_xy + max_xy) / 2
         extent = max(max_xy - min_xy)
+        # if self.config
+        self.car_scale = extent/self.params['width'] / 100
         # Fixed height above map
-        z = extent / 2   # or a constant like 30
         x, y = center
         self.view.setCameraPosition(
-            pos=QtGui.QVector3D(x, y, z),             # camera position
+            pos=QtGui.QVector3D(x, y, 1),             # camera position
+            distance=extent * 0.8,  # zoom level
+            elevation=90,                              # top-down
+            azimuth=0                                  # no rotation
+        )
+    
+    def _center_camera_on_car(self, car_idx=0, distance_reset=False):
+        x, y = self.cars[car_idx].pose[:2]  # Get car position
+        self.car_scale = 1.0
+        if distance_reset:
+            self.view.setCameraPosition(
+                distance=self.params['width'] * 50,  # zoom level
+            )
+        self.view.setCameraPosition(
+            pos=QtGui.QVector3D(x, y, 1),             # camera position
             elevation=90,                              # top-down
             azimuth=0                                  # no rotation
         )
@@ -119,12 +138,21 @@ class PyQtEnvRendererGL(EnvRenderer):
         self.view.pan_start = QtCore.QPoint()
 
         def mousePressEvent(event):
-            if event.button() == QtCore.Qt.MouseButton.LeftButton:
+            if event.button() == QtCore.Qt.MouseButton.LeftButton: # NOTE: left button is used for panning
                 self.view.pan_active = True
                 self.view.pan_start = event.pos()
                 event.accept()
-            else:
-                event.ignore()
+            if event.button() == QtCore.Qt.MouseButton.RightButton:
+                logging.debug("Pressed right button -> Follow Next agent")
+                if self.agent_to_follow is None:
+                    self.agent_to_follow = 0
+                else:
+                    self.agent_to_follow = (self.agent_to_follow + 1) % len(self.agent_ids)
+                self._center_camera_on_car(self.agent_to_follow, distance_reset=True)
+            elif event.button() == QtCore.Qt.MouseButton.MiddleButton:
+                logging.debug("Pressed middle button -> Change to Map View")
+                self._center_camera_on_map()
+                self.agent_to_follow = None
 
         def mouseMoveEvent(event):
             if self.view.pan_active:
@@ -177,18 +205,23 @@ class PyQtEnvRendererGL(EnvRenderer):
     def render(self):
         if self.draw_flag:
             start_time = time.time()
-            self._update_fps()
+            
             # call callbacks
             for callback_fn in self.callbacks:
                 callback_fn(self)
-            
+            if self.agent_to_follow is not None:
+                self._center_camera_on_car(self.agent_to_follow)
             # draw cars
             for i in range(len(self.agent_ids)):
-                self.cars[i].render()
+                self.cars[i].render(self.car_scale)
+            
             self.app.processEvents()
-            # elapsed = time.time() - start_time
-            # sleep_time = max(0.0, 1/self.render_fps - elapsed)
-            # time.sleep(sleep_time)
+            
+            if self.render_mode in ["human", "human_fast"]:
+                self._update_fps()
+                # elapsed = time.time() - start_time
+                # sleep_time = max(0.0, 1/self.render_fps - elapsed)
+                # time.sleep(sleep_time)
         
     def add_renderer_callback(self, callback_fn):
         """
