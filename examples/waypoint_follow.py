@@ -326,6 +326,7 @@ def main():
             "map_scale": 1.0,
             "enable_rendering": 1,
             "enable_scan": 1,
+            "compute_frenet": 1,
         },
         render_mode="human_fast",
     )

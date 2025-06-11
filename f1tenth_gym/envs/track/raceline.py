@@ -64,6 +64,8 @@ class Raceline:
 
         # compute spline through waypoints if not provided
         self.spline = spline or CubicSpline2D(x=xs, y=ys)
+        self.s_frame_max = self.spline.s[-1]
+        self.s_guess = 0.0
 
         self.waypoint_renderer = None
 

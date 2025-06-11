@@ -139,7 +139,6 @@ class F110Env(gym.Env):
             model=self.model,
             action_type=self.action_type,
         )
-        self.sim.set_map(self.map, self.config["map_scale"])
 
         if isinstance(self.map, Track):
             self.track = self.map
@@ -148,6 +147,7 @@ class F110Env(gym.Env):
                 self.map,
                 track_scale=self.config["map_scale"],
             )  # load track in gym env for convenience
+        self.sim.set_map(self.track, self.config["map_scale"])
 
         # observations
         self.agent_ids = [f"agent_{i}" for i in range(self.num_agents)]

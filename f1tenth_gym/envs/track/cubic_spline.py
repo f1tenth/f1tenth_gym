@@ -33,83 +33,32 @@ class CubicSpline2D:
         vxs: Optional[np.ndarray] = None,
         axs: Optional[np.ndarray] = None,
         ss: Optional[np.ndarray] = None,
-    ):
-        self.xs = x
-        self.ys = y
-        input_vals = [x, y, psis, ks, vxs, axs, ss]
+    ):        
+        psis = psis if psis is not None else self._calc_yaw_from_xy(x, y)
+        ks = ks if ks is not None else self._calc_kappa_from_xy(x, y)
+        vxs = vxs if vxs is not None else np.ones_like(x)
+        axs = axs if axs is not None else np.zeros_like(x)
 
-        # Only close the path if for the input values from the user,
-        # the first and last points are not the same => the path is not closed
-        # Otherwise, the constructed values can mess up the s calculation and closure
-        need_closure = False
-        for input_val in input_vals:
-            if input_val is not None:
-                if not (input_val[-1] == input_val[0]):
-                    need_closure = True
-                    break
-
-        def close_with_constructor(input_val, constructor, closed_path):
-            '''
-            If the input value is not None, return it.
-            Otherwise, return the constructor, with closure if necessary.
-
-            Parameters
-            ----------
-            input_val : np.ndarray | None
-                The input value from the user.
-            constructor : np.ndarray
-                The constructor to use if the input value is None.
-            closed_path : bool
-                Indicator whether the orirignal path is closed.
-            '''
-            if input_val is not None:
-                return input_val 
-            else:
-                temp_ret = constructor
-                if closed_path:
-                   temp_ret[-1] = temp_ret[0]
-                return temp_ret
-            
-        self.psis = close_with_constructor(psis, self._calc_yaw_from_xy(x, y), not need_closure)
-        self.ks = close_with_constructor(ks, self._calc_kappa_from_xy(x, y), not need_closure)
-        self.vxs = close_with_constructor(vxs, np.ones_like(x), not need_closure)
-        self.axs = close_with_constructor(axs, np.zeros_like(x), not need_closure)
-        self.ss = close_with_constructor(ss, self.__calc_s(x, y), not need_closure)
-        psis_spline = close_with_constructor(psis, self._calc_yaw_from_xy(x, y), not need_closure)
-
-        # If yaw is provided, interpolate cosines and sines of yaw for continuity
-        cosines_spline = np.cos(psis_spline)
-        sines_spline = np.sin(psis_spline)
+        self.points = np.c_[x, y, 
+                            np.cos(psis), np.sin(psis), 
+                            ks, vxs, axs]
         
-        ks_spline = close_with_constructor(ks, self._calc_kappa_from_xy(x, y), not need_closure)
-        vxs_spline = close_with_constructor(vxs, np.zeros_like(x), not need_closure)
-        axs_spline = close_with_constructor(axs, np.zeros_like(x), not need_closure)
-
-        self.points = np.c_[self.xs, self.ys, 
-                            cosines_spline, sines_spline, 
-                            ks_spline, vxs_spline, axs_spline]
-        
-        if need_closure:
-            self.points = np.vstack(
-                (self.points, self.points[0])
-            )  # Ensure the path is closed
-
-        if ss is not None:
-            self.s = ss
+        if np.any(self.points[-1, :2] != self.points[0, :2]):
+            self.points = np.vstack((self.points, self.points[0]))
         else:
-            self.s = self.__calc_s(self.points[:, 0], self.points[:, 1])
-        self.s_interval = (self.s[-1] - self.s[0]) / len(self.s)
+            self.points[-1] = self.points[0]
+        self.s = ss if ss is not None else self.__calc_s(self.points[:, 0], self.points[:, 1])
+        # self.s_interval = (self.s[-1] - self.s[0]) / len(self.s)
 
         # Use scipy CubicSpline to interpolate the points with periodic boundary conditions
-        # This is necesaxsry to ensure the path is continuous
+        # This is necessary to ensure the path is continuous
         self.spline = interpolate.CubicSpline(self.s, self.points, bc_type="periodic")
         self.spline_x = np.array(self.spline.x) 
-        self.spline_c = np.array(self.spline.c)
-
 
     def find_segment_for_s(self, x):
         # Find the segment of the spline that x is in
-        return (x / (self.spline.x[-1] + self.s_interval) * (len(self.spline_x) - 1)).astype(int)
+        # return (x / (self.spline.x[-1] + self.s_interval) * (len(self.spline_x) - 1)).astype(int)
+        return (x / (self.spline.x[-1]) * (len(self.spline_x) - 2)).astype(int)
     
     def predict_with_spline(self, point, segment, state_index=0):
         # A (4, 100) array, where the rows contain (x-x[i])**3, (x-x[i])**2 etc.

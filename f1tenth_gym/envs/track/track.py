@@ -416,8 +416,9 @@ class Track:
             psi: yaw angle
         """
         line = self.raceline if use_raceline else self.centerline
-        x, y = line.spline.calc_position(s)
-        psi = line.spline.calc_yaw(s)
+        s = s % self.s_frame_max
+        x, y = self.centerline.calc_position(s)
+        psi = self.centerline.calc_yaw(s)
 
         # Adjust x,y by shifting along the normal vector
         x -= ey * np.sin(psi)
@@ -425,10 +426,9 @@ class Track:
 
         # Adjust psi by adding the heading deviation
         psi += ephi
+        return x, y, psi % (2 * np.pi)
 
-        return x, y, psi
-
-    def cartesian_to_frenet(self, x, y, phi, use_raceline=False, s_guess=0):
+    def cartesian_to_frenet(self, x, y, phi, use_raceline=False, s_guess=None):
         """
         Convert Cartesian coordinates to Frenet coordinates.
 
@@ -441,11 +441,14 @@ class Track:
             ey: lateral deviation
             ephi: heading deviation
         """
+        if s_guess is None:
+            s_guess = self.s_guess
         line = self.raceline if use_raceline else self.centerline
         # s, ey = line.spline.calc_arclength_inaccurate(x, y) # inaccurate, but much faster
         s, ey = line.spline.calc_arclength(x, y, s_guess)
         # Wrap around
         s = s % line.spline.s[-1]
+        self.s_guess = s
 
         # Use the normal to calculate the signed lateral deviation
         yaw = line.spline.calc_yaw(s)
