@@ -40,7 +40,7 @@ from .rendering import make_renderer
 from .reset import make_reset_fn
 from .track import Track
 from .utils import deep_update
-
+import time
 
 class F110Env(gym.Env):
     """
@@ -148,7 +148,7 @@ class F110Env(gym.Env):
                 track_scale=self.config["map_scale"],
             )  # load track in gym env for convenience
         self.sim.set_map(self.track, self.config["map_scale"])
-
+        
         # observations
         self.agent_ids = [f"agent_{i}" for i in range(self.num_agents)]
 

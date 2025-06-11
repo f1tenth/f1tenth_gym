@@ -69,6 +69,7 @@ class Track:
         self.occupancy_map = occupancy_map
         self.centerline = centerline
         self.raceline = raceline
+        self.s_guess = None
 
     @staticmethod
     def load_spec(track: str, filespec: str) -> TrackSpec:
