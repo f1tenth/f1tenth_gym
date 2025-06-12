@@ -41,6 +41,15 @@ from .reset import make_reset_fn
 from .track import Track
 from .utils import deep_update
 
+# class WindingAngleLoopCounter:
+#     def __init__(self, track: Track):
+#         self.start_point_curvature = track.centerline.calc_curvature(0.0)
+#         self.winding_point = np.array(
+#             track.frenet_to_cartesian(
+#                 s=0.0, ey=np.sign(self.start_point_curvature) * 1.5, ephi=0.0
+#             )
+#         )[:2]
+
 class F110Env(gym.Env):
     """
     OpenAI gym environment for F1TENTH
@@ -112,20 +121,13 @@ class F110Env(gym.Env):
         self.near_start = True
         self.num_toggles = 0
 
-        # race info
-        self.lap_times = np.zeros((self.num_agents,))
-        self.lap_counts = np.zeros((self.num_agents,))
-        self.sim_time = 0.0
-
         # finish line info
-        self.num_toggles = 0
-        self.near_start = True
-        self.near_starts = np.array([True] * self.num_agents)
-        self.toggle_list = np.zeros((self.num_agents,))
-        self.start_xs = np.zeros((self.num_agents,))
-        self.start_ys = np.zeros((self.num_agents,))
-        self.start_thetas = np.zeros((self.num_agents,))
-        self.start_rot = np.eye(2)
+        if self.config["loop_counting_method"] == "frenet_based":
+            self.agents_prev_s = np.array([None] * self.num_agents)
+            self.lap_times = np.zeros((self.num_agents, ))
+            self.lap_times_finish = np.zeros((self.num_agents, ))
+            self.lap_counts = np.zeros((self.num_agents, ))
+            self.sim_time = 0.0
         
         if isinstance(self.map, Track):
             self.track = self.map
@@ -208,6 +210,7 @@ class F110Env(gym.Env):
             "timestep": 0.01,
             "integrator_timestep": 0.01,
             "ego_idx": 0,
+            "max_laps": 'inf',  # 'inf' for infinite laps, or a positive integer
             "integrator": "rk4",
             "model": "st", # "ks", "st", "mb"
             "control_input": ["speed", "steering_angle"],
@@ -220,9 +223,9 @@ class F110Env(gym.Env):
             "lidar_range": 30.0,
             "lidar_noise_std": 0.01,
             "steer_delay_buffer_size": 1,
-            "compute_frenet": True, # NOTE: currently always true
+            "compute_frenet": True, 
             "collision_check_method": "bounding_box", # "lidar_scan", "bounding_box"
-            "loop_counting_method": "s_based", # "toggle", "s_based", "winding_angle"
+            "loop_counting_method": "frenet_based", # "toggle", "frenet_based", "winding_angle"
         }
 
     @classmethod
@@ -432,46 +435,24 @@ class F110Env(gym.Env):
     def _check_done(self):
         """
         Check if the current rollout is done
-
-        Args:
-            None
-
-        Returns:
-            done (bool): whether the rollout is done
-            toggle_list (list[int]): each agent's toggle list for crossing the finish zone
         """
-
-        # this is assuming 2 agents
-        # TODO: switch to maybe s-based
-        left_t = 2
-        right_t = 2
-
-        poses_x = np.array(self.poses_x) - self.start_xs
-        poses_y = np.array(self.poses_y) - self.start_ys
-        delta_pt = np.dot(self.start_rot, np.stack((poses_x, poses_y), axis=0))
-        temp_y = delta_pt[1, :]
-        idx1 = temp_y > left_t
-        idx2 = temp_y < -right_t
-        temp_y[idx1] -= left_t
-        temp_y[idx2] = -right_t - temp_y[idx2]
-        temp_y[np.invert(np.logical_or(idx1, idx2))] = 0
-
-        dist2 = delta_pt[0, :] ** 2 + temp_y**2
-        closes = dist2 <= 0.1
-        for i in range(self.num_agents):
-            if closes[i] and not self.near_starts[i]:
-                self.near_starts[i] = True
-                self.toggle_list[i] += 1
-            elif not closes[i] and self.near_starts[i]:
-                self.near_starts[i] = False
-                self.toggle_list[i] += 1
-            self.lap_counts[i] = self.toggle_list[i] // 2
-            if self.toggle_list[i] < 4:
-                self.lap_times[i] = self.sim_time
-
-        done = (self.collisions[self.ego_idx]) or np.all(self.toggle_list >= 4)
-
-        return bool(done), self.toggle_list >= 4
+        if self.config['loop_counting_method'] == "frenet_based":
+            for ind, agent_id in enumerate(self.agent_ids):
+                if self.agents_prev_s[ind] is None:
+                    self.agents_prev_s[ind] = self.obs[agent_id]['frenet_pose'][0]
+                else:
+                    agent_curr_s = self.obs[agent_id]['frenet_pose'][0]
+                    if self.agents_prev_s[ind] - agent_curr_s > self.sim.track.centerline.spline.s_frame_max * 0.85 \
+                        and self.sim_time > self.timestep:
+                        self.lap_counts[ind] += 1
+                        self.lap_times[ind] = self.sim_time - self.lap_times_finish[ind]
+                        self.lap_times_finish[ind] = self.sim_time
+                    self.agents_prev_s[ind] = agent_curr_s
+                self.obs[agent_id]['lap_time'] = self.lap_times[ind]
+                self.obs[agent_id]['lap_count'] = [ind]
+                
+        done = (self.collisions[self.ego_idx]) or self.lap_counts >= float(self.config["max_laps"])
+        return bool(done)
 
     def _update_state(self):
         """
@@ -510,9 +491,11 @@ class F110Env(gym.Env):
         self._update_state()
 
         # check done
-        done, toggle_list = self._check_done()
+        done = self._check_done()
         truncated = False
-        info = {"checkpoint_done": toggle_list}
+        info = {"lap_times": self.lap_times, 
+                "lap_counts": self.lap_counts,
+                "sim_time": self.sim_time}
 
         return self.obs, reward, done, truncated, info
 

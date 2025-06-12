@@ -48,6 +48,7 @@ class CubicSpline2D:
             self.points[-1] = self.points[0]
         self.s = ss if ss is not None else self.__calc_s(self.points[:, 0], self.points[:, 1])
         self.s_interval = (self.s[-1] - self.s[0]) / len(self.s)
+        self.s_frame_max = self.s[-1]
 
         # Use scipy CubicSpline to interpolate the points with periodic boundary conditions
         # This is necessary to ensure the path is continuous
