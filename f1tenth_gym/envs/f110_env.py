@@ -40,7 +40,6 @@ from .rendering import make_renderer
 from .reset import make_reset_fn
 from .track import Track
 from .utils import deep_update
-import time
 
 class F110Env(gym.Env):
     """
@@ -128,6 +127,14 @@ class F110Env(gym.Env):
         self.start_thetas = np.zeros((self.num_agents,))
         self.start_rot = np.eye(2)
         
+        if isinstance(self.map, Track):
+            self.track = self.map
+        else:
+            self.track = Track.from_track_name(
+                self.map,
+                track_scale=self.config["map_scale"],
+            )  # load track in gym env for convenience
+        
         # initiate stuff
         self.sim = Simulator(
             self.config,
@@ -138,15 +145,8 @@ class F110Env(gym.Env):
             integrator=self.integrator,
             model=self.model,
             action_type=self.action_type,
+            track=self.track,
         )
-
-        if isinstance(self.map, Track):
-            self.track = self.map
-        else:
-            self.track = Track.from_track_name(
-                self.map,
-                track_scale=self.config["map_scale"],
-            )  # load track in gym env for convenience
         self.sim.set_map(self.track, self.config["map_scale"])
         
         # observations
@@ -185,6 +185,45 @@ class F110Env(gym.Env):
                 render_mode=render_mode,
                 render_fps=self.metadata["render_fps"],
             )
+            
+    @classmethod
+    def default_config(cls) -> dict:
+        """
+        Default environment configuration.
+
+        Can be overloaded in environment implementations, or by calling configure().
+
+        Args:
+            None
+
+        Returns:
+            a configuration dict
+        """
+        return {
+            "seed": 12345,
+            "map": "Spielberg",
+            "map_scale": 1.0,
+            "params": cls.f1tenth_vehicle_params(),
+            "num_agents": 2,
+            "timestep": 0.01,
+            "integrator_timestep": 0.01,
+            "ego_idx": 0,
+            "integrator": "rk4",
+            "model": "st", # "ks", "st", "mb"
+            "control_input": ["speed", "steering_angle"],
+            "observation_config": {"type": "direct"},
+            "reset_config": {"type": None},
+            "enable_rendering": True,
+            "enable_scan": True, # NOTE no lidar scan and collision if False
+            "lidar_fov" : 4.712389,
+            "lidar_num_beams": 1080,
+            "lidar_range": 30.0,
+            "lidar_noise_std": 0.01,
+            "steer_delay_buffer_size": 1,
+            "compute_frenet": True, # NOTE: currently always true
+            "collision_check_method": "bounding_box", # "lidar_scan", "bounding_box"
+            "loop_counting_method": "s_based", # "toggle", "s_based", "winding_angle"
+        }
 
     @classmethod
     def fullscale_vehicle_params(cls) -> dict:
@@ -373,43 +412,6 @@ class F110Env(gym.Env):
         }
         return params
 
-    @classmethod
-    def default_config(cls) -> dict:
-        """
-        Default environment configuration.
-
-        Can be overloaded in environment implementations, or by calling configure().
-
-        Args:
-            None
-
-        Returns:
-            a configuration dict
-        """
-        return {
-            "seed": 12345,
-            "map": "Spielberg",
-            "map_scale": 1.0,
-            "params": cls.f1tenth_vehicle_params(),
-            "num_agents": 2,
-            "timestep": 0.01,
-            "integrator_timestep": 0.01,
-            "ego_idx": 0,
-            "integrator": "rk4",
-            "model": "st", # "ks", "st", "mb"
-            "control_input": ["speed", "steering_angle"],
-            "observation_config": {"type": None},
-            "reset_config": {"type": None},
-            "enable_rendering": True,
-            "enable_scan": True, # NOTE no lidar scan and collision if False
-            "lidar_fov" : 4.712389,
-            "lidar_num_beams": 360,
-            "lidar_range": 30.0,
-            "lidar_noise_std": 0.01,
-            "steer_delay_buffer_size": 1,
-            "compute_frenet": False,
-        }
-
     def configure(self, config: dict) -> None:
         if config:
             self.config = deep_update(self.config, config)
@@ -506,20 +508,6 @@ class F110Env(gym.Env):
 
         # update data member
         self._update_state()
-
-        # rendering observation
-        # if self.config["enable_rendering"]:
-        #     self.render_obs = {
-        #         "ego_idx": self.sim.ego_idx,
-        #         "poses_x": self.sim.agent_poses[:, 0],
-        #         "poses_y": self.sim.agent_poses[:, 1],
-        #         "poses_theta": self.sim.agent_poses[:, 2],
-        #         "steering_angles": self.sim.agent_steerings,
-        #         "lap_times": self.lap_times,
-        #         "lap_counts": self.lap_counts,
-        #         "collisions": self.sim.collisions,
-        #         "sim_time": self.sim_time,
-        #     }
 
         # check done
         done, toggle_list = self._check_done()

@@ -48,9 +48,6 @@ class DirectObservation(Observation):
                 "state": gym.spaces.Box(
                     low=-large_num, high=large_num, shape=(int(self.env.model.state_dim),), dtype=np.float32
                 ),
-                # "frenet_state": gym.spaces.Box(
-                #     low=-large_num, high=large_num, shape=(7,), dtype=np.float32
-                # ),
                 "collision": gym.spaces.Box(
                     low=0.0, high=1.0, shape=(), dtype=np.float32
                 ),
@@ -64,6 +61,10 @@ class DirectObservation(Observation):
                     low=0.0, high=large_num, shape=(), dtype=np.float32
                 ),
             }
+            if self.env.unwrapped.config["compute_frenet"]:
+                agent_dict["frenet_pose"] = gym.spaces.Box(
+                    low=-large_num, high=large_num, shape=(3,), dtype=np.float32
+                )
             complete_space[agent_id] = gym.spaces.Dict(
                 agent_dict
             )
@@ -88,6 +89,8 @@ class DirectObservation(Observation):
                 "lap_count": self.env.unwrapped.lap_counts[i],
                 "sim_time": self.env.unwrapped.sim_time,
             }
+            if self.env.unwrapped.config["compute_frenet"]:
+                agent_obs["frenet_pose"] = agent.frenet_pose if hasattr(agent, 'frenet_pose') else np.zeros(3, dtype=np.float32)
 
             # add agent's observation to multi-agent observation
             obs[agent_id] = agent_obs

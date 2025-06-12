@@ -7,12 +7,13 @@ Zirui branch TODO list:
 - [ ] verify collision
 - [x] scan toggle
 - [x] separate time step and integrater time step
-- [ ] add frenet
+- [x] add frenet
 - [ ] use correct loop count
 - [x] simplify std_state and observation
 - [x] add option "state" in reset
 - [x] control_buffer_size, lidar fov, lidar nums in config
 - [ ] double check dynamics result
+- [x] implemented new rendering with pyqtgraph.opengl
 
 ## Quickstart
 We recommend installing the simulation inside a virtualenv. You can install the environment by running:

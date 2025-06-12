@@ -305,7 +305,7 @@ def main():
         "mass": 3.463388126201571,
         "lf": 0.15597534362552312,
         "tlad": 0.82461887897713965,
-        "vgain": 0.5,
+        "vgain": 0.2,
     }
 
     num_agents = 1
@@ -326,6 +326,7 @@ def main():
             "map_scale": 1.0,
             "enable_rendering": 1,
             "enable_scan": 1,
+            "lidar_num_beams": 270,
             "compute_frenet": 1,
         },
         render_mode="human_fast",
@@ -365,10 +366,12 @@ def main():
                 work["vgain"],
             )
             action[i] = np.array([steer, speed])
+            # print("frenet_pose", obs[agent_id]["frenet_pose"])
         t1 = time.time()
         obs, step_reward, done, truncated, info = env.step(action)
+        
         times.append(1/(time.time() - t1))
-        if len(times) > 10000:
+        if len(times) > 2000:
             print("FPS:", np.mean(times))
             times = []
         laptime += step_reward

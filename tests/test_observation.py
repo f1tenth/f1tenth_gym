@@ -160,7 +160,7 @@ class TestObservationInterface(unittest.TestCase):
         """
         Check the dynamic state observation space contains the correct features.
         """
-        env = self._make_env(config={"observation_config": {"type": "dynamic_state"}})
+        env = self._make_env(config={"observation_config": {"type": "original"}})
 
         kinematic_features = [
             "pose_x",
@@ -204,7 +204,7 @@ class TestObservationInterface(unittest.TestCase):
                 self.assertTrue(np.allclose(ground_truth, observed))
 
     def test_consistency_observe_space(self):
-        obs_type_ids = ["kinematic_state", "dynamic_state", "original"]
+        obs_type_ids = ["direct", "original"]
 
         env = self._make_env()
         env.reset()
@@ -222,7 +222,7 @@ class TestObservationInterface(unittest.TestCase):
     def test_gymnasium_api(self):
         from gymnasium.utils.env_checker import check_env
 
-        obs_type_ids = ["kinematic_state", "dynamic_state", "original"]
+        obs_type_ids = ["direct", "original"]
 
         for obs_type_id in obs_type_ids:
             env = self._make_env(config={"observation_config": {"type": obs_type_id}})

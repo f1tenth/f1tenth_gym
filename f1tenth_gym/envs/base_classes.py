@@ -48,6 +48,7 @@ class RaceCar(object):
         num_beams (int): number of beams in laser
         fov (float): field of view of laser
         state (np.ndarray (7, )): state vector [x, y, theta, vel, steer_angle, ang_vel, slip_angle]
+        frenet_pose (np.ndarray (3, )): frenet pose vector [s, d, theta]
         odom (np.ndarray(13, )): odometry vector [x, y, z, qx, qy, qz, qw, linear_x, linear_y, linear_z, angular_x, angular_y, angular_z]
         accel (float): current acceleration input
         steer_angle_vel (float): current steering velocity input
@@ -70,6 +71,7 @@ class RaceCar(object):
         model=DynamicModel.ST,
         is_ego=False,
         time_step=0.01,
+        track = None,
     ):
         """
 
@@ -103,6 +105,7 @@ class RaceCar(object):
         self.integrator = integrator
         self.action_type = action_type
         self.model = model
+        self.track = track
         if self.model == DynamicModel.MB:
             from .dynamic_models.multi_body.multi_body import sequential_param_keys
             self.sequential_param_keys = sequential_param_keys
@@ -112,6 +115,8 @@ class RaceCar(object):
 
         # state of the vehicle
         self.state = self.model.get_initial_state(params=self.params)
+        if self.config['compute_frenet'] and self.track is not None:
+            self.frenet_pose = self.track.cartesian_to_frenet(self.state[0], self.state[1], self.state[4], use_s_guess=False)
 
         # pose of opponents in the world
         self.opp_poses = None
@@ -216,6 +221,8 @@ class RaceCar(object):
             self.state = self.model.get_initial_state(pose=pose, params=self.params)
         elif option == 'state':
             self.state = pose
+        if self.config['compute_frenet'] and self.track is not None:
+            self.frenet_pose = self.track.cartesian_to_frenet(self.state[0], self.state[1], self.state[4], use_s_guess=False)
 
         self.steer_buffer = np.empty((0,))
         # reset scan random generator
@@ -344,7 +351,7 @@ class RaceCar(object):
             )
 
         # bound yaw angle
-        self.state[4] %= 2 * np.pi  # TODO: This is a problem waiting to happen
+        self.state[4] = (self.state[4] + 2 * np.pi) % (2 * np.pi)  # TODO: This is a problem waiting to happen
 
         if self.config['enable_scan']:
             # update scan
@@ -353,6 +360,10 @@ class RaceCar(object):
             )
         else:
             current_scan = np.zeros((self.num_beams,))
+            
+        if self.config['compute_frenet'] and self.track is not None:
+            # update frenet poses for all agents
+            self.frenet_pose = self.track.cartesian_to_frenet(self.state[0], self.state[1], self.state[4])
 
         return current_scan
 
@@ -399,9 +410,7 @@ class RaceCar(object):
         Returns:
             np.ndarray (7, ): state of the vehicle
         """
-        # t1 = time.time()
         standard_state = self.standard_state_fn(self.state)
-        # print(time.time() - t1)
         return standard_state
 
 
@@ -434,6 +443,7 @@ class Simulator(object):
         model=DynamicModel.ST,
         time_step=0.01,
         ego_idx=0,
+        track : Track | None = None,
     ):
         """
         Init function
@@ -462,6 +472,7 @@ class Simulator(object):
         self.collisions = np.zeros((self.num_agents,))
         self.collision_idx = -1 * np.ones((self.num_agents,))
         self.model = model
+        self.track = track
 
         # initializing agents
         for i in range(self.num_agents):
@@ -474,6 +485,7 @@ class Simulator(object):
                 integrator=integrator,
                 model=model,
                 action_type=action_type,
+                track=self.track,
             )
             self.agents.append(car)
 
@@ -559,10 +571,10 @@ class Simulator(object):
             self.agent_poses[i, :] = np.append(agent.state[0:2], agent.state[4])
             self.agent_steerings[i] = agent.state[2]
             
-        if self.config['enable_scan']:
-            # check collisions between all agents
-            self.check_collision()
-
+            
+        # check collisions between all agents
+        self.check_collision()
+            
         for i, agent in enumerate(self.agents):
             # update agent's information on other agents
             opp_poses = np.concatenate(

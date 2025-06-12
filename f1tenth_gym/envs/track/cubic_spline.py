@@ -8,62 +8,9 @@ import math
 import numpy as np
 from scipy import interpolate
 from typing import Union, Optional
-import time
+# import scipy.optimize as so
 from f1tenth_gym.envs.track.utils import nearest_point_on_trajectory
-
 from numba import njit
-@njit(fastmath=False, cache=True)
-def nearest_point_on_trajectory(point: np.ndarray, trajectory: np.ndarray) -> tuple:
-    """
-    Return the nearest point along the given piecewise linear trajectory.
-
-    Same as nearest_point_on_line_segment, but vectorized. This method is quite fast, time constraints should
-    not be an issue so long as trajectories are not insanely long.
-
-        Order of magnitude: trajectory length: 1000 --> 0.0002 second computation (5000fps)
-
-    Parameters
-    ----------
-    point: np.ndarray
-        The 2d point to project onto the trajectory
-    trajectory: np.ndarray
-        The trajectory to project the point onto, shape (N, 2)
-        The points must be unique. If they are not unique, a divide by 0 error will destroy the world
-
-    Returns
-    -------
-    nearest_point: np.ndarray
-        The nearest point on the trajectory
-    distance: float
-        The distance from the point to the nearest point on the trajectory
-    t: float
-    min_dist_segment: int
-        The index of the nearest point on the trajectory
-    """
-    diffs = trajectory[1:, :] - trajectory[:-1, :]
-    l2s = diffs[:, 0] ** 2 + diffs[:, 1] ** 2
-    # this is equivalent to the elementwise dot product
-    # dots = np.sum((point - trajectory[:-1,:]) * diffs[:,:], axis=1)
-    dots = np.empty((trajectory.shape[0] - 1,))
-    for i in range(dots.shape[0]):
-        dots[i] = np.dot((point - trajectory[i, :]), diffs[i, :])
-    t = dots / l2s
-    t[t < 0.0] = 0.0
-    t[t > 1.0] = 1.0
-    # t = np.clip(dots / l2s, 0.0, 1.0)
-    projections = trajectory[:-1, :] + (t * diffs.T).T
-    # dists = np.linalg.norm(point - projections, axis=1)
-    dists = np.empty((projections.shape[0],))
-    for i in range(dists.shape[0]):
-        temp = point - projections[i]
-        dists[i] = np.sqrt(np.sum(temp * temp))
-    min_dist_segment = np.argmin(dists)
-    return (
-        dists[min_dist_segment],
-        t[min_dist_segment],
-        min_dist_segment,
-    )
-
 
 class CubicSpline2D:
     """
@@ -107,6 +54,8 @@ class CubicSpline2D:
         self.spline = interpolate.CubicSpline(self.s, self.points, bc_type="periodic")
         self.spline_x = np.array(self.spline.x) 
         self.spline_c = np.array(self.spline.c) 
+        self.diffs = self.points[1:, :2] - self.points[:, :2][:-1, :2]
+        self.l2s = self.diffs[:, 0] ** 2 + self.diffs[:, 1] ** 2
 
     def find_segment_for_s(self, x):
         # Find the segment of the spline that x is in
@@ -162,7 +111,7 @@ class CubicSpline2D:
         curvature = (dx_dt * d2y_dt2 - d2x_dt2 * dy_dt) / (dx_dt * dx_dt + dy_dt * dy_dt)**1.5
         return curvature[2:-2]
 
-    def calc_position(self, s: float) -> np.ndarray:
+    def calc_position(self, s: float, segment=None) -> np.ndarray:
         """
         Calc position at the given s.
 
@@ -179,7 +128,7 @@ class CubicSpline2D:
         y : float | None
             y position for given s.
         """
-        segment = self.find_segment_for_s(s)
+        segment = segment or self.find_segment_for_s(s)
         x = self.predict_with_spline(s, segment, 0)[0]
         y = self.predict_with_spline(s, segment, 1)[0]
         return x,y
@@ -222,7 +171,7 @@ class CubicSpline2D:
         k = self.points[segment, 4]
         return k
         
-    def calc_yaw(self, s: float) -> Optional[float]:
+    def calc_yaw(self, s: float, segment=None) -> Optional[float]:
         """
         Calc yaw angle at the given s.
 
@@ -236,44 +185,40 @@ class CubicSpline2D:
         yaw : float
             yaw angle (tangent vector) for given s.
         """
-        segment = self.find_segment_for_s(s)
+        segment = segment or self.find_segment_for_s(s)
         cos = self.predict_with_spline(s, segment, 2)[0]
         sin = self.predict_with_spline(s, segment, 3)[0]
         yaw = (math.atan2(sin, cos) + 2 * math.pi) % (2 * math.pi)
         return yaw
 
-    def calc_arclength(
-        self, x: float, y: float, s_guess: float = 0.0,
-    ) -> tuple[float, float]:
-        """
-        Calculate arclength for a given point (x, y) on the trajectory.
+    # def calc_arclength(
+    #     self, x: float, y: float, s_guess: float = 0.0
+    # ) -> tuple[float, float]:
+    #     """
+    #     Calculate arclength for a given point (x, y) on the trajectory.
 
-        Parameters
-        ----------
-        x : float
-            x position.
-        y : float
-            y position.
-        s_guess : float
-            initial guess for s.
-
-        Returns
-        -------
-        s : float
-            distance from the start point for given x, y.
-        ey : float
-            lateral deviation for given x, y.
-        """
-        ey, t, min_dist_segment = nearest_point_on_trajectory(
-            np.array([x, y]).astype(np.float32), self.points[:, :2]
-        )
-        # s = s at closest_point + t
-        s = float(
-            self.s[min_dist_segment]
-            + t * (self.s[min_dist_segment + 1] - self.s[min_dist_segment])
-        )
-
-        return s, ey
+    #     Parameters
+    #     ----------
+    #     x : float
+    #         x position.
+    #     y : float
+    #         y position.
+    #     s_guess : float
+    #         initial guess for s.
+    #     Returns
+    #     -------
+    #     s : float
+    #         distance from the start point for given x, y.
+    #     ey : float
+    #         lateral deviation for given x, y.
+    #     """
+    #     def distance_to_spline(s):
+    #         x_eval, y_eval = self.spline(s)[0, :2]
+    #         return np.sqrt((x - x_eval) ** 2 + (y - y_eval) ** 2)
+    #     output = so.fmin(distance_to_spline, s_guess, full_output=True, disp=False)
+    #     closest_s = float(output[0][0])
+    #     absolute_distance = output[1]
+    #     return closest_s, absolute_distance
 
     def calc_arclength_inaccurate(self, x: float, y: float, s_inds=None) -> tuple[float, float]:
         """
@@ -296,14 +241,17 @@ class CubicSpline2D:
             lateral deviation for given x, y.
         """
         if s_inds is None:
-            s_inds = np.arange(self.points.shape[0])
-        _, ey, t, min_dist_segment = nearest_point_on_trajectory(
-            np.array([x, y]).astype(np.float32), self.points[s_inds, :2]
-        )
-        min_dist_segment_s_ind = s_inds[min_dist_segment]
+            ey, t, min_dist_segment = nearest_point_on_trajectory(
+                np.asarray([x, y]).astype(np.float32), self.points[:, :2]
+            )
+        else:
+            ey, t, min_dist_segment = nearest_point_on_trajectory(
+                np.asarray([x, y]).astype(np.float32), self.points[s_inds, :2]
+            )
+            min_dist_segment = s_inds[min_dist_segment]
         s = float(
-            self.s[min_dist_segment_s_ind]
-            + t * (self.s[min_dist_segment_s_ind + 1] - self.s[min_dist_segment_s_ind])
+            self.s[min_dist_segment]
+            + t * (self.s[min_dist_segment + 1] - self.s[min_dist_segment])
         )
         return s, ey
 

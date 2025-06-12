@@ -70,6 +70,7 @@ class Track:
         self.centerline = centerline
         self.raceline = raceline
         self.s_guess = None
+        self.frenet_search_range = 10 # meters
 
     @staticmethod
     def load_spec(track: str, filespec: str) -> TrackSpec:
@@ -417,9 +418,9 @@ class Track:
             psi: yaw angle
         """
         line = self.raceline if use_raceline else self.centerline
-        s = s % self.s_frame_max
-        x, y = self.centerline.calc_position(s)
-        psi = self.centerline.calc_yaw(s)
+        s = s % line.s_frame_max
+        x, y = line.spline.calc_position(s)
+        psi = line.spline.calc_yaw(s)
 
         # Adjust x,y by shifting along the normal vector
         x -= ey * np.sin(psi)
@@ -427,38 +428,47 @@ class Track:
 
         # Adjust psi by adding the heading deviation
         psi += ephi
-        return x, y, psi % (2 * np.pi)
+        return x, y, (psi + (2 * np.pi)) % (2 * np.pi)
 
-    def cartesian_to_frenet(self, x, y, phi, use_raceline=False, s_guess=None):
+    def cartesian_to_frenet(self, x, y, psi, use_raceline=False, s_guess=None, use_s_guess=True):
         """
         Convert Cartesian coordinates to Frenet coordinates.
 
         x: x-coordinate
         y: y-coordinate
-        phi: yaw angle
+        psi: yaw angle
 
         returns:
             s: distance along the centerline
             ey: lateral deviation
             ephi: heading deviation
         """
+        line = self.raceline if use_raceline else self.centerline
         if s_guess is None:
             s_guess = self.s_guess
-        line = self.raceline if use_raceline else self.centerline
-        # s, ey = line.spline.calc_arclength_inaccurate(x, y) # inaccurate, but much faster
-        s, ey = line.spline.calc_arclength(x, y, s_guess)
+        
+        if use_s_guess and s_guess is not None:
+            s_inds = line.spline.find_segment_for_s(s_guess)
+            extend_length = int(self.frenet_search_range / 2 / line.spline.s_interval)  # extend search range
+            s_inds = np.arange(s_inds - extend_length, s_inds + extend_length) % (len(line.spline.s)-1) # search around the guess
+        else:
+            s_inds = None
+        # print(max(line.spline.s[s_inds]), min(line.spline.s[s_inds]))
+        s, ey = line.spline.calc_arclength_inaccurate(x, y, s_inds) # inaccurate, but much faster
+        # s, ey = line.spline.calc_arclength(x, y, s_guess)
         # Wrap around
         s = s % line.spline.s[-1]
         self.s_guess = s
+        segment = line.spline.find_segment_for_s(s)
 
         # Use the normal to calculate the signed lateral deviation
-        yaw = line.spline.calc_yaw(s)
+        yaw = line.spline.calc_yaw(s, segment)
         normal = np.asarray([-np.sin(yaw), np.cos(yaw)])
-        x_eval, y_eval = line.spline.calc_position(s)
+        x_eval, y_eval = line.spline.calc_position(s, segment)
         dx = x - x_eval
         dy = y - y_eval
         distance_sign = np.sign(np.dot([dx, dy], normal))
         ey = ey * distance_sign
 
-        phi = phi - yaw
-        return s, ey, np.arctan2(np.sin(phi), np.cos(phi))
+        psi = psi - yaw
+        return s, ey, (psi + (2 * np.pi)) % (2 * np.pi)
