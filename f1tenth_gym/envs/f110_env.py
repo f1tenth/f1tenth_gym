@@ -41,15 +41,6 @@ from .reset import make_reset_fn
 from .track import Track
 from .utils import deep_update
 
-# class WindingAngleLoopCounter:
-#     def __init__(self, track: Track):
-#         self.start_point_curvature = track.centerline.calc_curvature(0.0)
-#         self.winding_point = np.array(
-#             track.frenet_to_cartesian(
-#                 s=0.0, ey=np.sign(self.start_point_curvature) * 1.5, ephi=0.0
-#             )
-#         )[:2]
-
 class F110Env(gym.Env):
     """
     OpenAI gym environment for F1TENTH

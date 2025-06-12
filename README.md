@@ -8,7 +8,8 @@ Zirui branch TODO list:
 - [x] scan toggle
 - [x] separate time step and integrater time step
 - [x] add frenet
-- [ ] use correct loop count
+- [x] use correct loop count frenet_based
+- [ ] also add winding_angle
 - [x] simplify std_state and observation
 - [x] add option "state" in reset
 - [x] control_buffer_size, lidar fov, lidar nums in config
