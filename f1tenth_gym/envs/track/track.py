@@ -1,4 +1,6 @@
 from __future__ import annotations
+import time
+import uuid
 import pathlib
 from dataclasses import dataclass
 from typing import Tuple, Optional
@@ -10,7 +12,7 @@ from PIL.Image import Transpose
 from yamldataclassconfig.config import YamlDataClassConfig
 
 from . import Raceline
-from .cubic_spline import CubicSpline2D
+from .cubic_spline import CubicSplineND
 from .utils import find_track_dir
 
 
@@ -91,7 +93,7 @@ class Track:
         return track_spec
 
     @staticmethod
-    def from_track_name(track: str):
+    def from_track_name(track: str, track_scale: float = 1.0) -> Track:
         """
         Load track from track name.
 
@@ -99,6 +101,8 @@ class Track:
         ----------
         track : str
             name of the track
+        track_scale : float, optional
+            scale of the track, by default 1.0
 
         Returns
         -------
@@ -115,12 +119,19 @@ class Track:
             track_spec = Track.load_spec(
                 track=track, filespec=str(track_dir / f"{track_dir.stem}_map.yaml")
             )
+            track_spec.resolution = track_spec.resolution * track_scale
+            track_spec.origin = (
+                track_spec.origin[0] * track_scale,
+                track_spec.origin[1] * track_scale,
+                track_spec.origin[2],
+            )
 
             # load occupancy grid
             map_filename = pathlib.Path(track_spec.image)
             image = Image.open(track_dir / str(map_filename)).transpose(
                 Transpose.FLIP_TOP_BOTTOM
             )
+
             occupancy_map = np.array(image).astype(np.float32)
             occupancy_map[occupancy_map <= 128] = 0.0
             occupancy_map[occupancy_map > 128] = 255.0
@@ -128,7 +139,8 @@ class Track:
             # if exists, load centerline
             if (track_dir / f"{track}_centerline.csv").exists():
                 centerline = Raceline.from_centerline_file(
-                    track_dir / f"{track}_centerline.csv"
+                    track_dir / f"{track}_centerline.csv",
+                    track_scale=track_scale,
                 )
             else:
                 centerline = None
@@ -136,7 +148,8 @@ class Track:
             # if exists, load raceline
             if (track_dir / f"{track}_raceline.csv").exists():
                 raceline = Raceline.from_raceline_file(
-                    track_dir / f"{track}_raceline.csv"
+                    track_dir / f"{track}_raceline.csv",
+                    track_scale=track_scale,
                 )
             else:
                 raceline = centerline
@@ -152,6 +165,72 @@ class Track:
         except Exception as ex:
             print(ex)
             raise FileNotFoundError(f"It could not load track {track}") from ex
+
+    @staticmethod
+    def from_track_path(path: pathlib.Path, track_scale: float = 1.0) -> Track:
+        """
+        Load track from track path.
+
+        Parameters
+        ----------
+        path : pathlib.Path
+            path to the track yaml file
+
+        Returns
+        -------
+        Track
+            track object
+
+        Raises
+        ------
+        FileNotFoundError
+            if the track cannot be loaded
+        """
+        try:
+            if type(path) is str:
+                path = pathlib.Path(path)
+        
+            track_spec = Track.load_spec(
+                track=path.stem, filespec=path
+            )
+            track_spec.resolution = track_spec.resolution * track_scale
+            track_spec.origin = (
+                track_spec.origin[0] * track_scale,
+                track_spec.origin[1] * track_scale,
+                track_spec.origin[2],
+            )
+
+            # load occupancy grid
+            # Image path is from path + image name from track_spec
+            image_path = path.parent / track_spec.image  
+            image = Image.open(image_path).transpose(Transpose.FLIP_TOP_BOTTOM)
+            occupancy_map = np.array(image).astype(np.float32)
+            occupancy_map[occupancy_map <= 128] = 0.0
+            occupancy_map[occupancy_map > 128] = 255.0
+
+            # if exists, load centerline
+            if (path / f"{path.stem}_centerline.csv").exists():
+                centerline = Raceline.from_centerline_file(path / f"{path.stem}_centerline.csv")
+            else:
+                centerline = None
+
+            # if exists, load raceline
+            if (path / f"{path.stem}_raceline.csv").exists():
+                raceline = Raceline.from_raceline_file(path / f"{path.stem}_raceline.csv")
+            else:
+                raceline = centerline
+
+            return Track(
+                spec=track_spec,
+                filepath=str(path.absolute()),
+                ext=image_path.suffix,
+                occupancy_map=occupancy_map,
+                centerline=centerline,
+                raceline=raceline,
+            )
+        except Exception as ex:
+            print(ex)
+            raise FileNotFoundError(f"It could not load track {path}") from ex
 
     @staticmethod
     def from_refline(x: np.ndarray, y: np.ndarray, velx: np.ndarray):
@@ -176,23 +255,8 @@ class Track:
         resolution = 0.05
         margin_perc = 0.1
 
-        spline = CubicSpline2D(x=x, y=y)
-        ss, xs, ys, yaws, ks, vxs = [], [], [], [], [], []
-        for i_s in np.arange(0, spline.s[-1], ds):
-            xi, yi = spline.calc_position(i_s)
-            yaw = spline.calc_yaw(i_s)
-            k = spline.calc_curvature(i_s)
-
-            # find closest waypoint
-            closest = np.argmin(np.hypot(x - xi, y - yi))
-            v = velx[closest]
-
-            xs.append(xi)
-            ys.append(yi)
-            yaws.append(yaw)
-            ks.append(k)
-            ss.append(i_s)
-            vxs.append(v)
+        spline = CubicSplineND(x=x, y=y)
+        ss, xs, ys, yaws, ks, vxs = spline.ss, spline.xs, spline.ys, spline.psis, spline.ks, velx
 
         refline = Raceline(
             ss=np.array(ss).astype(np.float32),
@@ -237,8 +301,108 @@ class Track:
             raceline=refline,
             centerline=refline,
         )
+    
+    def from_raceline_file(filepath: pathlib.Path, delimiter: str = ";", skip_rows: int = 3, track_scale: float = 1.0) -> Track:
+        """
+        Creates a Track object from a raceline file of the format [s, x, y, psi, k, vx, ax].
+        
+        Args:
+            filepath (pathlib.Path): path to the raceline file
+            delimiter (str, optional): delimiter used in the file. Defaults to ";".
+            skip_rows (int, optional): number of rows to skip. Defaults to 3.
+            track_scale (float, optional): scale of the track. Defaults to 1.0.
+        
+        Returns:
+            Track: track object
+        """
+        raceline = Raceline.from_raceline_file(filepath, delimiter, skip_rows, track_scale)
+        xs = raceline.xs
+        ys = raceline.ys
+        resolution = 0.05
+        margin_perc = 0.1
 
-    def frenet_to_cartesian(self, s, ey, ephi):
+        min_x, max_x = np.min(xs), np.max(xs)
+        min_y, max_y = np.min(ys), np.max(ys)
+        x_range = max_x - min_x
+        y_range = max_y - min_y
+        occupancy_map = 255.0 * np.ones(
+            (
+                int((1 + 2 * margin_perc) * x_range / resolution),
+                int((1 + 2 * margin_perc) * y_range / resolution),
+            ),
+            dtype=np.float32,
+        )
+        # origin is the bottom left corner
+        origin = (min_x - margin_perc * x_range, min_y - margin_perc * y_range, 0.0)
+
+        track_spec = TrackSpec(
+            name=None,
+            image=None,
+            resolution=resolution,
+            origin=origin,
+            negate=False,
+            occupied_thresh=0.65,
+            free_thresh=0.196,
+        )
+
+        track_spec = TrackSpec(
+            name=None,
+            image=None,
+            resolution=0.05,
+            origin=(0.0, 0.0, 0.0),
+            negate=False,
+            occupied_thresh=0.65,
+            free_thresh=0.196,
+        )
+        return Track(
+            spec=track_spec,
+            filepath=None,
+            ext=None,
+            occupancy_map=occupancy_map,
+            raceline=raceline,
+            centerline=raceline,
+        )
+
+    def save_raceline(self, outdir: pathlib.Path):
+        """
+        Save track raceline.
+
+        Parameters
+        ----------
+        outdir : pathlib.Path
+            output directory
+        """
+        raceline_filepath = outdir / f"{self.spec.name}_raceline.csv"
+        with open(raceline_filepath, "w") as raceline_csv:
+            raceline_csv.write("# " + str(uuid.uuid4()) + "\n") # same as TUM opt
+            raceline_csv.write('# {}\n'.format(time.strftime('%Y-%m-%d %H:%M:%S'))) # TUM opt uses ggv hash, but no ggv here
+            raceline_csv.write("# s_m; x_m; y_m; psi_rad; kappa_radpm; vx_mps; ax_mps2\n")
+            for i in range(len(self.raceline.ss)):
+                raceline_csv.write(
+                    f"{self.raceline.ss[i]}; {self.raceline.xs[i]}; {self.raceline.ys[i]}; {self.raceline.yaws[i]}; {self.raceline.ks[i]}; {self.raceline.vxs[i]}; {self.raceline.axs[i]}\n"
+                )
+
+    def save_centerline(self, outdir: pathlib.Path, half_width: float):
+        """
+        Save track raceline.
+
+        Parameters
+        ----------
+        outdir : pathlib.Path
+            output directory
+        half_width : float
+            half width of the track
+        """
+        raceline_filepath = outdir / f"{self.spec.name}_raceline.csv"
+        with open(raceline_filepath, "w") as raceline_csv:
+            raceline_csv.write("# " + str(uuid.uuid4()) + "\n") # same as TUM opt
+            raceline_csv.write("# x_m, y_m, w_tr_right_m, w_tr_left_m\n")
+            for i in range(len(self.centerline.ss)):
+                raceline_csv.write(
+                    f"{self.centerline.xs[i]}, {self.centerline.ys[i]}, {half_width}, {half_width}\n"
+                )
+
+    def frenet_to_cartesian(self, s, ey, ephi, use_raceline=False):
         """
         Convert Frenet coordinates to Cartesian coordinates.
 
@@ -251,8 +415,9 @@ class Track:
             y: y-coordinate
             psi: yaw angle
         """
-        x, y = self.centerline.spline.calc_position(s)
-        psi = self.centerline.spline.calc_yaw(s)
+        line = self.raceline if use_raceline else self.centerline
+        x, y = line.spline.calc_position(s)
+        psi = line.spline.calc_yaw(s)
 
         # Adjust x,y by shifting along the normal vector
         x -= ey * np.sin(psi)
@@ -263,7 +428,7 @@ class Track:
 
         return x, y, psi
 
-    def cartesian_to_frenet(self, x, y, phi, s_guess=0):
+    def cartesian_to_frenet(self, x, y, phi, use_raceline=False, s_guess=0):
         """
         Convert Cartesian coordinates to Frenet coordinates.
 
@@ -276,22 +441,20 @@ class Track:
             ey: lateral deviation
             ephi: heading deviation
         """
-        s, ey = self.centerline.spline.calc_arclength_inaccurate(x, y)
-        if s > self.centerline.spline.s[-1]:
-            # Wrap around
-            s = s - self.centerline.spline.s[-1]
-        if s < 0:
-            # Negative s means we are behind the start point
-            s = s + self.centerline.spline.s[-1]
+        line = self.raceline if use_raceline else self.centerline
+        # s, ey = line.spline.calc_arclength_inaccurate(x, y) # inaccurate, but much faster
+        s, ey = line.spline.calc_arclength(x, y, s_guess)
+        # Wrap around
+        s = s % line.spline.s[-1]
 
         # Use the normal to calculate the signed lateral deviation
-        normal = self.centerline.spline._calc_normal(s)
-        x_eval, y_eval = self.centerline.spline.calc_position(s)
+        yaw = line.spline.calc_yaw(s)
+        normal = np.asarray([-np.sin(yaw), np.cos(yaw)])
+        x_eval, y_eval = line.spline.calc_position(s)
         dx = x - x_eval
         dy = y - y_eval
         distance_sign = np.sign(np.dot([dx, dy], normal))
         ey = ey * distance_sign
 
-        phi = phi - self.centerline.spline.calc_yaw(s)
-
-        return s, ey, phi
+        phi = phi - yaw
+        return s, ey, np.arctan2(np.sin(phi), np.cos(phi))

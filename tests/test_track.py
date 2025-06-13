@@ -149,8 +149,8 @@ class TestTrack(unittest.TestCase):
             track.centerline.ss, track.centerline.xs, track.centerline.ys
         ):
             x_, y_, _ = track.frenet_to_cartesian(s, 0, 0)
-            self.assertAlmostEqual(x, x_, places=2)
-            self.assertAlmostEqual(y, y_, places=2)
+            self.assertAlmostEqual(x, x_, places=4)
+            self.assertAlmostEqual(y, y_, places=4)
 
     def test_frenet_to_cartesian_to_frenet(self):
         track_name = "Spielberg"
@@ -161,8 +161,8 @@ class TestTrack(unittest.TestCase):
         for s in np.linspace(0, 1, 10):
             x, y, psi = track.frenet_to_cartesian(s, 0, 0)
             s_, d, _ = track.cartesian_to_frenet(x, y, psi, s_guess=s_)
-            self.assertAlmostEqual(s, s_, places=2)
-            self.assertAlmostEqual(d, 0, places=2)
+            self.assertAlmostEqual(s, s_, places=4)
+            self.assertAlmostEqual(d, 0, places=4)
 
         # check frenet to cartesian conversion
         # with non-zero lateral offset
@@ -171,5 +171,6 @@ class TestTrack(unittest.TestCase):
             d = np.random.uniform(-1.0, 1.0)
             x, y, psi = track.frenet_to_cartesian(s, d, 0)
             s_, d_, _ = track.cartesian_to_frenet(x, y, psi, s_guess=s_)
-            self.assertAlmostEqual(s, s_, places=2)
-            self.assertAlmostEqual(d, d_, places=2)
+            # Handle edge case where we are checking for s=0 but s_ is the last s (same point, but different s)
+            self.assertTrue(np.isclose(s, s_, atol=1e-4) or np.isclose(s + track.centerline.spline.s[-1], s_, atol=1e-4))
+            self.assertAlmostEqual(d, d_, places=4)

@@ -83,3 +83,36 @@ def sample_around_waypoint(
         )
 
     return np.array(poses)
+
+def sample_around_pose(
+    pose: np.ndarray,
+    n_agents: int,
+    min_dist: float,
+    max_dist: float,
+) -> np.ndarray:
+    """
+    Compute n poses around a given pose.
+    It iteratively samples the next agent within a distance range from the previous one.
+    Note: no guarantee that the agents are on the track nor that they are not colliding with the environment.
+
+    Args:
+        - pose: the initial pose
+        - n_agents: the number of agents
+        - min_dist: the minimum distance between two consecutive agents
+        - max_dist: the maximum distance between two consecutive agents
+    """
+    current_pose = pose
+
+    poses = []
+    for i in range(n_agents):
+        x, y, theta = current_pose
+        pose = np.array([x, y, theta])
+        poses.append(pose)
+        # sample next pose
+        dist = np.random.uniform(min_dist, max_dist)
+        theta = np.random.uniform(-np.pi, np.pi)
+        x += dist * np.cos(theta)
+        y += dist * np.sin(theta)
+        current_pose = np.array([x, y, theta])
+
+    return np.array(poses)

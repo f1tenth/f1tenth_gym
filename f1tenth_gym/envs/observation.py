@@ -32,10 +32,10 @@ class OriginalObservation(Observation):
         super().__init__(env)
 
     def space(self):
-        num_agents = self.env.num_agents
-        scan_size = self.env.sim.agents[0].scan_simulator.num_beams
+        num_agents = self.env.unwrapped.num_agents
+        scan_size = self.env.unwrapped.sim.agents[0].scan_simulator.num_beams
         scan_range = (
-            self.env.sim.agents[0].scan_simulator.max_range + 0.5
+            self.env.unwrapped.sim.agents[0].scan_simulator.max_range + 0.5
         )  # add 1.0 to avoid small errors
         large_num = 1e30  # large number to avoid unbounded obs space (ie., low=-inf or high=inf)
 
@@ -105,7 +105,7 @@ class OriginalObservation(Observation):
         )  # 7 largest state size (ST Model)
 
         observations = {
-            "ego_idx": self.env.sim.ego_idx,
+            "ego_idx": self.env.unwrapped.sim.ego_idx,
             "scans": [],
             "poses_x": [],
             "poses_y": [],
@@ -118,17 +118,19 @@ class OriginalObservation(Observation):
             "lap_counts": [],
         }
 
-        for i, agent in enumerate(self.env.sim.agents):
-            agent_scan = self.env.sim.agent_scans[i]
-            lap_time = self.env.lap_times[i]
-            lap_count = self.env.lap_counts[i]
-            collision = self.env.sim.collisions[i]
+        for i, agent in enumerate(self.env.unwrapped.sim.agents):
+            agent_scan = self.env.unwrapped.sim.agent_scans[i]
+            lap_time = self.env.unwrapped.lap_times[i]
+            lap_count = self.env.unwrapped.lap_counts[i]
+            collision = self.env.unwrapped.sim.collisions[i]
 
-            x, y, theta = agent.state[xi], agent.state[yi], agent.state[yawi]
-            vx, vy = agent.state[vxi], 0.0
-            angvel = (
-                0.0 if len(agent.state) < 7 else agent.state[yaw_ratei]
-            )  # set 0.0 when KST Model
+            std_state = agent.standard_state
+
+            x, y, theta = std_state["x"], std_state["y"], std_state["yaw"]
+
+            vx = std_state["v_x"]
+            vy = std_state["v_y"]
+            angvel = std_state["yaw_rate"]
 
             observations["scans"].append(agent_scan)
             observations["poses_x"].append(x)
@@ -157,12 +159,12 @@ class FeaturesObservation(Observation):
         self.features = features
 
     def space(self):
-        scan_size = self.env.sim.agents[0].scan_simulator.num_beams
-        scan_range = self.env.sim.agents[0].scan_simulator.max_range
+        scan_size = self.env.unwrapped.sim.agents[0].scan_simulator.num_beams
+        scan_range = self.env.unwrapped.sim.agents[0].scan_simulator.max_range
         large_num = 1e30  # large number to avoid unbounded obs space (ie., low=-inf or high=inf)
 
         complete_space = {}
-        for agent_id in self.env.agent_ids:
+        for agent_id in self.env.unwrapped.agent_ids:
             agent_dict = {
                 "scan": gym.spaces.Box(
                     low=0.0, high=scan_range, shape=(scan_size,), dtype=np.float32
@@ -209,30 +211,22 @@ class FeaturesObservation(Observation):
         return obs_space
 
     def observe(self):
-        # state indices
-        xi, yi, deltai, vxi, yawi, yaw_ratei, slipi = range(
-            7
-        )  # 7 largest state size (ST Model)
-
         obs = {}  # dictionary agent_id -> observation dict
 
-        for i, agent_id in enumerate(self.env.agent_ids):
-            scan = self.env.sim.agent_scans[i]
-            agent = self.env.sim.agents[i]
-            lap_time = self.env.lap_times[i]
-            lap_count = self.env.lap_counts[i]
+        for i, agent_id in enumerate(self.env.unwrapped.agent_ids):
+            scan = self.env.unwrapped.sim.agent_scans[i]
+            agent = self.env.unwrapped.sim.agents[i]
+            lap_time = self.env.unwrapped.lap_times[i]
+            lap_count = self.env.unwrapped.lap_counts[i]
 
-            x, y, theta = agent.state[xi], agent.state[yi], agent.state[yawi]
-            vlong = agent.state[vxi]
-            delta = agent.state[deltai]
-            beta = (
-                0.0 if len(agent.state) < 7 else agent.state[slipi]
-            )  # set 0.0 when KST Model
-            vx = vlong * np.cos(beta)
-            vy = vlong * np.sin(beta)
-            angvel = (
-                0.0 if len(agent.state) < 7 else agent.state[yaw_ratei]
-            )  # set 0.0 when KST Model
+            std_state = agent.standard_state
+
+            x, y, theta = std_state["x"], std_state["y"], std_state["yaw"]
+            delta = std_state["delta"]
+            beta = std_state["slip"]
+            vx = std_state["v_x"]
+            vy = std_state["v_y"]
+            angvel = std_state["yaw_rate"]
 
             # create agent's observation dict
             agent_obs = {
@@ -256,11 +250,10 @@ class FeaturesObservation(Observation):
             # cast to match observation space
             for key in obs[agent_id].keys():
                 if isinstance(obs[agent_id][key], np.ndarray) or isinstance(
-                    obs[agent_id][key], list
+                    obs[agent_id][key], list) or isinstance(
+                    obs[agent_id][key], float
                 ):
                     obs[agent_id][key] = np.array(obs[agent_id][key], dtype=np.float32)
-                if isinstance(obs[agent_id][key], float):
-                    obs[agent_id][key] = np.float32(obs[agent_id][key])
 
         return obs
 

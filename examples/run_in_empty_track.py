@@ -31,8 +31,8 @@ def main():
     planner = PurePursuitPlanner(track=track, wb=0.17145 + 0.15875)
 
     # rendering callbacks
-    env.add_render_callback(track.raceline.render_waypoints)
-    env.add_render_callback(planner.render_lookahead_point)
+    env.unwrapped.add_render_callback(track.raceline.render_waypoints)
+    env.unwrapped.add_render_callback(planner.render_lookahead_point)
 
     # simulation
     obs, info = env.reset()
