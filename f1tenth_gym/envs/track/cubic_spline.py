@@ -13,9 +13,9 @@ from typing import Union, Optional
 from f1tenth_gym.envs.track.utils import nearest_point_on_trajectory
 
 
-class CubicSpline2D:
+class CubicSplineND:
     """
-    Cubic CubicSpline2D class.
+    Cubic CubicSplineND class.
 
     Attributes
     ----------
@@ -36,7 +36,7 @@ class CubicSpline2D:
     ):
         self.xs = x
         self.ys = y
-        input_vals = [x, y, psis, ks, vxs, axs, ss]
+        input_vals = [x, y, psis, ks, vxs, axs]
 
         # Only close the path if for the input values from the user,
         # the first and last points are not the same => the path is not closed
@@ -95,11 +95,17 @@ class CubicSpline2D:
             )  # Ensure the path is closed
 
         if ss is not None:
-            self.s = ss
+            self.s = ss if not need_closure else self.__calc_s(self.points[:, 0], self.points[:, 1])
         else:
             self.s = self.__calc_s(self.points[:, 0], self.points[:, 1])
         self.s_interval = (self.s[-1] - self.s[0]) / len(self.s)
 
+        # Delete points where the diff of self.s is 0
+        # This is necessary to ensure the path is continuous
+        self.points = self.points[np.diff(self.s, prepend=1) != 0]
+        # Recalculate s after deleting points
+        self.s = self.__calc_s(self.points[:, 0], self.points[:, 1])
+        
         # Use scipy CubicSpline to interpolate the points with periodic boundary conditions
         # This is necesaxsry to ensure the path is continuous
         self.spline = interpolate.CubicSpline(self.s, self.points, bc_type="periodic")

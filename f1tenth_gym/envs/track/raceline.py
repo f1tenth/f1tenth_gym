@@ -5,7 +5,7 @@ from typing import Optional
 import numpy as np
 
 from ..rendering import EnvRenderer
-from .cubic_spline import CubicSpline2D
+from .cubic_spline import CubicSplineND
 
 
 class Raceline:
@@ -32,7 +32,7 @@ class Raceline:
         acceleration along the raceline
     length : float
         length of the raceline
-    spline : CubicSpline2D
+    spline : CubicSplineND
         spline object through the waypoints
     """
 
@@ -45,7 +45,7 @@ class Raceline:
         psis: Optional[np.ndarray] = None,
         kappas: Optional[np.ndarray] = None,
         accxs: Optional[np.ndarray] = None,
-        spline: Optional[CubicSpline2D] = None,
+        spline: Optional[CubicSplineND] = None,
     ):
         assert xs.shape == ys.shape == velxs.shape, "inconsistent shapes for x, y, vel"
 
@@ -63,7 +63,12 @@ class Raceline:
         self.length = float(np.sum(np.sqrt(np.diff(xs) ** 2 + np.diff(ys) ** 2)))
 
         # compute spline through waypoints if not provided
-        self.spline = spline or CubicSpline2D(x=xs, y=ys)
+        self.spline = spline or CubicSplineND(x=xs, y=ys,
+                                            psis=psis,
+                                            ks=kappas,
+                                            vxs=velxs,
+                                            axs=accxs,
+                                            ss=ss)
 
         self.waypoint_render = None
 
@@ -105,7 +110,7 @@ class Raceline:
         # close loop
         xx = np.append(xx, xx[0])
         yy = np.append(yy, yy[0])
-        spline = CubicSpline2D(x=xx, y=yy)
+        spline = CubicSplineND(x=xx, y=yy)
         ds = 0.1
 
         ss, xs, ys, yaws, ks = [], [], [], [], []
@@ -162,7 +167,7 @@ class Raceline:
             # scale x-y waypoints and recalculate s, psi, and k
             waypoints[:, 1] *= track_scale
             waypoints[:, 2] *= track_scale
-            spline = CubicSpline2D(x=waypoints[:, 1], y=waypoints[:, 2])    
+            spline = CubicSplineND(x=waypoints[:, 1], y=waypoints[:, 2])    
             ss, yaws, ks = spline.ss, spline.psis, spline.ks
             waypoints[:, 0] = ss
             waypoints[:, 3] = yaws
