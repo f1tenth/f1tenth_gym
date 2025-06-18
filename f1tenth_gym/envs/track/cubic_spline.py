@@ -47,6 +47,7 @@ class CubicSpline2D:
         else:
             self.points[-1] = self.points[0]
         self.s = ss if ss is not None else self.__calc_s(self.points[:, 0], self.points[:, 1])
+        self.ss, self.psis, self.ks = self.s, psis, ks
         self.s_interval = (self.s[-1] - self.s[0]) / len(self.s)
         self.s_frame_max = self.s[-1]
 

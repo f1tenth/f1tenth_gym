@@ -142,7 +142,7 @@ class ObjectRenderer(ABC):
         Initialize the point renderer.
         This should set up the necessary parameters for rendering points.
         """
-        raise NotImplementedError()
+        pass
     
     @abstractmethod
     def update(self):

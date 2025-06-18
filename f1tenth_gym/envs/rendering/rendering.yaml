@@ -7,6 +7,7 @@ show_wheels: True     # [bool] it toggles the visualization of the vehicle wheel
 car_tickness: 1       # [px] thickness of the car
 show_info: True       # [bool] it toggles the visualization of the instruction text
 render_type: "pyqt6gl"  # [str] rendering type. Options: "pyqt6gl", "pyqt6" NOTE: pygame not supported until reimplemented
+car_model: "3d"  # [str] car model to use. Options: "2d", "3d"
 vehicle_palette:      # [list] cyclic list of colors for the vehicles
   - "#FD3754"
   - "#377eb8"

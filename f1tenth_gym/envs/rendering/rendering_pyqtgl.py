@@ -1,12 +1,14 @@
 import time, logging
+import numpy as np
 import pyqtgraph.opengl as gl
 from PyQt6 import QtWidgets, QtCore, QtGui
-import numpy as np
+from typing import Any, Optional
+from PIL import ImageColor
+
 from ..track import Track
 from .renderer import EnvRenderer, RenderSpec, ObjectRenderer
-from PIL import ImageColor
-from typing import Any, Callable, Optional
 from .pyqtgl_objects import PointsRenderer, LinesRenderer, ClosedLinesRenderer, CarRenderer
+from .mesh_renderer import MeshRenderer
 
 class PyQtEnvRendererGL(EnvRenderer):
     def __init__(
@@ -43,7 +45,8 @@ class PyQtEnvRendererGL(EnvRenderer):
         self.window.setWindowTitle("F1Tenth Gym - OpenGL")
         self.window.setGeometry(0, 0, self.render_spec.window_size, self.render_spec.window_size)
         
-        self._enable_pan_only()
+        if self.render_spec.car_model == "2d":
+            self._enable_pan_only()
         self._init_map(track)
         
         # FPS label
@@ -183,8 +186,8 @@ class PyQtEnvRendererGL(EnvRenderer):
             obs: simulation obs as dictionary
         """
         if self.cars is None:
-            self.cars = [
-                CarRenderer(
+            if self.render_spec.car_model == "3d":
+                self.cars = [MeshRenderer(
                     env_renderer=self,
                     car_length=self.params["length"],
                     car_width=self.params["width"],
@@ -192,9 +195,19 @@ class PyQtEnvRendererGL(EnvRenderer):
                     render_spec=self.render_spec,
                     map_origin=self.map_origin[:2],
                     resolution=self.map_resolution,
-                )
-                for ic in range(len(self.agent_ids))
-            ]
+                ) for ic in range(len(self.agent_ids))
+                ]
+            elif self.render_spec.car_model == "2d":
+                [CarRenderer(
+                    env_renderer=self,
+                    car_length=self.params["length"],
+                    car_width=self.params["width"],
+                    color=self.car_colors[ic],
+                    render_spec=self.render_spec,
+                    map_origin=self.map_origin[:2],
+                    resolution=self.map_resolution,
+                ) for ic in range(len(self.agent_ids))
+                ]
 
         # update cars obs and zoom level (updating points-per-unit)
         for i, id in enumerate(self.agent_ids):
@@ -210,7 +223,7 @@ class PyQtEnvRendererGL(EnvRenderer):
             # call callbacks
             for callback_fn in self.callbacks:
                 callback_fn(self)
-            if self.agent_to_follow is not None:
+            if self.agent_to_follow is not None and self.render_spec.car_model == "2d":
                 self._center_camera_on_car(self.agent_to_follow)
             # draw cars
             for i in range(len(self.agent_ids)):
@@ -220,9 +233,10 @@ class PyQtEnvRendererGL(EnvRenderer):
             
             if self.render_mode in ["human", "human_fast"]:
                 self._update_fps()
-                # elapsed = time.time() - start_time
-                # sleep_time = max(0.0, 1/self.render_fps - elapsed)
-                # time.sleep(sleep_time)
+                if self.render_fps < 1500:
+                    elapsed = time.time() - start_time
+                    sleep_time = max(0.0, 1/self.render_fps - elapsed)
+                    time.sleep(sleep_time)
         
     def add_renderer_callback(self, callback_fn):
         """

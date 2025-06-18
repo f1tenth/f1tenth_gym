@@ -8,13 +8,14 @@ Zirui branch TODO list:
 - [x] scan toggle
 - [x] separate time step and integrater time step
 - [x] add frenet
-- [x] use correct loop count frenet_based
+- [x] use correct loop count frenet_based, added max loop num
 - [ ] also add winding_angle
 - [x] simplify std_state and observation
 - [x] add option "state" in reset
 - [x] control_buffer_size, lidar fov, lidar nums in config
 - [ ] double check dynamics result
 - [x] implemented new rendering with pyqtgraph.opengl
+- [x] added 3d mesh renderering for proof of concept
 
 ## Quickstart
 We recommend installing the simulation inside a virtualenv. You can install the environment by running:
