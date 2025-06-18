@@ -32,13 +32,14 @@ class PyQtEnvRendererGL(EnvRenderer):
         else:
             self.agent_to_follow = None
         self.car_scale = 1.0
+        self.default_camera_dist = self.params['width'] * 70
         
         fmt = QtGui.QSurfaceFormat()
         fmt.setSwapInterval(0)  # 0 = no vsync, 1 = vsync
         QtGui.QSurfaceFormat.setDefaultFormat(fmt)
         self.app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
         self.view = gl.GLViewWidget()
-        self.view.setCameraPosition(pos=QtGui.QVector3D(0, 0, 0), distance=20, elevation=90, azimuth=0)
+        self.view.setCameraPosition(pos=QtGui.QVector3D(0, 0, 0), distance=self.default_camera_dist, elevation=90, azimuth=0)
         self.view.setBackgroundColor((25, 25, 25))
         self.window = QtWidgets.QMainWindow()
         self.window.setCentralWidget(self.view)
@@ -128,7 +129,7 @@ class PyQtEnvRendererGL(EnvRenderer):
         self.car_scale = 1.0
         if distance_reset:
             self.view.setCameraPosition(
-                distance=self.params['width'] * 50,  # zoom level
+                distance=self.default_camera_dist,  # zoom level
             )
         self.view.setCameraPosition(
             pos=QtGui.QVector3D(x, y, 1),             # camera position

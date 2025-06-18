@@ -152,6 +152,8 @@ class F110Env(gym.Env):
         ), "observation_config must contain 'type' key"
         self.observation_type = observation_factory(env=self, **self.observation_config)
         self.observation_space = self.observation_type.space()
+        self.render_obs_type = observation_factory(env=self, type='direct')
+        self.render_obs = None
 
         # action space
         self.action_space = from_single_to_multi_action_space(
@@ -165,7 +167,6 @@ class F110Env(gym.Env):
 
         # stateful observations for rendering
         # add choice of colors (same, random, ...)
-        self.obs = None
         self.render_mode = render_mode
 
         # match render_fps to integration timestep
@@ -434,17 +435,17 @@ class F110Env(gym.Env):
         if self.config['loop_counting_method'] == "frenet_based":
             for ind, agent_id in enumerate(self.agent_ids):
                 if self.agents_prev_s[ind] is None:
-                    self.agents_prev_s[ind] = self.obs[agent_id]['frenet_pose'][0]
+                    self.agents_prev_s[ind] = self.render_obs[agent_id]['frenet_pose'][0]
                 else:
-                    agent_curr_s = self.obs[agent_id]['frenet_pose'][0]
+                    agent_curr_s = self.render_obs[agent_id]['frenet_pose'][0]
                     if self.agents_prev_s[ind] - agent_curr_s > self.sim.track.centerline.spline.s_frame_max * 0.85 \
                         and self.sim_time > self.timestep:
                         self.lap_counts[ind] += 1
                         self.lap_times[ind] = self.sim_time - self.lap_times_finish[ind]
                         self.lap_times_finish[ind] = self.sim_time
                     self.agents_prev_s[ind] = agent_curr_s
-                self.obs[agent_id]['lap_time'] = self.lap_times[ind]
-                self.obs[agent_id]['lap_count'] = [ind]
+                self.render_obs[agent_id]['lap_time'] = self.lap_times[ind]
+                self.render_obs[agent_id]['lap_count'] = [ind]
                 
         done = (self.collisions[self.ego_idx]) or self.lap_counts >= float(self.config["max_laps"])
         return bool(done)
@@ -476,7 +477,13 @@ class F110Env(gym.Env):
         self.sim.step(action)
 
         # observation
-        self.obs = self.observation_type.observe()
+        obs = self.observation_type.observe()
+        if self.observation_config["type"] == "direct":
+            # for direct observation, also update the render_obs
+            self.render_obs = obs
+        else:
+            # for other observation types, update the render_obs
+            self.render_obs = self.render_obs_type.observe()
 
         # times
         reward = self.timestep
@@ -492,7 +499,7 @@ class F110Env(gym.Env):
                 "lap_counts": self.lap_counts,
                 "sim_time": self.sim_time}
 
-        return self.obs, reward, done, truncated, info
+        return obs, reward, done, truncated, info
 
     def reset(self, seed=None, options=None):
         """
@@ -624,7 +631,7 @@ class F110Env(gym.Env):
         if self.render_mode not in self.metadata["render_modes"] or not self.config["enable_rendering"]:
             return
 
-        self.renderer.update(obs=self.obs)
+        self.renderer.update(obs=self.render_obs)
         return self.renderer.render()
 
     def close(self):

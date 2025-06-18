@@ -16,6 +16,7 @@ Zirui branch TODO list:
 - [ ] double check dynamics result
 - [x] implemented new rendering with pyqtgraph.opengl
 - [x] added 3d mesh renderering for proof of concept
+- [ ] merge lidar scan fix
 
 ## Quickstart
 We recommend installing the simulation inside a virtualenv. You can install the environment by running:

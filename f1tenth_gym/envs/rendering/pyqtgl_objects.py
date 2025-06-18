@@ -87,7 +87,7 @@ class CarRenderer(ObjectRenderer):
         
     def render(self, scale=1.0):
         # pass
-        if scale != 1.0:
+        if scale != 1.0 or self.scale != scale:
             transformed = self.apply_pose(self.pose, scale)
             self.mesh.resetTransform()
             self.mesh.setMeshData(vertexes=transformed, 
@@ -95,6 +95,7 @@ class CarRenderer(ObjectRenderer):
                                 faceColors=self.rgba,
                                 smooth=False,
                                 drawEdges=False,)
+            self.scale = scale
         else:
             self.mesh.resetTransform()
             self.mesh.rotate(self.pose[2] / np.pi * 180, 0, 0, 1)
