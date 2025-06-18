@@ -208,7 +208,7 @@ class PurePursuitPlanner:
             points = self.lookahead_point[:2][None]  # shape (1, 2)~
             if self.lookahead_point_render is None:
                 self.lookahead_point_render = e.get_points_renderer(
-                    points, color=(200, 0, 0), size=5
+                    points, color=(200, 0, 0), size=10
                 )
             else:
                 self.lookahead_point_render.update(points)
@@ -221,7 +221,7 @@ class PurePursuitPlanner:
             points = self.waypoints[self.current_index : self.current_index + 10, :2]
             if self.local_plan_render is None:
                 self.local_plan_render = e.get_lines_renderer(
-                    points, color=(0, 128, 0), size=1
+                    points, color=(0, 128, 0), size=5
                 )
             else:
                 self.local_plan_render.update(points)
@@ -325,12 +325,12 @@ def main():
             "reset_config": {"type": "rl_random_static"},
             "map_scale": 1.0,
             "enable_rendering": 1,
-            "enable_scan": 1,
+            "enable_scan": 0,
             "lidar_num_beams": 270,
-            "compute_frenet": 1,
+            "compute_frenet": 0,
             "max_laps": 2,  # 'inf' for infinite laps, or a positive integer
         },
-        render_mode="human_fast",
+        render_mode="unlimited",
     )
     track = env.unwrapped.track
 

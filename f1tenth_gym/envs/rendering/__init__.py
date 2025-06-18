@@ -47,7 +47,7 @@ def make_renderer(
     else:
         raise ValueError(f"Unknown render type: {render_spec.render_type}")
 
-    if render_mode in ["human", "rgb_array", "human_fast"]:
+    if render_mode in ["human", "rgb_array", 'unlimited', "human_fast"]:
         renderer = EnvRenderer(
             params=params,
             track=track,

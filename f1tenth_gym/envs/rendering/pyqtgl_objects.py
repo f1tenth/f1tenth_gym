@@ -28,6 +28,7 @@ class CarRenderer(ObjectRenderer):
         self.show_wheels = render_spec.show_wheels
         self.rgba = [c / 255 for c in color] + [1.0]
         self.rgba = np.array([self.rgba] * 2)
+        self.scale = 1.0
         
         # Define centered rectangle in local coords
         hl = self.car_length / 2 # half-length
@@ -86,12 +87,18 @@ class CarRenderer(ObjectRenderer):
         
     def render(self, scale=1.0):
         # pass
-        transformed = self.apply_pose(self.pose, scale)
-        self.mesh.setMeshData(vertexes=transformed, 
-                              faces=self.faces,
-                              faceColors=self.rgba,
-                              smooth=False,
-                              drawEdges=False,)
+        if scale != 1.0:
+            transformed = self.apply_pose(self.pose, scale)
+            self.mesh.resetTransform()
+            self.mesh.setMeshData(vertexes=transformed, 
+                                faces=self.faces,
+                                faceColors=self.rgba,
+                                smooth=False,
+                                drawEdges=False,)
+        else:
+            self.mesh.resetTransform()
+            self.mesh.rotate(self.pose[2] / np.pi * 180, 0, 0, 1)
+            self.mesh.translate(self.pose[0], self.pose[1], 0.01)
 
 class LinesRenderer(ObjectRenderer):
     def __init__(

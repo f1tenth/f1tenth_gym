@@ -73,7 +73,7 @@ class PyQtEnvRenderer(EnvRenderer):
         render_spec : RenderSpec
             rendering specification
         render_mode : str
-            rendering mode in ["human", "human_fast", "rgb_array"]
+            rendering mode in ["human", "human_fast", 'unlimited', "rgb_array"]
         render_fps : int
             number of frames per second
         """
@@ -128,7 +128,7 @@ class PyQtEnvRenderer(EnvRenderer):
         )
         self.top_info_renderer = TextRenderer(parent=self.canvas, position="top_center")
 
-        if self.render_mode in ["human", "human_fast"]:
+        if self.render_mode in ["human", "human_fast", 'unlimited']:
             self.clock.sigFpsUpdate.connect(
                 lambda fps: self.fps_renderer.render(f"FPS: {fps:.1f}")
             )
@@ -181,7 +181,7 @@ class PyQtEnvRenderer(EnvRenderer):
             self.follow_agent_flag: bool = False
             self.agent_to_follow: int = None
 
-        if self.render_mode in ["human", "human_fast"]:
+        if self.render_mode in ["human", "human_fast", 'unlimited']:
             signal.signal(signal.SIGINT, signal.SIG_DFL)
             self.window.show()
         elif self.render_mode == "rgb_array":
@@ -321,7 +321,7 @@ class PyQtEnvRenderer(EnvRenderer):
             self.clock.update()
             self.app.processEvents()
 
-            if self.render_mode in ["human", "human_fast"]:
+            if self.render_mode in ["human", "human_fast", 'unlimited']:
                 assert self.window is not None
 
             else:  

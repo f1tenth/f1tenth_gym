@@ -120,7 +120,6 @@ class MeshRenderer(ObjectRenderer):
             item.rotate(self.car_pose["roll"]+90, 1, 0, 0)
             item.rotate(self.car_pose["yaw"], 0, 0, 1)
             item.rotate(self.car_pose["pitch"], 0, 1, 0)
-            
             item.translate(tx, ty, self.z_lift)
 
 

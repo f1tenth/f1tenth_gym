@@ -80,7 +80,7 @@ class F110Env(gym.Env):
     """
 
     # NOTE: change matadata with default rendering-modes, add definition of render_fps
-    metadata = {"render_modes": ["human", "human_fast", "rgb_array"], "render_fps": 100}
+    metadata = {"render_modes": ["human", "human_fast", "rgb_array", "unlimited"], "render_fps": 100}
 
     def __init__(self, config: dict = None, render_mode=None, **kwargs):
         super().__init__()
@@ -88,6 +88,8 @@ class F110Env(gym.Env):
         # Configuration
         self.config = self.default_config()
         self.configure(config)
+        if self.config['loop_counting_method'] == "frenet_based":
+            self.config["compute_frenet"] = True # NOTE always compute frenet pose for lap counting
 
         self.seed = self.config["seed"]
         self.map = self.config["map"]
@@ -170,6 +172,8 @@ class F110Env(gym.Env):
         self.metadata["render_fps"] = int(1.0 / self.timestep)
         if self.render_mode == "human_fast":
             self.metadata["render_fps"] *= 10  # boost fps by 10x
+        elif self.render_mode == "unlimited":
+            self.metadata["render_fps"] = float('inf')
         if self.config["enable_rendering"]:
             self.renderer, self.render_spec = make_renderer(
                 params=self.params,

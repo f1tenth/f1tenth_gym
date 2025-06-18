@@ -50,7 +50,7 @@ class PyQtEnvRendererGL(EnvRenderer):
         self._init_map(track)
         
         # FPS label
-        if self.render_mode in ["human", "human_fast"]:
+        if self.render_mode in ["human", "human_fast", 'unlimited']:
             text_rgb = (140, 140, 140)
             self.fps_label = QtWidgets.QLabel(self.window)
             font = QtGui.QFont("Arial", 14)
@@ -198,7 +198,7 @@ class PyQtEnvRendererGL(EnvRenderer):
                 ) for ic in range(len(self.agent_ids))
                 ]
             elif self.render_spec.car_model == "2d":
-                [CarRenderer(
+                self.cars = [CarRenderer(
                     env_renderer=self,
                     car_length=self.params["length"],
                     car_width=self.params["width"],
@@ -231,9 +231,9 @@ class PyQtEnvRendererGL(EnvRenderer):
             
             self.app.processEvents()
             
-            if self.render_mode in ["human", "human_fast"]:
+            if self.render_mode in ["human", "human_fast", 'unlimited']:
                 self._update_fps()
-                if self.render_fps < 1500:
+                if self.render_fps < float('inf'):
                     elapsed = time.time() - start_time
                     sleep_time = max(0.0, 1/self.render_fps - elapsed)
                     time.sleep(sleep_time)
