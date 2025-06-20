@@ -90,8 +90,7 @@ class DirectObservation(Observation):
                 "sim_time": self.env.unwrapped.sim_time,
             }
             if self.env.unwrapped.config["compute_frenet"]:
-                agent_obs["frenet_pose"] = agent.frenet_pose if hasattr(agent, 'frenet_pose') else np.zeros(3, dtype=np.float32)
-
+                agent_obs["frenet_pose"] = agent.frenet_pose if hasattr(agent, 'frenet_pose') else np.zeros(3)
             # add agent's observation to multi-agent observation
             obs[agent_id] = agent_obs
             

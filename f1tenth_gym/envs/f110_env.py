@@ -433,22 +433,20 @@ class F110Env(gym.Env):
         Check if the current rollout is done
         """
         if self.config['loop_counting_method'] == "frenet_based":
+            # print(self.agents_prev_s)
             for ind, agent_id in enumerate(self.agent_ids):
                 if self.agents_prev_s[ind] is None:
-                    self.agents_prev_s[ind] = self.render_obs[agent_id]['frenet_pose'][0]
+                    self.agents_prev_s[ind] = self.sim.agents[ind].frenet_pose[0]
                 else:
-                    agent_curr_s = self.render_obs[agent_id]['frenet_pose'][0]
+                    agent_curr_s = self.sim.agents[ind].frenet_pose[0]
                     if self.agents_prev_s[ind] - agent_curr_s > self.sim.track.centerline.spline.s_frame_max * 0.85 \
                         and self.sim_time > self.timestep:
                         self.lap_counts[ind] += 1
                         self.lap_times[ind] = self.sim_time - self.lap_times_finish[ind]
                         self.lap_times_finish[ind] = self.sim_time
                     self.agents_prev_s[ind] = agent_curr_s
-                self.render_obs[agent_id]['lap_time'] = self.lap_times[ind]
-                self.render_obs[agent_id]['lap_count'] = [ind]
-                
-        done = (self.collisions[self.ego_idx]) or self.lap_counts >= float(self.config["max_laps"])
-        return bool(done)
+        done = (self.collisions[self.ego_idx]) or self.lap_counts[self.ego_idx] >= float(self.config["max_laps"])
+        return bool(np.any(done))
 
     def _update_state(self):
         """
@@ -475,6 +473,12 @@ class F110Env(gym.Env):
 
         # call simulation step
         self.sim.step(action)
+        
+        # update data member
+        self._update_state()
+
+        # check done
+        done = self._check_done()
 
         # observation
         obs = self.observation_type.observe()
@@ -489,11 +493,6 @@ class F110Env(gym.Env):
         reward = self.timestep
         self.sim_time = self.sim_time + self.timestep
 
-        # update data member
-        self._update_state()
-
-        # check done
-        done = self._check_done()
         truncated = False
         info = {"lap_times": self.lap_times, 
                 "lap_counts": self.lap_counts,
@@ -531,8 +530,8 @@ class F110Env(gym.Env):
         if options is not None and "poses" in options:
             poses = options["poses"]
             option = "pose"
-        elif options is not None and "state" in options:
-            poses = options["state"]
+        elif options is not None and "states" in options:
+            poses = options["states"]
             option = "state"
         else:
             poses = self.reset_fn.sample()

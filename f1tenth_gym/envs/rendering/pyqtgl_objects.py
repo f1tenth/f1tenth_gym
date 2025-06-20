@@ -1,5 +1,6 @@
 from __future__ import annotations
 import numpy as np
+import time
 import pyqtgraph.opengl as gl
 
 from .renderer import RenderSpec, EnvRenderer, ObjectRenderer
@@ -86,15 +87,16 @@ class CarRenderer(ObjectRenderer):
         self.steering = state[2]
         
     def render(self, scale=1.0):
-        # pass
-        if scale != 1.0 or self.scale != scale:
-            transformed = self.apply_pose(self.pose, scale)
+        if self.scale != scale:
+            # transformed = self.apply_pose(self.pose, 1.0)
             self.mesh.resetTransform()
-            self.mesh.setMeshData(vertexes=transformed, 
+            self.mesh.setMeshData(vertexes=self.base_rect * scale, 
                                 faces=self.faces,
                                 faceColors=self.rgba,
                                 smooth=False,
                                 drawEdges=False,)
+            self.mesh.rotate(self.pose[2] / np.pi * 180, 0, 0, 1)
+            self.mesh.translate(self.pose[0], self.pose[1], 0.01)
             self.scale = scale
         else:
             self.mesh.resetTransform()

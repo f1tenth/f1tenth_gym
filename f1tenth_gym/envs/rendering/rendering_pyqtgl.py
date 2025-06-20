@@ -33,6 +33,7 @@ class PyQtEnvRendererGL(EnvRenderer):
             self.agent_to_follow = None
         self.car_scale = 1.0
         self.default_camera_dist = self.params['width'] * 70
+        self.obs = None
         
         fmt = QtGui.QSurfaceFormat()
         fmt.setSwapInterval(0)  # 0 = no vsync, 1 = vsync
@@ -63,6 +64,17 @@ class PyQtEnvRendererGL(EnvRenderer):
             self.fps_label.resize(100, 20)
             self.fps_label.setAttribute(QtCore.Qt.WidgetAttribute.WA_TransparentForMouseEvents)
             self.fps_label.show()
+            
+            self.lap_label = QtWidgets.QLabel(self.window)
+            font = QtGui.QFont("Arial", 14)
+            self.lap_label.setFont(font)
+            self.lap_label.setStyleSheet(
+                f"color: rgb({text_rgb[0]}, {text_rgb[1]}, {text_rgb[2]}); background-color: transparent; padding: 2px;"
+            )
+            self.lap_label.move(int(self.render_spec.window_size) - 220, 10)
+            self.lap_label.resize(220, 30)
+            self.lap_label.setAttribute(QtCore.Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+            self.lap_label.show()
 
         # Frame timer
         self.last_time = time.time()
@@ -216,9 +228,14 @@ class PyQtEnvRendererGL(EnvRenderer):
 
         # update time
         self.sim_time = obs[self.agent_ids[0]]["sim_time"]
+        self.obs = obs
+        
 
     def render(self):
         if self.draw_flag:
+            if self.obs is not None:
+                self.lap_label.setText(f"Lap Time {self.obs[self.agent_ids[0]]['lap_time']:.2f}, " + 
+                    f"Lap {int(self.obs[self.agent_ids[0]]['lap_count']):d}")
             start_time = time.time()
             
             # call callbacks

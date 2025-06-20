@@ -308,7 +308,7 @@ def main():
         "vgain": 0.5,
     }
 
-    num_agents = 1
+    num_agents = 2
     env = gym.make(
         "f1tenth_gym:f1tenth-v0",
         config={
@@ -348,7 +348,10 @@ def main():
     for r in planner.get_render_callbacks():
         env.unwrapped.add_render_callback(r)
 
-    obs, info = env.reset()
+    frenet_start = np.array(env.unwrapped.track.frenet_to_cartesian(0, 0, 0))
+    frenet_start2 = np.array(env.unwrapped.track.frenet_to_cartesian(10, 0, 0))
+    init_poses = np.array([frenet_start, frenet_start2])
+    obs, info = env.reset(options={'poses':init_poses})
     done = False
     env.render()
 
@@ -367,7 +370,6 @@ def main():
                 work["vgain"],
             )
             action[i] = np.array([steer, speed])
-            # print("frenet_pose", obs[agent_id]["frenet_pose"])
         t1 = time.time()
         obs, step_reward, done, truncated, info = env.step(action)
         
@@ -380,7 +382,6 @@ def main():
         frame = env.render()
 
     print("Sim elapsed time:", laptime, "Real elapsed time:", time.time() - start)
-
 
 if __name__ == "__main__":
     main()
