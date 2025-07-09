@@ -20,7 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-FROM ubuntu:20.04
+FROM nvidia/cudagl:11.2.2-runtime-ubuntu20.04
 
 ARG DEBIAN_FRONTEND="noninteractive"
 ENV LIBGL_ALWAYS_INDIRECT=1
@@ -42,7 +42,7 @@ RUN apt-get update --fix-missing && \
                     fontconfig \
                     libfreetype6-dev
 
-RUN pip3 install --upgrade pip
+RUN pip3 install --upgrade "pip<24.1"
 RUN pip3 install PyOpenGL \
                  PyOpenGL_accelerate
 
