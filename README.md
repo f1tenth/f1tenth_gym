@@ -48,6 +48,32 @@ f110-gym 0.2.1 requires pyglet<1.5, but you have pyglet 1.5.20 which is incompat
 ```
 which could be ignored. The environment should still work without error.
 
+- Invalid metadata: Expected end or smeicolon (after version specifier)
+>WARNING: Ignoring version 0.19.0 of gym since it has invalid metadata:
+Requested gym==0.19.0 from file:///home/\<user\>/.cache/pip/wheels/c8/24/9d/db9869e09d1fbf12a10ce64362d9f161f09bdb5651e44317fe/gym-0.19.0-py3-none-any.whl (from f110-gym==0.2.1) has invalid metadata: Expected matching RIGHT_PARENTHESIS for LEFT_PARENTHESIS, after version specifier
+    opencv-python (>=3.) ; extra == 'all'
+                  ~~~~^
+Please use pip<24.1 if you need to use this version.
+INFO: pip is looking at multiple versions of f110-gym to determine which version is compatible with other requirements. This could take a while.
+ERROR: Could not find a version that satisfies the requirement gym==0.19.0 (from f110-gym) (from versions: 0.0.2, 0.0.3, 0.0.4, 0.0.5, 0.0.6, 0.0.7, 0.1.0, 0.1.1, 0.1.2, 0.1.3, 0.1.4, 0.1.5, 0.1.6, 0.1.7, 0.2.0, 0.2.1, 0.2.2, 0.2.3, 0.2.4, 0.2.5, 0.2.6, 0.2.7, 0.2.8, 0.2.9, 0.2.10, 0.2.11, 0.2.12, 0.3.0, 0.4.0, 0.4.1, 0.4.2, 0.4.3, 0.4.4, 0.4.5, 0.4.6, 0.4.8, 0.4.9, 0.4.10, 0.5.0, 0.5.1, 0.5.2, 0.5.3, 0.5.4, 0.5.5, 0.5.6, 0.5.7, 0.6.0, 0.7.0, 0.7.1, 0.7.2, 0.7.3, 0.7.4, 0.8.0.dev0, 0.8.0, 0.8.1, 0.8.2, 0.9.0, 0.9.1, 0.9.2, 0.9.3, 0.9.4, 0.9.5, 0.9.6, 0.9.7, 0.10.0, 0.10.1, 0.10.2, 0.10.3, 0.10.4, 0.10.5, 0.10.8, 0.10.9, 0.10.11, 0.11.0, 0.12.0, 0.12.1, 0.12.4, 0.12.5, 0.12.6, 0.13.0, 0.13.1, 0.14.0, 0.15.3, 0.15.4, 0.15.6, 0.15.7, 0.16.0, 0.17.0, 0.17.1, 0.17.2, 0.17.3, 0.18.0, 0.18.3, 0.19.0, 0.20.0, 0.21.0, 0.22.0, 0.23.0, 0.23.1, 0.24.0, 0.24.1, 0.25.0, 0.25.1, 0.25.2, 0.26.0, 0.26.1, 0.26.2)
+ERROR: No matching distribution found for gym==0.19.0
+
+As the warning suggests, this is due to incompatibility between pip versions >=24.1 and gym version 0.19.0. You can resolve this by downgrading the pip used in the virtualenv:
+
+```
+pip install --upgrade pip==24.0
+```
+
+The installation steps are then as follows:
+
+```bash
+virtualenv gym_env
+source gym_env/bin/activate
+pip install --upgrade pip==24.0
+git clone https://github.com/f1tenth/f1tenth_gym.git
+cd f1tenth_gym
+pip install -e .
+```
 ## Citing
 If you find this Gym environment useful, please consider citing:
 
