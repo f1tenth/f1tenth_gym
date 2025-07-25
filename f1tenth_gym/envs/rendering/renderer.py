@@ -7,18 +7,50 @@ from typing import Optional, Any
 import numpy as np
 import yaml
 
+class ConfigYAML:
+    """
+    Config class for yaml file
+    Able to load and save yaml file to and from python object
+    """
+    def __init__(self) -> None:
+        pass
+    
+    def load_file(self, filename):
+        self.d = yaml.safe_load(pathlib.Path(filename).read_text())
+        for key in self.d: 
+            setattr(self, key, self.d[key]) 
+    
+    def from_yaml(self, filename):
+        self.d = yaml.safe_load(pathlib.Path(filename).read_text())
+        for key in self.d: 
+            setattr(self, key, self.d[key]) 
+    
+    def save_file(self, filename):
+        d = vars(self)
+        class_d = vars(self.__class__)
+        d_out = {}
+        for key in list(class_d.keys()):
+            if not (key.startswith('__') or \
+                    key.startswith('load_file') or \
+                    key.startswith('save_file')):
+                if isinstance(class_d[key], np.ndarray):
+                    d_out[key] = class_d[key].tolist()
+                else:
+                    d_out[key] = class_d[key]
+        for key in list(d.keys()):
+            if not (key.startswith('__') or \
+                    key.startswith('load_file') or \
+                    key.startswith('save_file')):
+                if isinstance(d[key], np.ndarray):
+                    d_out[key] = d[key].tolist()
+                else:
+                    d_out[key] = d[key]
+        with open(filename, 'w+') as ff:
+            yaml.dump_all([d_out], ff)
+
 
 @dataclass
-class RenderSpec:
-    window_size: int
-    zoom_in_factor: float
-    focus_on: str
-    car_tickness: int
-    show_wheels: bool
-    show_info: Optional[bool] = True
-    vehicle_palette: Optional[list[str]] = None
-    render_type: Optional[str] = "pygame"
-
+class RenderSpec(ConfigYAML):
     def __init__(
         self,
         window_size: int = 800,
@@ -59,46 +91,34 @@ class RenderSpec:
         self.vehicle_palette = vehicle_palette or ["#984ea3"]
         self.render_type = render_type
 
-    @staticmethod
-    def from_yaml(yaml_file: str | pathlib.Path):
-        """
-        Load rendering specification from a yaml file.
-
-        Parameters
-        ----------
-        yaml_file : str | pathlib.Path
-            path to the yaml file
-
-        Returns
-        -------
-        RenderSpec
-            rendering specification object
-        """
-        with open(yaml_file, "r") as yaml_stream:
-            try:
-                config = yaml.safe_load(yaml_stream)
-            except yaml.YAMLError as ex:
-                print(ex)
-        return RenderSpec(**config)
-
-
 class EnvRenderer(ABC):
     """
     Abstract class for rendering the environment.
     """
-
     @abstractmethod
-    def update(self, state: Any) -> None:
+    def add_renderer_callback(self, callback_fn):
+        """
+        Add a custom callback for visualization.
+
+        Parameters
+        ----------
+        callback_fn : Callable[[EnvRenderer], None]
+            callback function to be called at every rendering step
+        """
+        raise NotImplementedError()
+    
+    @abstractmethod
+    def update(self, obs: dict) -> None:
         """
         Update the state to be rendered.
         This is called at every rendering call.
 
         Parameters
         ----------
-        state : Any
-            state to be rendered, e.g. a list of vehicle states
+        obs : dict
+            observations from the env to be rendered
         """
-        raise NotImplementedError()
+        raise NotImplementedError()    
 
     @abstractmethod
     def render(self):
@@ -108,50 +128,26 @@ class EnvRenderer(ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    def render_lines(
-        self,
-        points: list | np.ndarray,
-        color: Optional[tuple[int, int, int]] = (0, 0, 255),
-        size: Optional[int] = 1,
-    ):
-        """
-        Render a sequence of lines segments.
-
-        Parameters
-        ----------
-        points : list | np.ndarray
-            list of points to render
-        color : tuple[int, int, int], optional
-            color as rgb tuple, by default blue (0, 0, 255)
-        size : int, optional
-            size of the line, by default 1
-        """
-        raise NotImplementedError()
-
-    @abstractmethod
-    def render_closed_lines(
-        self,
-        points: list | np.ndarray,
-        color: Optional[tuple[int, int, int]] = (0, 0, 255),
-        size: Optional[int] = 1,
-    ):
-        """
-        Render a closed loop of lines (draw a line between the last and the first point).
-
-        Parameters
-        ----------
-        points : list | np.ndarray
-            list of points to render
-        color : tuple[int, int, int], optional
-            color as rgb tuple, by default blue (0, 0, 255)
-        size : int, optional
-            size of the line, by default 1
-        """
-        raise NotImplementedError()
-
-    @abstractmethod
     def close(self):
         """
         Close the rendering window.
+        """
+        raise NotImplementedError()
+
+class ObjectRenderer(ABC):
+    
+    @abstractmethod
+    def __init__(self):
+        """
+        Initialize the point renderer.
+        This should set up the necessary parameters for rendering points.
+        """
+        pass
+    
+    @abstractmethod
+    def update(self):
+        """
+        Update the point renderer with new data.
+        This is called at every rendering call.
         """
         raise NotImplementedError()

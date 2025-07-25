@@ -70,8 +70,9 @@ class Raceline:
                                             vxs=velxs,
                                             axs=accxs,
                                             ss=ss)
+        self.s_frame_max = self.spline.s[-1]
 
-        self.waypoint_render = None
+        self.waypoint_renderer = None
 
     @staticmethod
     def from_centerline_file(
@@ -203,7 +204,7 @@ class Raceline:
             Environment renderer object.
         """
         points = np.stack([self.xs, self.ys], axis=1)
-        if self.waypoint_render is None:
-            self.waypoint_render = e.render_closed_lines(points, color=(0, 128, 0), size=1)
+        if self.waypoint_renderer is None:
+            self.waypoint_renderer = e.get_closed_lines_renderer(points, color=(0, 255, 0), size=2)
         else:
-            self.waypoint_render.updateItems(points)
+            self.waypoint_renderer.update(points)

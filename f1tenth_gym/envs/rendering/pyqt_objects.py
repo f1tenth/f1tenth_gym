@@ -2,16 +2,75 @@ from __future__ import annotations
 import numpy as np
 import pyqtgraph as pg
 
-from PyQt6.QtWidgets import QGraphicsRectItem, QGraphicsPolygonItem
-from PyQt6 import QtGui
+# from PyQt6.QtWidgets import QGraphicsRectItem, QGraphicsPolygonItem
+# from PyQt6 import QtGui
 
-from .renderer import RenderSpec
+from .renderer import RenderSpec, EnvRenderer, ObjectRenderer
 from ..collision_models import get_vertices, get_trmtx
+from typing import Optional, Any, Union
 
 from numba import njit
 
 
-class TextObject:
+class LinesRenderer(ObjectRenderer):
+    def __init__(
+        self, 
+        env_renderer: EnvRenderer,
+        points: Union[list, np.ndarray], 
+        color: Optional[tuple[int, int, int]] = (0, 0, 255), 
+        size: Optional[int] = 1
+        ):
+        pen = pg.mkPen(color=pg.mkColor(*color), width=size)
+        self.renderer = env_renderer.canvas.plot(
+            points[:, 0], points[:, 1], pen=pen, fillLevel=None, antialias=True
+        )
+        
+    def update(self, points: Union[list, np.ndarray]) -> None:
+        self.renderer.updateItems(points)
+        
+class ClosedLinesRenderer(ObjectRenderer):
+    def __init__(
+        self, 
+        env_renderer: EnvRenderer,
+        points: Union[list, np.ndarray], 
+        color: Optional[tuple[int, int, int]] = (0, 0, 255), 
+        size: Optional[int] = 1
+        ):
+        # Append the first point to the end to close the loop
+        points = np.vstack([points, points[0]])
+        pen = pg.mkPen(color=pg.mkColor(*color), width=size)
+        pen.setCapStyle(pg.QtCore.Qt.PenCapStyle.RoundCap)
+        pen.setJoinStyle(pg.QtCore.Qt.PenJoinStyle.RoundJoin)
+        self.renderer = env_renderer.canvas.plot(
+            points[:, 0], points[:, 1], pen=pen, cosmetic=True, antialias=True
+        ) ## setting pen=None disables line drawing
+        
+    def update(self, points: Union[list, np.ndarray]) -> None:
+        self.renderer.updateItems(points)
+
+class PointsRenderer(ObjectRenderer):
+    def __init__(
+        self, 
+        env_renderer: EnvRenderer,
+        points: Union[list, np.ndarray], 
+        color: Optional[tuple[int, int, int]] = (0, 0, 255), 
+        size: Optional[int] = 1
+        ):
+        self.renderer = env_renderer.canvas.plot(
+            points[:, 0],
+            points[:, 1],
+            pen=None,
+            symbol="o",
+            symbolPen=pg.mkPen(color=color, width=0),
+            symbolBrush=pg.mkBrush(color=color, width=0),
+            symbolSize=size,
+        )
+        
+    def update(self, points: Union[list, np.ndarray]) -> None:
+        self.renderer.setData(points)
+
+
+class TextRenderer(ObjectRenderer):
     """
     Class to display text on the screen at a given position.
 
@@ -24,7 +83,6 @@ class TextObject:
     text : pygame.Surface
         text surface to be displayed
     """
-
     def __init__(
         self,
         position: str | tuple,
@@ -45,7 +103,6 @@ class TextObject:
             font name, by default "Arial"
         """
         self.position = position
-
         self.text_label = pg.LabelItem("", parent=parent, size=str(relative_font_size) + 'pt', family=font_name, color=(125, 125, 125)) # create text label
         # Get the position and offset of the text
         position_tuple = self._position_resolver(self.position)
@@ -146,6 +203,9 @@ class TextObject:
             raise ValueError(
                 f"Position expected to be a tuple[int, int] or a string. Got {position}."
             )
+    
+    def update(self) -> None:
+        pass
         
     def render(self, text: str) -> None:
         """
@@ -213,11 +273,10 @@ def _get_tire_vertices(pose, length, width, tire_width, tire_length, index, stee
 
     return vertices
     
-class Car:
+class CarRenderer(ObjectRenderer):
     """
     Class to display the car.
     """
-
     def __init__(
         self,
         render_spec: RenderSpec,
@@ -225,7 +284,7 @@ class Car:
         resolution: float,
         car_length: float,
         car_width: float,
-        color: list[int] | None = None,
+        color: Optional[list[int]] = None,
         wheel_size: float = 0.2,
         parent: pg.PlotWidget = None,
     ):
@@ -275,14 +334,15 @@ class Car:
                 brush=(0,0,0), # Rubber tire => Black
             )
 
-    def update(self, state: dict[str, np.ndarray], idx: int):
+    def update(self, obs: dict[str, np.ndarray], id: str):        
+        state = obs[id]["std_state"].astype(float)
         self.pose = (
-            state["poses_x"][idx],
-            state["poses_y"][idx],
-            state["poses_theta"][idx],
+            state[0],
+            state[1],
+            state[4],
         )
-        self.color = (255, 0, 0) if state["collisions"][idx] > 0 else self.color
-        self.steering = state["steering_angles"][idx]
+        self.color = (255, 0, 0) if obs[id]["collision"] > 0 else self.color
+        self.steering = state[2]
 
     def render(self):
         vertices = get_vertices(self.pose, self.car_length, self.car_width)
@@ -305,3 +365,6 @@ class Car:
 
 
 
+
+
+        

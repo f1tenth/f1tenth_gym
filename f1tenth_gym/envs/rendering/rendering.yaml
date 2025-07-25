@@ -1,11 +1,16 @@
 window_size: 800      # [px] width and height of the window
 focus_on: agent_0     # [str] agent id to focus on (e.g., agent_0) or null for map view
-zoom_in_factor: 1.5   # [float] zoom in factor. 1.0 is no zoom, >1.0 is zoom in, <1.0 is zoom out
+zoom_in_factor: 0.5   # [float] zoom in factor. 1.0 is no zoom, >1.0 is zoom in, <1.0 is zoom out
+bigger_car_when_map_centered: True  # [bool] it toggles the size of the car when centered in the map
+render_map_img: True  # [bool] it toggles the visualization of the map image
 show_wheels: True     # [bool] it toggles the visualization of the vehicle wheels
 car_tickness: 1       # [px] thickness of the car
 show_info: True       # [bool] it toggles the visualization of the instruction text
-render_type: "pyqt6"  # [str] rendering type. Options: "pygame", "pyqt6"
+render_type: "pyqt6gl"  # [str] rendering type. Options: "pyqt6gl", "pyqt6" NOTE: pygame not supported until reimplemented
+car_model: "2d"  # [str] car model to use. Options: "2d", "3d"
 vehicle_palette:      # [list] cyclic list of colors for the vehicles
+  - "#FD3754"
+  - "#377eb8"
   - "#984ea3"
   - "#e41a1c"
   - "#ff7f00"
@@ -14,3 +19,7 @@ vehicle_palette:      # [list] cyclic list of colors for the vehicles
   - "#888888"
   - "#a6cee3"
   - "#b2df8a"
+frame_output_method: "offscreen" # [str] method to output frames. Options: "xcb", "offscreen"
+# NOTE: "xcb" is slower, requires a display server, but with higher quality, 
+#       "offscreen" is faster, works without a display server, but with lower quality
+frame_output_info_label: True # [bool] it toggles the visualization of the frame output label

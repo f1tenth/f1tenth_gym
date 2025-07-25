@@ -25,8 +25,9 @@ def main():
             "map": track,
             "num_agents": 1,
             "observation_config": {"type": "kinematic_state"},
+            "reset_config": {"type": "rl_random_static"},
         },
-        render_mode="human",
+        render_mode="unlimited",
     )
     planner = PurePursuitPlanner(track=track, wb=0.17145 + 0.15875)
 
@@ -44,8 +45,8 @@ def main():
             obs["agent_0"]["pose_x"],
             obs["agent_0"]["pose_y"],
             obs["agent_0"]["pose_theta"],
-            lookahead_distance=0.8,
-            vgain=1.0,
+            lookahead_distance=1.0,
+            vgain=0.8,
         )
         action = np.array([[steer, speed]])
         obs, timestep, terminated, truncated, infos = env.step(action)

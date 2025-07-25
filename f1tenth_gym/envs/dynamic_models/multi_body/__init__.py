@@ -8,7 +8,7 @@ from numba import njit
 from .multi_body import vehicle_dynamics_mb, get_standardized_state_mb
 
 
-def init_mb(init_state, params: dict) -> np.ndarray:
+def init_mb(init_state, params) -> np.ndarray:
     # init_MB - generates the initial state vector for the multi-body model
     #
     # Syntax:
@@ -32,24 +32,24 @@ def init_mb(init_state, params: dict) -> np.ndarray:
 
     ### Parameters
     ## steering constraints
-    s_min = params["s_min"]  # minimum steering angle [rad]
-    s_max = params["s_max"]  # maximum steering angle [rad]
+    s_min = params[8]   # minimum steering angle [rad]
+    s_max = params[9]   # maximum steering angle [rad]
     ## longitudinal constraints
-    v_min = params["v_min"]  # minimum velocity [m/s]
-    v_max = params["v_max"]  # minimum velocity [m/s]
+    v_min = params[14]  # minimum velocity [m/s]
+    v_max = params[15]  # maximum velocity [m/s]
     ## masses
-    m_s = params["m_s"]  # sprung mass [kg]  SMASS
-    m_uf = params["m_uf"]  # unsprung mass front [kg]  UMASSF
-    m_ur = params["m_ur"]  # unsprung mass rear [kg]  UMASSR
+    m_s = params[22]  # sprung mass [kg]
+    m_uf = params[23]  # front unsprung mass [kg]
+    m_ur = params[24]  # rear unsprung mass [kg]
     ## axes distances
-    lf = params["lf"]
+    lf = params[3]
     # distance from spring mass center of gravity to front axle [m]  LENA
-    lr = params["lr"]
+    lr = params[4]
     # distance from spring mass center of gravity to rear axle [m]  LENB
 
     ## geometric parameters
-    K_zt = params["K_zt"]  # vertical spring rate of tire [N/m]  TSPRINGR
-    R_w = params["R_w"]
+    K_zt = params[39]  # vertical spring rate of tire [N/m]  TSPRINGR
+    R_w = params[48]
     # effective wheel/tire radius  chosen as tire rolling radius RR  taken from ADAMS documentation [m]
     # create equivalent bicycle parameters
     g = 9.81  # [m/s^2]

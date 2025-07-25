@@ -1,6 +1,6 @@
 from __future__ import annotations
 from abc import abstractmethod
-from typing import List
+from typing import List, Optional
 
 import gymnasium as gym
 import numpy as np
@@ -26,6 +26,77 @@ class Observation:
     def observe(self):
         raise NotImplementedError()
 
+class DirectObservation(Observation):
+    def __init__(self, env):
+        super().__init__(env)
+        self.env = env
+
+    def space(self):
+        scan_size = self.env.unwrapped.sim.agents[0].scan_simulator.num_beams
+        scan_range = self.env.unwrapped.sim.agents[0].scan_simulator.max_range
+        large_num = 1e30  # large number to avoid unbounded obs space (ie., low=-inf or high=inf)
+        
+        complete_space = {}
+        for agent_id in self.env.unwrapped.agent_ids:
+            agent_dict = {
+                "scan": gym.spaces.Box(
+                    low=0.0, high=scan_range, shape=(scan_size,), dtype=np.float32
+                ),
+                "std_state": gym.spaces.Box(
+                    low=-large_num, high=large_num, shape=(7,), dtype=np.float32
+                ),
+                "state": gym.spaces.Box(
+                    low=-large_num, high=large_num, shape=(int(self.env.unwrapped.model.state_dim),), dtype=np.float32
+                ),
+                "collision": gym.spaces.Box(
+                    low=0.0, high=1.0, shape=(), dtype=np.float32
+                ),
+                "lap_time": gym.spaces.Box(
+                    low=0.0, high=large_num, shape=(), dtype=np.float32
+                ),
+                "lap_count": gym.spaces.Box(
+                    low=0.0, high=large_num, shape=(), dtype=np.float32
+                ),
+                "sim_time": gym.spaces.Box(
+                    low=0.0, high=large_num, shape=(), dtype=np.float32
+                ),
+            }
+            if self.env.unwrapped.config["compute_frenet"]:
+                agent_dict["frenet_pose"] = gym.spaces.Box(
+                    low=-large_num, high=large_num, shape=(3,), dtype=np.float32
+                )
+            complete_space[agent_id] = gym.spaces.Dict(
+                agent_dict
+            )
+
+        obs_space = gym.spaces.Dict(complete_space)
+        return obs_space
+
+    def observe(self):
+        obs = {}  # dictionary agent_id -> observation dict
+
+        for i, agent_id in enumerate(self.env.unwrapped.agent_ids):
+            scan = self.env.unwrapped.sim.agent_scans[i]
+            agent = self.env.unwrapped.sim.agents[i]
+            # create agent's observation dict
+            agent_obs = {
+                "scan": scan.copy(),
+                "std_state": agent.standard_state.copy(),
+                "state": agent.state.copy(),
+                "collision": agent.in_collision,
+                "lap_time": self.env.unwrapped.lap_times[i],
+                "lap_count": self.env.unwrapped.lap_counts[i],
+                "sim_time": np.array(self.env.unwrapped.sim_time, dtype=np.float32),
+            }
+            if self.env.unwrapped.config["compute_frenet"]:
+                agent_obs["frenet_pose"] = agent.frenet_pose if hasattr(agent, 'frenet_pose') else np.zeros(3)
+            # add agent's observation to multi-agent observation
+            obs[agent_id] = agent_obs
+            
+            # cast to match observation space
+            for key in obs[agent_id].keys():
+                obs[agent_id][key] = np.array(obs[agent_id][key], dtype=np.float32)
+        return obs
 
 class OriginalObservation(Observation):
     def __init__(self, env):
@@ -93,6 +164,9 @@ class OriginalObservation(Observation):
                 "lap_counts": gym.spaces.Box(
                     low=0.0, high=large_num, shape=(num_agents,), dtype=np.float32
                 ),
+                "sim_time": gym.spaces.Box(
+                    low=0.0, high=large_num, shape=(), dtype=np.float32
+                ),
             }
         )
 
@@ -116,6 +190,7 @@ class OriginalObservation(Observation):
             "collisions": [],
             "lap_times": [],
             "lap_counts": [],
+            "sim_time": np.array(self.env.unwrapped.sim_time, dtype=np.float32),
         }
 
         for i, agent in enumerate(self.env.unwrapped.sim.agents):
@@ -125,12 +200,10 @@ class OriginalObservation(Observation):
             collision = self.env.unwrapped.sim.collisions[i]
 
             std_state = agent.standard_state
-
-            x, y, theta = std_state["x"], std_state["y"], std_state["yaw"]
-
-            vx = std_state["v_x"]
-            vy = std_state["v_y"]
-            angvel = std_state["yaw_rate"]
+            x, y, theta = std_state[0], std_state[1], std_state[4]
+            vx = std_state[3] * np.cos(std_state[6])
+            vy = std_state[3] * np.sin(std_state[6])
+            angvel = std_state[5]
 
             observations["scans"].append(agent_scan)
             observations["poses_x"].append(x)
@@ -151,7 +224,6 @@ class OriginalObservation(Observation):
                 observations[key] = np.array(observations[key], dtype=np.float32)
 
         return observations
-
 
 class FeaturesObservation(Observation):
     def __init__(self, env, features: List[str]):
@@ -182,6 +254,9 @@ class FeaturesObservation(Observation):
                     low=-large_num, high=large_num, shape=(), dtype=np.float32
                 ),
                 "linear_vel_y": gym.spaces.Box(
+                    low=-large_num, high=large_num, shape=(), dtype=np.float32
+                ),
+                "linear_vel_magnitude": gym.spaces.Box( # [AA] combined linear velocity, for ST observation
                     low=-large_num, high=large_num, shape=(), dtype=np.float32
                 ),
                 "ang_vel_z": gym.spaces.Box(
@@ -221,12 +296,12 @@ class FeaturesObservation(Observation):
 
             std_state = agent.standard_state
 
-            x, y, theta = std_state["x"], std_state["y"], std_state["yaw"]
-            delta = std_state["delta"]
-            beta = std_state["slip"]
-            vx = std_state["v_x"]
-            vy = std_state["v_y"]
-            angvel = std_state["yaw_rate"]
+            x, y, theta = std_state[0], std_state[1], std_state[4]
+            delta = std_state[2]
+            beta = std_state[6]
+            vx = std_state[3] * np.cos(std_state[6])
+            vy = std_state[3] * np.sin(std_state[6])
+            angvel = std_state[5]
 
             # create agent's observation dict
             agent_obs = {
@@ -234,6 +309,7 @@ class FeaturesObservation(Observation):
                 "pose_x": x,
                 "pose_y": y,
                 "pose_theta": theta,
+                "linear_vel_magnitude": std_state[3],
                 "linear_vel_x": vx,
                 "linear_vel_y": vy,
                 "ang_vel_z": angvel,
@@ -258,11 +334,13 @@ class FeaturesObservation(Observation):
         return obs
 
 
-def observation_factory(env, type: str | None, **kwargs) -> Observation:
+def observation_factory(env, type: Optional[str], **kwargs) -> Observation:
     type = type or "original"
 
     if type == "original":
         return OriginalObservation(env)
+    elif type == "direct":
+        return DirectObservation(env)
     elif type == "features":
         return FeaturesObservation(env, **kwargs)
     elif type == "kinematic_state":
@@ -273,7 +351,7 @@ def observation_factory(env, type: str | None, **kwargs) -> Observation:
             "pose_x",
             "pose_y",
             "delta",
-            "linear_vel_x",
+            "linear_vel_magnitude",
             "pose_theta",
             "ang_vel_z",
             "beta",

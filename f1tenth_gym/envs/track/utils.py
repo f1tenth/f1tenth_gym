@@ -99,8 +99,13 @@ def nearest_point_on_trajectory(point: np.ndarray, trajectory: np.ndarray) -> tu
         temp = point - projections[i]
         dists[i] = np.sqrt(np.sum(temp * temp))
     min_dist_segment = np.argmin(dists)
+    # return (
+    #     projections[min_dist_segment],
+    #     dists[min_dist_segment],
+    #     t[min_dist_segment],
+    #     min_dist_segment,
+    # )
     return (
-        projections[min_dist_segment],
         dists[min_dist_segment],
         t[min_dist_segment],
         min_dist_segment,

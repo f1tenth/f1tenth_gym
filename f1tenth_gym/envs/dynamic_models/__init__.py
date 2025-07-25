@@ -32,22 +32,26 @@ class DynamicModel(Enum):
         else:
             raise ValueError(f"Unknown model type {model}")
 
-    def get_initial_state(self, pose=None, params: Optional[dict] = None):
+    def get_initial_state(self, pose=None, params=None):
         # Assert that if self is MB, params is not None
         if self == DynamicModel.MB and params is None:
             raise ValueError("MultiBody model requires parameters to be provided.")
         # initialize zero state
         if self == DynamicModel.KS:
             # state is [x, y, steer_angle, vel, yaw_angle]
-            state = np.zeros(5)
+            self.state_dim = 5      
+            self.control_dim = 2
         elif self == DynamicModel.ST:
             # state is [x, y, steer_angle, vel, yaw_angle, yaw_rate, slip_angle]
-            state = np.zeros(7)
+            self.state_dim = 7
+            self.control_dim = 2
         elif self == DynamicModel.MB:
             # state is a 29D vector
-            state = np.zeros(29)
+            self.state_dim = 29
+            self.control_dim = 2
         else:
             raise ValueError(f"Unknown model type {self}")
+        state = np.zeros(self.state_dim)
 
         # set initial pose if provided
         if pose is not None:

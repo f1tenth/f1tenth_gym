@@ -244,7 +244,7 @@ def get_scan(
         # make sure it stays in the range [0, theta_dis)
         while theta_index >= theta_dis:
             theta_index -= theta_dis
-
+        
     return scan
 
 
@@ -265,17 +265,19 @@ def check_ttc_jit(scan, vel, scan_angles, cosines, side_distances, ttc_thresh):
         in_collision (bool): whether vehicle is in collision with environment
         collision_angle (float): at which angle the collision happened
     """
-    in_collision = False
-    if vel != 0.0:
-        num_beams = scan.shape[0]
-        for i in range(num_beams):
-            proj_vel = vel * cosines[i]
-            ttc = (scan[i] - side_distances[i]) / proj_vel
-            if (ttc < ttc_thresh) and (ttc >= 0.0):
-                in_collision = True
-                break
-    else:
-        in_collision = False
+    ttc = scan - side_distances
+    in_collision = np.any(ttc <= ttc_thresh)
+    # in_collision = False
+    # if vel != 0.0:
+    #     num_beams = scan.shape[0]
+    #     for i in range(num_beams):
+    #         proj_vel = vel * cosines[i]
+    #         ttc = (scan[i] - side_distances[i]) / proj_vel
+    #         if (ttc < ttc_thresh) and (ttc >= 0.0):
+    #             in_collision = True
+    #             break
+    # else:
+    #     in_collision = False
 
     return in_collision
 
@@ -432,11 +434,12 @@ class ScanSimulator2D(object):
         max_range (float, default=30.0): maximum range of the laser
     """
 
-    def __init__(self, num_beams, fov, eps=0.0001, theta_dis=2000, max_range=30.0):
+    def __init__(self, num_beams, fov, eps=0.0001, theta_dis=2000, std_dev=0.01, max_range=30.0):
         # initialization
         self.num_beams = num_beams
         self.fov = fov
         self.eps = eps
+        self.std_dev = std_dev
         self.theta_dis = theta_dis
         self.max_range = max_range
         self.angle_increment = self.fov / (self.num_beams - 1)
@@ -493,14 +496,13 @@ class ScanSimulator2D(object):
 
         return True
 
-    def scan(self, pose, rng, std_dev=0.01):
+    def scan(self, pose, rng):
         """
         Perform simulated 2D scan by pose on the given map
 
             Args:
                 pose (numpy.ndarray (3, )): pose of the scan frame (x, y, theta)
                 rng (numpy.random.Generator): random number generator to use for whitenoise in scan, or None
-                std_dev (float, default=0.01): standard deviation of the generated whitenoise in the scan
 
             Returns:
                 scan (numpy.ndarray (n, )): data array of the laserscan, n=num_beams
@@ -512,6 +514,7 @@ class ScanSimulator2D(object):
         if self.map_height is None:
             raise ValueError("Map is not set for scan simulator.")
 
+            
         scan = get_scan(
             pose,
             self.theta_dis,
@@ -533,10 +536,9 @@ class ScanSimulator2D(object):
         )
 
         if rng is not None:
-            noise = rng.normal(0.0, std_dev, size=self.num_beams)
-            scan += noise
-
-        return scan
+            scan = scan + rng.normal(0.0, self.std_dev, size=self.num_beams)
+            
+        return np.clip(scan, 0.0, self.max_range)
 
     def get_increment(self):
         return self.angle_increment

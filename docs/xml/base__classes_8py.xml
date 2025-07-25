@@ -242,7 +242,7 @@
 <codeline lineno="230"><highlight class="normal"></highlight></codeline>
 <codeline lineno="231"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>in_collision</highlight></codeline>
 <codeline lineno="232"><highlight class="normal"></highlight></codeline>
-<codeline lineno="233"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">def<sp/></highlight><highlight class="normal"><ref refid="classf110__gym_1_1envs_1_1base__classes_1_1_race_car_1ae12c14c1353e6aab2f72036593d85518" kindref="member">update_pose</ref>(self,<sp/>raw_steer,<sp/>vel):</highlight></codeline>
+<codeline lineno="233"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">def<sp/></highlight><highlight class="normal"><ref refid="classf110__gym_1_1envs_1_1base__classes_1_1_race_car_1ae12c14c1353e6aab2f72036593d85518" kindref="member">update_dynamic</ref>(self,<sp/>raw_steer,<sp/>vel):</highlight></codeline>
 <codeline lineno="234"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="stringliteral">&quot;&quot;&quot;</highlight></codeline>
 <codeline lineno="235"><highlight class="stringliteral"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>Steps<sp/>the<sp/>vehicle&apos;s<sp/>physical<sp/>simulation</highlight></codeline>
 <codeline lineno="236"><highlight class="stringliteral"></highlight></codeline>
@@ -313,7 +313,7 @@
 <codeline lineno="301"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">def<sp/></highlight><highlight class="normal"><ref refid="classf110__gym_1_1envs_1_1base__classes_1_1_race_car_1a356ec05a0a0c056f4d43f5fb0451c83d" kindref="member">update_scan</ref>(self):</highlight></codeline>
 <codeline lineno="302"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="stringliteral">&quot;&quot;&quot;</highlight></codeline>
 <codeline lineno="303"><highlight class="stringliteral"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>Steps<sp/>the<sp/>vehicle&apos;s<sp/>laser<sp/>scan<sp/>simulation</highlight></codeline>
-<codeline lineno="304"><highlight class="stringliteral"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>Separated<sp/>from<sp/>update_pose<sp/>because<sp/>needs<sp/>to<sp/>update<sp/>scan<sp/>based<sp/>on<sp/>NEW<sp/>poses<sp/>of<sp/>agents<sp/>in<sp/>the<sp/>environment</highlight></codeline>
+<codeline lineno="304"><highlight class="stringliteral"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>Separated<sp/>from<sp/>update_dynamic<sp/>because<sp/>needs<sp/>to<sp/>update<sp/>scan<sp/>based<sp/>on<sp/>NEW<sp/>poses<sp/>of<sp/>agents<sp/>in<sp/>the<sp/>environment</highlight></codeline>
 <codeline lineno="305"><highlight class="stringliteral"></highlight></codeline>
 <codeline lineno="306"><highlight class="stringliteral"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>Args:</highlight></codeline>
 <codeline lineno="307"><highlight class="stringliteral"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>None</highlight></codeline>
@@ -443,7 +443,7 @@
 <codeline lineno="431"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">#<sp/>looping<sp/>over<sp/>agents</highlight><highlight class="normal"></highlight></codeline>
 <codeline lineno="432"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">for</highlight><highlight class="normal"><sp/>i,<sp/>agent<sp/></highlight><highlight class="keywordflow">in</highlight><highlight class="normal"><sp/>enumerate(self.<ref refid="classf110__gym_1_1envs_1_1base__classes_1_1_simulator_1ae665b35ec7d9ced7de789a02cafdd566" kindref="member">agents</ref>):</highlight></codeline>
 <codeline lineno="433"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">#<sp/>update<sp/>each<sp/>agent&apos;s<sp/>pose</highlight><highlight class="normal"></highlight></codeline>
-<codeline lineno="434"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>agent.update_pose(control_inputs[i,<sp/>0],<sp/>control_inputs[i,<sp/>1])</highlight></codeline>
+<codeline lineno="434"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>agent.update_dynamic(control_inputs[i,<sp/>0],<sp/>control_inputs[i,<sp/>1])</highlight></codeline>
 <codeline lineno="435"><highlight class="normal"></highlight></codeline>
 <codeline lineno="436"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">#<sp/>update<sp/>sim&apos;s<sp/>information<sp/>of<sp/>agent<sp/>poses</highlight><highlight class="normal"></highlight></codeline>
 <codeline lineno="437"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>self.<ref refid="classf110__gym_1_1envs_1_1base__classes_1_1_simulator_1ade120757dde31d2130e4b0f9b01e3a7d" kindref="member">agent_poses</ref>[i,<sp/>:]<sp/>=<sp/>np.append(agent.state[0:2],<sp/>agent.state[4])</highlight></codeline>

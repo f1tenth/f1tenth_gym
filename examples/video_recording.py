@@ -3,6 +3,7 @@ import gymnasium as gym
 import gymnasium.wrappers
 import numpy as np
 
+from f1tenth_gym.envs.f110_env import F110Env
 from waypoint_follow import PurePursuitPlanner
 
 
@@ -23,8 +24,9 @@ def main():
             "integrator": "rk4",
             "control_input": ["speed", "steering_angle"],
             "model": "st",
+            "params": F110Env.f1tenth_vehicle_params(),
             "observation_config": {"type": "kinematic_state"},
-            "params": {"mu": 1.0},
+            "reset_config": {"type": "rl_random_static"},
         },
         render_mode="rgb_array",
     )
@@ -32,6 +34,9 @@ def main():
     track = env.unwrapped.track
 
     planner = PurePursuitPlanner(track=track, wb=0.17145 + 0.15875)
+    track.raceline.render_waypoints(env.unwrapped.renderer)
+    for r in planner.get_render_callbacks():
+        env.unwrapped.add_render_callback(r)
 
     poses = np.array(
         [
@@ -50,7 +55,7 @@ def main():
     start = time.time()
 
     frames = [env.render()]
-    while not done and laptime < 15.0:
+    while not done and laptime < 5.0:
         action = env.action_space.sample()
         for i, agent_id in enumerate(obs.keys()):
             speed, steer = planner.plan(

@@ -44,6 +44,7 @@ class TestObservationInterface(unittest.TestCase):
             "collisions",
             "lap_times",
             "lap_counts",
+            "sim_time",
         ]
 
         # check that the observation space has the correct types
@@ -116,13 +117,13 @@ class TestObservationInterface(unittest.TestCase):
             ):
                 self.assertTrue(np.allclose(ground_truth, observation))
 
-    def test_unexisting_obs_space(self):
+    def test_nonexistent_obs_space(self):
         """
-        Check that an error is raised when an unexisting observation type is requested.
+        Check that an error is raised when a nonexistent observation type is requested.
         """
         env = self._make_env()
         with self.assertRaises(ValueError):
-            observation_factory(env, vehicle_id=0, type="unexisting_obs_type")
+            observation_factory(env, vehicle_id=0, type="nonexistent_obs_type")
 
     def test_kinematic_obs_space(self):
         """
@@ -143,7 +144,7 @@ class TestObservationInterface(unittest.TestCase):
         obs, _, _, _, _ = env.step(env.action_space.sample())
 
         for i, agent_id in enumerate(env.unwrapped.agent_ids):
-            pose_x, pose_y, _, velx, pose_theta, _, _ = env.unwrapped.sim.agents[i].state
+            pose_x, pose_y, _, vel, pose_theta, _, beta = env.unwrapped.sim.agents[i].state
             obs_x, obs_y, obs_theta = (
                 obs[agent_id]["pose_x"],
                 obs[agent_id]["pose_y"],
@@ -151,10 +152,9 @@ class TestObservationInterface(unittest.TestCase):
             )
             obs_velx = obs[agent_id]["linear_vel_x"]
 
-            for ground_truth, observed in zip(
-                [pose_x, pose_y, pose_theta, velx], [obs_x, obs_y, obs_theta, obs_velx]
-            ):
-                self.assertTrue(np.allclose(ground_truth, observed))
+            ground_truth = np.asarray([pose_x, pose_y, pose_theta, vel * np.cos(beta)], dtype=np.float32)
+            observed = np.asarray([obs_x, obs_y, obs_theta, obs_velx], dtype=np.float32)
+            self.assertTrue(np.allclose(ground_truth, observed))
 
     def test_dynamic_obs_space(self):
         """
@@ -162,49 +162,43 @@ class TestObservationInterface(unittest.TestCase):
         """
         env = self._make_env(config={"observation_config": {"type": "dynamic_state"}})
 
-        kinematic_features = [
+        dynamic_features = [
             "pose_x",
             "pose_y",
             "pose_theta",
-            "linear_vel_x",
+            "linear_vel_magnitude",
             "ang_vel_z",
             "delta",
             "beta",
         ]
 
-        # check kinematic features are in the observation space
+        # check dynamic features are in the observation space
         for agent_id in env.unwrapped.agent_ids:
             space = env.observation_space.spaces[agent_id].spaces
-            self.assertTrue(all([k in space for k in kinematic_features]))
-            self.assertTrue(all([k in kinematic_features for k in space]))
+            self.assertTrue(all([k in space for k in dynamic_features]))
+            self.assertTrue(all([k in dynamic_features for k in space]))
 
         # check the actual observation
         obs, _ = env.reset()
         obs, _, _, _, _ = env.step(env.action_space.sample())
 
         for i, agent_id in enumerate(env.unwrapped.agent_ids):
-            pose_x, pose_y, delta, velx, pose_theta, _, beta = env.unwrapped.sim.agents[i].state
-
             agent_obs = obs[agent_id]
-            obs_x, obs_y, obs_theta = (
+            observed = np.array([
                 agent_obs["pose_x"],
                 agent_obs["pose_y"],
-                agent_obs["pose_theta"],
-            )
-            obs_velx, obs_delta, obs_beta = (
-                agent_obs["linear_vel_x"],
                 agent_obs["delta"],
+                agent_obs["linear_vel_magnitude"],
+                agent_obs["pose_theta"],
+                agent_obs["ang_vel_z"],
                 agent_obs["beta"],
-            )
-
-            for ground_truth, observed in zip(
-                [pose_x, pose_y, pose_theta, velx, delta, beta],
-                [obs_x, obs_y, obs_theta, obs_velx, obs_delta, obs_beta],
-            ):
-                self.assertTrue(np.allclose(ground_truth, observed))
+            ])
+            ground_truth = env.unwrapped.sim.agents[i].state.astype(np.float32)
+    
+            self.assertTrue(np.allclose(ground_truth, observed))
 
     def test_consistency_observe_space(self):
-        obs_type_ids = ["kinematic_state", "dynamic_state", "original"]
+        obs_type_ids = ["kinematic_state", "dynamic_state", "direct", "original"]
 
         env = self._make_env()
         env.reset()
@@ -222,7 +216,7 @@ class TestObservationInterface(unittest.TestCase):
     def test_gymnasium_api(self):
         from gymnasium.utils.env_checker import check_env
 
-        obs_type_ids = ["kinematic_state", "dynamic_state", "original"]
+        obs_type_ids = ["direct", "original", "kinematic_state", "dynamic_state"]
 
         for obs_type_id in obs_type_ids:
             env = self._make_env(config={"observation_config": {"type": obs_type_id}})

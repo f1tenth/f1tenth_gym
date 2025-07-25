@@ -4,6 +4,7 @@ from typing import Tuple
 import gymnasium as gym
 import numpy as np
 from numba import njit
+import pathlib
 
 from f1tenth_gym.envs.f110_env import F110Env
 
@@ -207,11 +208,11 @@ class PurePursuitPlanner:
         if self.lookahead_point is not None:
             points = self.lookahead_point[:2][None]  # shape (1, 2)~
             if self.lookahead_point_render is None:
-                self.lookahead_point_render = e.render_points(
-                    points, color=(0, 0, 128), size=2
+                self.lookahead_point_render = e.get_points_renderer(
+                    points, color=(228, 26, 28), size=10
                 )
             else:
-                self.lookahead_point_render.setData(points)
+                self.lookahead_point_render.update(points)
 
     def render_local_plan(self, e):
         """
@@ -220,11 +221,14 @@ class PurePursuitPlanner:
         if self.current_index is not None:
             points = self.waypoints[self.current_index : self.current_index + 10, :2]
             if self.local_plan_render is None:
-                self.local_plan_render = e.render_lines(
-                    points, color=(0, 128, 0), size=1
+                self.local_plan_render = e.get_lines_renderer(
+                    points, color=(255, 255, 51), size=5
                 )
             else:
-                self.local_plan_render.updateItems(points)
+                self.local_plan_render.update(points)
+                
+    def get_render_callbacks(self):
+        return [self.render_lookahead_point, self.render_local_plan]
 
     def _get_current_waypoint(
         self, waypoints, lookahead_distance, position, theta
@@ -301,48 +305,60 @@ def main():
     work = {
         "mass": 3.463388126201571,
         "lf": 0.15597534362552312,
-        "tlad": 0.82461887897713965 * 10,
-        "vgain": 1.0,
+        "tlad": 0.82461887897713965 * 2,
+        "vgain": 1.,
     }
-
     num_agents = 1
     env = gym.make(
         "f1tenth_gym:f1tenth-v0",
         config={
-            "map": "Spielberg_blank",
+            "map": "Spielberg",
             "num_agents": num_agents,
             "timestep": 0.01,
+            "integrator_timestep": 0.01,
             "integrator": "rk4",
             "control_input": ["speed", "steering_angle"],
-            "model": "mb",
+            "model": 'ks', # "ks", "st", "mb"
             "observation_config": {"type": "kinematic_state"},
-            "params": F110Env.fullscale_vehicle_params(),
+            "params": F110Env.f1tenth_vehicle_params(),
+            # "params": F110Env.fullscale_vehicle_params(),
             "reset_config": {"type": "rl_random_static"},
-            "scale": 10.0,
+            "map_scale": 1.0,
+            "enable_rendering": 1,
+            "enable_scan": 0,
+            "lidar_num_beams": 270,
+            "compute_frenet": 0,
+            "max_laps": 5,  # 'inf' for infinite laps, or a positive integer
+            "steer_delay_buffer_size": 1,  # 0 for no delay, >0 for delay
         },
-        render_mode="human",
+        render_mode="unlimited", # "human", "human_fast", "unlimited"
     )
     track = env.unwrapped.track
 
     planner = PurePursuitPlanner(
         track=track,
         wb=(
-            F110Env.fullscale_vehicle_params()["lf"]
-            + F110Env.fullscale_vehicle_params()["lr"]
+            F110Env.f1tenth_vehicle_params()["lf"]
+            + F110Env.f1tenth_vehicle_params()["lr"]
+            # F110Env.fullscale_vehicle_params()["lf"]
+            # + F110Env.fullscale_vehicle_params()["lr"]
         ),
     )
 
-    env.unwrapped.add_render_callback(track.raceline.render_waypoints)
-    env.unwrapped.add_render_callback(planner.render_local_plan)
-    env.unwrapped.add_render_callback(planner.render_lookahead_point)
+    track.raceline.render_waypoints(env.unwrapped.renderer)
+    for r in planner.get_render_callbacks():
+        env.unwrapped.add_render_callback(r)
 
-    obs, info = env.reset()
+    frenet_start = np.array(env.unwrapped.track.frenet_to_cartesian(0.0, 0, 0))
+    frenet_start2 = np.array(env.unwrapped.track.frenet_to_cartesian(10, 0, 0))
+    init_poses = np.array([frenet_start, frenet_start2])
+    obs, info = env.reset(options={'poses':init_poses[:num_agents]})
     done = False
     env.render()
 
     laptime = 0.0
     start = time.time()
-
+    times = []
     while not done:
         action = env.action_space.sample()
         for i, agent_id in enumerate(obs.keys()):
@@ -360,15 +376,12 @@ def main():
 
     print("Sim elapsed time:", laptime, "Real elapsed time:", time.time() - start)
 
-
 if __name__ == "__main__":
     main()
 # %%
-work = {
-    "mass": 3.463388126201571,
-    "lf": 0.15597534362552312,
-    "tlad": 0.82461887897713965 * 10,
-    "vgain": 1,
-}
-
-num_agents = 1
+# work = {
+#     "mass": 3.463388126201571,
+#     "lf": 0.15597534362552312,
+#     "tlad": 0.82461887897713965 * 10,
+#     "vgain": 1,
+# }

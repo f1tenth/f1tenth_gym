@@ -23,8 +23,8 @@ class TestCubicSpline(unittest.TestCase):
         # Test the yaw at the four corners of the circle
         # The yaw of a circle is s + pi/2
         self.assertAlmostEqual(track.calc_yaw(0), np.pi / 2, places=2)
-        self.assertAlmostEqual(track.calc_yaw(np.pi / 2), np.pi, places=2)
-        self.assertAlmostEqual(track.calc_yaw(np.pi), 3 * np.pi / 2, places=2)
+        self.assertAlmostEqual(track.calc_yaw(np.pi / 2), -np.pi, places=2)
+        self.assertAlmostEqual(track.calc_yaw(np.pi), -np.pi / 2, places=2)
         self.assertAlmostEqual(track.calc_yaw(3 * np.pi / 2), 0, places=2)
 
     def test_calc_position(self):
@@ -48,32 +48,32 @@ class TestCubicSpline(unittest.TestCase):
             )
         )
 
+    def test_calc_arclength_slow(self):
+        circle_x = np.cos(np.linspace(0, 2 * np.pi, 100))[:-1]
+        circle_y = np.sin(np.linspace(0, 2 * np.pi, 100))[:-1]
+        track = cubic_spline.CubicSplineND(circle_x, circle_y)
+        # Test the arclength at the four corners of the circle
+        self.assertAlmostEqual(track.calc_arclength_slow(1, 0, 0)[0], 0, places=2)
+        self.assertAlmostEqual(track.calc_arclength_slow(0, 1, 0)[0], np.pi / 2, places=2)
+        self.assertAlmostEqual(
+            track.calc_arclength_slow(-1, 0, np.pi / 2)[0], np.pi, places=2
+        )
+        self.assertAlmostEqual(
+            track.calc_arclength_slow(0, -1, np.pi)[0], 3 * np.pi / 2, places=2
+        )
+
     def test_calc_arclength(self):
         circle_x = np.cos(np.linspace(0, 2 * np.pi, 100))[:-1]
         circle_y = np.sin(np.linspace(0, 2 * np.pi, 100))[:-1]
         track = cubic_spline.CubicSplineND(circle_x, circle_y)
         # Test the arclength at the four corners of the circle
-        self.assertAlmostEqual(track.calc_arclength(1, 0, 0)[0], 0, places=2)
-        self.assertAlmostEqual(track.calc_arclength(0, 1, 0)[0], np.pi / 2, places=2)
+        self.assertAlmostEqual(track.calc_arclength(1, 0)[0], 0, places=2)
         self.assertAlmostEqual(
-            track.calc_arclength(-1, 0, np.pi / 2)[0], np.pi, places=2
+            track.calc_arclength(-1, 0)[0], np.pi, places=2
         )
         self.assertAlmostEqual(
-            track.calc_arclength(0, -1, np.pi)[0], 3 * np.pi / 2, places=2
-        )
-
-    def test_calc_arclength_inaccurate(self):
-        circle_x = np.cos(np.linspace(0, 2 * np.pi, 100))[:-1]
-        circle_y = np.sin(np.linspace(0, 2 * np.pi, 100))[:-1]
-        track = cubic_spline.CubicSplineND(circle_x, circle_y)
-        # Test the arclength at the four corners of the circle
-        self.assertAlmostEqual(track.calc_arclength_inaccurate(1, 0)[0], 0, places=2)
-        self.assertAlmostEqual(
-            track.calc_arclength_inaccurate(0, 1)[0], np.pi / 2, places=2
+            track.calc_arclength(-1, 0)[0], np.pi, places=2
         )
         self.assertAlmostEqual(
-            track.calc_arclength_inaccurate(-1, 0)[0], np.pi, places=2
-        )
-        self.assertAlmostEqual(
-            track.calc_arclength_inaccurate(0, -1)[0], 3 * np.pi / 2, places=2
+            track.calc_arclength(0, -1)[0], 3 * np.pi / 2, places=2
         )

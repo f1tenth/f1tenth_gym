@@ -28,6 +28,7 @@ class TestEnvInterface(unittest.TestCase):
 
         env = self._make_env()
         check_env(env.unwrapped, skip_render_check=True)
+        env.close()
 
     def test_configure_method(self):
         """
@@ -74,16 +75,23 @@ class TestEnvInterface(unittest.TestCase):
         t = 0
 
         while not done0 and not done1:
+            for agent in obs0:
+                for observation in obs0[agent]:
+                    if not np.allclose(obs0[agent][observation], obs1[agent][observation]):
+                        print(
+                            f"Observation {observation} should be the same for agent {agent}, "
+                            f"got {obs0[agent][observation]} != {obs1[agent][observation]}"
+                        )
+                    self.assertTrue(
+                        np.allclose(obs0[agent][observation], obs1[agent][observation]),
+                        f"Observation {observation} should be the same for agent {agent}",
+                    )
+            self.assertTrue(done0 == done1, "Done should be the same")
             action = base_env.action_space.sample()
             obs0, _, done0, _, _ = base_env.step(action)
             obs1, _, done1, _, _ = extended_env.step(action)
             base_env.render()
-            for k in obs0:
-                self.assertTrue(
-                    np.allclose(obs0[k], obs1[k]),
-                    f"Observations {k} should be the same",
-                )
-            self.assertTrue(done0 == done1, "Done should be the same")
+            extended_env.render()
             t += 1
 
         print(f"Done after {t} steps")
@@ -120,6 +128,7 @@ class TestEnvInterface(unittest.TestCase):
             new_action_space_high[0][1] == new_v_max,
             f"Speed action high should be {new_v_max}",
         )
+        base_env.close()
 
     def test_acceleration_action_space(self):
         """
@@ -146,6 +155,7 @@ class TestEnvInterface(unittest.TestCase):
             (action_space_high[0][1] - params["a_max"]) < 1e-6,
             "upper acceleration bound does not match a_max",
         )
+        base_env.close()
 
     def test_manual_reset_options_in_synch_vec_env(self):
         """
@@ -177,6 +187,7 @@ class TestEnvInterface(unittest.TestCase):
                     np.allclose(agent_pose, rnd_poses[i]),
                     f"pose of agent {agent_id} in env {ie} should be {rnd_poses[i]}, got {agent_pose}",
                 )
+        vec_env.close()
 
     def test_manual_reset_options_in_asynch_vec_env(self):
         """
@@ -208,6 +219,7 @@ class TestEnvInterface(unittest.TestCase):
                     np.allclose(agent_pose, rnd_poses[i]),
                     f"pose of agent {agent_id} in env {ie} should be {rnd_poses[i]}, got {agent_pose}",
                 )
+        vec_env.close()
 
     def test_auto_reset_options_in_synch_vec_env(self):
         """

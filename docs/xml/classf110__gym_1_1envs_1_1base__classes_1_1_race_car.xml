@@ -442,9 +442,9 @@ Returns:
       </memberdef>
       <memberdef kind="function" id="classf110__gym_1_1envs_1_1base__classes_1_1_race_car_1ae12c14c1353e6aab2f72036593d85518" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type>def</type>
-        <definition>def f110_gym.envs.base_classes.RaceCar.update_pose</definition>
+        <definition>def f110_gym.envs.base_classes.RaceCar.update_dynamic</definition>
         <argsstring>(self, raw_steer, vel)</argsstring>
-        <name>update_pose</name>
+        <name>update_dynamic</name>
         <param>
           <type>self</type>
           <defname>self</defname>
@@ -516,7 +516,7 @@ Returns:
         </briefdescription>
         <detaileddescription>
 <para><verbatim>Steps the vehicle&apos;s laser scan simulation
-Separated from update_pose because needs to update scan based on NEW poses of agents in the environment
+Separated from update_dynamic because needs to update scan based on NEW poses of agents in the environment
 
 Args:
     None
@@ -596,7 +596,7 @@ Data Members:
       <member refid="classf110__gym_1_1envs_1_1base__classes_1_1_race_car_1a5eb8a1fa8d27dfccd008573e2d720c44" prot="public" virt="non-virtual"><scope>f110_gym::envs::base_classes::RaceCar</scope><name>ttc_thresh</name></member>
       <member refid="classf110__gym_1_1envs_1_1base__classes_1_1_race_car_1a4800c5ac90ba93b79a0338e5e34ead43" prot="public" virt="non-virtual"><scope>f110_gym::envs::base_classes::RaceCar</scope><name>update_opp_poses</name></member>
       <member refid="classf110__gym_1_1envs_1_1base__classes_1_1_race_car_1a6ab5b5dd420b182b5156ee9566c03411" prot="public" virt="non-virtual"><scope>f110_gym::envs::base_classes::RaceCar</scope><name>update_params</name></member>
-      <member refid="classf110__gym_1_1envs_1_1base__classes_1_1_race_car_1ae12c14c1353e6aab2f72036593d85518" prot="public" virt="non-virtual"><scope>f110_gym::envs::base_classes::RaceCar</scope><name>update_pose</name></member>
+      <member refid="classf110__gym_1_1envs_1_1base__classes_1_1_race_car_1ae12c14c1353e6aab2f72036593d85518" prot="public" virt="non-virtual"><scope>f110_gym::envs::base_classes::RaceCar</scope><name>update_dynamic</name></member>
       <member refid="classf110__gym_1_1envs_1_1base__classes_1_1_race_car_1a356ec05a0a0c056f4d43f5fb0451c83d" prot="public" virt="non-virtual"><scope>f110_gym::envs::base_classes::RaceCar</scope><name>update_scan</name></member>
     </listofallmembers>
   </compounddef>

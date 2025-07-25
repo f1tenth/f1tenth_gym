@@ -50,27 +50,28 @@ def func_KS(
     v_min,
     v_max,
 ):
+    params = np.array([
+            mu,
+            C_Sf,
+            C_Sr,
+            lf,
+            lr,
+            h,
+            m,
+            I,
+            s_min,
+            s_max,
+            sv_min,
+            sv_max,
+            v_switch,
+            a_max,
+            v_min,
+            v_max,
+    ])
     f = vehicle_dynamics_ks(
         x,
         u,
-        params={
-            "mu": mu,
-            "C_Sf": C_Sf,
-            "C_Sr": C_Sr,
-            "lf": lf,
-            "lr": lr,
-            "h": h,
-            "m": m,
-            "I": I,
-            "s_min": s_min,
-            "s_max": s_max,
-            "sv_min": sv_min,
-            "sv_max": sv_max,
-            "v_switch": v_switch,
-            "a_max": a_max,
-            "v_min": v_min,
-            "v_max": v_max,
-        },
+        params=params,
     )
     return f
 
@@ -96,27 +97,28 @@ def func_ST(
     v_min,
     v_max,
 ):
+    params = np.array([
+            mu,
+            C_Sf,
+            C_Sr,
+            lf,
+            lr,
+            h,
+            m,
+            I,
+            s_min,
+            s_max,
+            sv_min,
+            sv_max,
+            v_switch,
+            a_max,
+            v_min,
+            v_max,
+    ])
     f = vehicle_dynamics_st(
         x,
         u,
-        params={
-            "mu": mu,
-            "C_Sf": C_Sf,
-            "C_Sr": C_Sr,
-            "lf": lf,
-            "lr": lr,
-            "h": h,
-            "m": m,
-            "I": I,
-            "s_min": s_min,
-            "s_max": s_max,
-            "sv_min": sv_min,
-            "sv_max": sv_max,
-            "v_switch": v_switch,
-            "a_max": a_max,
-            "v_min": v_min,
-            "v_max": v_max,
-        },
+        params=params,
     )
     return f
 
@@ -655,7 +657,3 @@ class DynamicsTest(unittest.TestCase):
         ]
 
         np.testing.assert_array_almost_equal(x_left_st[-1], x_left_st_gt, decimal=2)
-
-
-if __name__ == "__main__":
-    unittest.main()

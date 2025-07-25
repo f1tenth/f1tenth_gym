@@ -69,6 +69,8 @@ class Track:
         self.occupancy_map = occupancy_map
         self.centerline = centerline
         self.raceline = raceline
+        self.s_guess = None
+        self.frenet_search_range = 10 # meters
 
     @staticmethod
     def load_spec(track: str, filespec: str) -> TrackSpec:
@@ -131,7 +133,6 @@ class Track:
             image = Image.open(track_dir / str(map_filename)).transpose(
                 Transpose.FLIP_TOP_BOTTOM
             )
-
             occupancy_map = np.array(image).astype(np.float32)
             occupancy_map[occupancy_map <= 128] = 0.0
             occupancy_map[occupancy_map > 128] = 255.0
@@ -156,7 +157,7 @@ class Track:
 
             return Track(
                 spec=track_spec,
-                filepath=str((track_dir / map_filename.stem).absolute()),
+                filepath=str((track_dir / track).absolute()),
                 ext=map_filename.suffix,
                 occupancy_map=occupancy_map,
                 centerline=centerline,
@@ -189,9 +190,9 @@ class Track:
         try:
             if type(path) is str:
                 path = pathlib.Path(path)
-        
+
             track_spec = Track.load_spec(
-                track=path.stem, filespec=path
+                track=path.stem, filespec=path.parent / f"{path.stem}_map.yaml"
             )
             track_spec.resolution = track_spec.resolution * track_scale
             track_spec.origin = (
@@ -207,18 +208,27 @@ class Track:
             occupancy_map = np.array(image).astype(np.float32)
             occupancy_map[occupancy_map <= 128] = 0.0
             occupancy_map[occupancy_map > 128] = 255.0
-
+            
             # if exists, load centerline
-            if (path / f"{path.stem}_centerline.csv").exists():
-                centerline = Raceline.from_centerline_file(path / f"{path.stem}_centerline.csv")
+            if (path.parent / f"{path.stem}_centerline.csv").exists():
+                centerline = Raceline.from_centerline_file(path.parent / f"{path.stem}_centerline.csv",
+                                                           track_scale=track_scale,)
             else:
                 centerline = None
 
             # if exists, load raceline
-            if (path / f"{path.stem}_raceline.csv").exists():
-                raceline = Raceline.from_raceline_file(path / f"{path.stem}_raceline.csv")
+            if (path.parent / f"{path.stem}_raceline.csv").exists():
+                raceline = Raceline.from_raceline_file(path.parent / f"{path.stem}_raceline.csv",
+                                                       track_scale=track_scale,)
             else:
                 raceline = centerline
+                
+            if centerline is None:
+                centerline = raceline
+            if raceline is None and centerline is None:
+                raise ValueError(
+                    f"Please provide a centerline/raceline."
+                )
 
             return Track(
                 spec=track_spec,
@@ -255,8 +265,8 @@ class Track:
         resolution = 0.05
         margin_perc = 0.1
 
-        spline = CubicSplineND(x=x, y=y)
-        ss, xs, ys, yaws, ks, vxs = spline.ss, spline.xs, spline.ys, spline.psis, spline.ks, velx
+        spline = CubicSplineND(x=x, y=y, vxs=velx)
+        ss, xs, ys, yaws, ks, vxs = spline.ss, spline.xs, spline.ys, spline.psis, spline.ks, spline.vxs
 
         refline = Raceline(
             ss=np.array(ss).astype(np.float32),
@@ -416,6 +426,7 @@ class Track:
             psi: yaw angle
         """
         line = self.raceline if use_raceline else self.centerline
+        s = s % line.s_frame_max
         x, y = line.spline.calc_position(s)
         psi = line.spline.calc_yaw(s)
 
@@ -425,16 +436,16 @@ class Track:
 
         # Adjust psi by adding the heading deviation
         psi += ephi
+        # return x, y, np.arctan2(np.sin(psi), np.cos(psi))
+        return x, y, (psi + np.pi) % (2 * np.pi) - np.pi  # wrap to [-pi, pi]
 
-        return x, y, psi
-
-    def cartesian_to_frenet(self, x, y, phi, use_raceline=False, s_guess=0):
+    def cartesian_to_frenet(self, x, y, psi, use_raceline=False, s_guess=None, use_s_guess=True):
         """
         Convert Cartesian coordinates to Frenet coordinates.
 
         x: x-coordinate
         y: y-coordinate
-        phi: yaw angle
+        psi: yaw angle
 
         returns:
             s: distance along the centerline
@@ -442,19 +453,33 @@ class Track:
             ephi: heading deviation
         """
         line = self.raceline if use_raceline else self.centerline
-        # s, ey = line.spline.calc_arclength_inaccurate(x, y) # inaccurate, but much faster
-        s, ey = line.spline.calc_arclength(x, y, s_guess)
+        if s_guess is None:
+            s_guess = self.s_guess
+        # use_s_guess = False
+        
+        if use_s_guess and s_guess is not None:
+            s_inds = line.spline.find_segment_for_s(s_guess)
+            extend_length = int(self.frenet_search_range / 2 / line.spline.s_interval)  # extend search range
+            s_inds = np.arange(s_inds - extend_length, s_inds + extend_length) % (len(line.spline.s)-1) # search around the guess
+        else:
+            s_inds = None
+        # print(max(line.spline.s[s_inds]), min(line.spline.s[s_inds]))
+        s, ey = line.spline.calc_arclength(x, y, s_inds) # inaccurate, but much faster
+        # s, ey = line.spline.calc_arclength(x, y, s_guess)
         # Wrap around
         s = s % line.spline.s[-1]
+        self.s_guess = s
+        segment = line.spline.find_segment_for_s(s)
 
         # Use the normal to calculate the signed lateral deviation
-        yaw = line.spline.calc_yaw(s)
+        yaw = line.spline.calc_yaw(s, segment)
         normal = np.asarray([-np.sin(yaw), np.cos(yaw)])
-        x_eval, y_eval = line.spline.calc_position(s)
+        x_eval, y_eval = line.spline.calc_position(s, segment)
         dx = x - x_eval
         dy = y - y_eval
         distance_sign = np.sign(np.dot([dx, dy], normal))
         ey = ey * distance_sign
 
-        phi = phi - yaw
-        return s, ey, np.arctan2(np.sin(phi), np.cos(phi))
+        psi = psi - yaw
+        # return s, ey, np.arctan2(np.sin(psi), np.cos(psi))
+        return s, ey, (psi + np.pi) % (2 * np.pi) - np.pi

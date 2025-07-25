@@ -1,11 +1,10 @@
 import numpy as np
 from numba import njit
-from numba.typed import Dict
 
 from .utils import steering_constraint, accl_constraints
 
-
-def vehicle_dynamics_ks(x: np.ndarray, u_init: np.ndarray, params: dict):
+@njit(cache=True)
+def vehicle_dynamics_ks(x: np.ndarray, u_init: np.ndarray, params: np.ndarray) -> np.ndarray:
     """
     Single Track Kinematic Vehicle Dynamics.
     Follows https://gitlab.lrz.de/tum-cps/commonroad-vehicle-models/-/blob/master/vehicleModels_commonRoad.pdf, section 5
@@ -50,8 +49,25 @@ def vehicle_dynamics_ks(x: np.ndarray, u_init: np.ndarray, params: dict):
     # Raw Actions
     RAW_STEER_VEL = u_init[0]
     RAW_ACCL = u_init[1]
+   
+    # mu = params[0]
+    # C_Sf = params[1]  # front tire cornering stiffness [N/rad]  CF
+    # C_Sr = params[2]  # rear tire cornering stiffness [N/rad]  CR
+    lf = params[3]  # distance from spring mass center of gravity to front axle [m]  LENA
+    lr = params[4]  # distance from spring mass center of gravity to rear axle [m]  LENB
+    # h = params[5]  # M_s center of gravity above ground [m]  HS
+    # m = params[6]  # vehicle mass [kg]  MASS
+    # I = params[7]  # moment of inertia for sprung mass in yaw [kg m^2]  IZZ
+    s_min = params[8]  # minimum steering angle [rad]
+    s_max = params[9]  # maximum steering angle [rad]
+    sv_min = params[10]  # minimum steering velocity [rad/s]
+    sv_max = params[11]  # maximum steering velocity [rad/s]
+    v_switch = params[12]  # switching velocity [m/s]
+    a_max = params[13]  # maximum absolute acceleration [m/s^2]
+    v_min = params[14]  # minimum velocity [m/s]
+    v_max = params[15]  # maximum velocity [m/s]
     # wheelbase
-    lwb = params["lf"] + params["lr"]
+    lwb = lf + lr
 
     # constraints
     u = np.array(
@@ -59,18 +75,18 @@ def vehicle_dynamics_ks(x: np.ndarray, u_init: np.ndarray, params: dict):
             steering_constraint(
                 DELTA,
                 RAW_STEER_VEL,
-                params["s_min"],
-                params["s_max"],
-                params["sv_min"],
-                params["sv_max"],
+                s_min,
+                s_max,
+                sv_min,
+                sv_max,
             ),
             accl_constraints(
                 V,
                 RAW_ACCL,
-                params["v_switch"],
-                params["a_max"],
-                params["v_min"],
-                params["v_max"],
+                v_switch,
+                a_max,
+                v_min,
+                v_max,
             ),
         ]
     )
@@ -90,8 +106,8 @@ def vehicle_dynamics_ks(x: np.ndarray, u_init: np.ndarray, params: dict):
     )
     return f
 
-
-def vehicle_dynamics_ks_cog(x: np.ndarray, u_init: np.ndarray, params: dict):
+@njit(cache=True)
+def vehicle_dynamics_ks_cog(x: np.ndarray, u_init: np.ndarray, params: np.ndarray) -> np.ndarray:
     """
     Single Track Kinematic Vehicle Dynamics.
     Follows https://gitlab.lrz.de/tum-cps/commonroad-vehicle-models/-/blob/master/vehicleModels_commonRoad.pdf, section 5
@@ -136,31 +152,48 @@ def vehicle_dynamics_ks_cog(x: np.ndarray, u_init: np.ndarray, params: dict):
     # Raw Actions
     RAW_STEER_VEL = u_init[0]
     RAW_ACCL = u_init[1]
+    
+    # mu = params[0]
+    # C_Sf = params[1]  # front tire cornering stiffness [N/rad]  CF
+    # C_Sr = params[2]  # rear tire cornering stiffness [N/rad]  CR
+    lf = params[3]  # distance from spring mass center of gravity to front axle [m]  LENA
+    lr = params[4]  # distance from spring mass center of gravity to rear axle [m]  LENB
+    # h = params[5]  # M_s center of gravity above ground [m]  HS
+    # m = params[6]  # vehicle mass [kg]  MASS
+    # I = params[7]  # moment of inertia for sprung mass in yaw [kg m^2]  IZZ
+    s_min = params[8]  # minimum steering angle [rad]
+    s_max = params[9]  # maximum steering angle [rad]
+    sv_min = params[10]  # minimum steering velocity [rad/s]
+    sv_max = params[11]  # maximum steering velocity [rad/s]
+    v_switch = params[12]  # switching velocity [m/s]
+    a_max = params[13]  # maximum absolute acceleration [m/s^2]
+    v_min = params[14]  # minimum velocity [m/s]
+    v_max = params[15]  # maximum velocity [m/s]
     # wheelbase
-    lwb = params["lf"] + params["lr"]
+    lwb = lf + lr
     # constraints
     u = np.array(
         [
             steering_constraint(
                 DELTA,
                 RAW_STEER_VEL,
-                params["s_min"],
-                params["s_max"],
-                params["sv_min"],
-                params["sv_max"],
+                s_min,
+                s_max,
+                sv_min,
+                sv_max,
             ),
             accl_constraints(
                 V,
                 RAW_ACCL,
-                params["v_switch"],
-                params["a_max"],
-                params["v_min"],
-                params["v_max"],
+                v_switch,
+                a_max,
+                v_min,
+                v_max,
             ),
         ]
     )
     # slip angle (beta) from vehicle kinematics
-    beta = np.arctan(np.tan(x[2]) * params["lr"] / lwb)
+    beta = np.arctan(np.tan(x[2]) * lr / lwb)
 
     # system dynamics
     f = [
@@ -173,17 +206,7 @@ def vehicle_dynamics_ks_cog(x: np.ndarray, u_init: np.ndarray, params: dict):
 
     return f
 
-
 @njit(cache=True)
-def get_standardized_state_ks(x: np.ndarray) -> dict:
-    """[X,Y,DELTA,V_X, V_Y,YAW,YAW_RATE,SLIP]"""
-    d = dict()
-    d["x"] = x[0]
-    d["y"] = x[1]
-    d["delta"] = x[2]
-    d["v_x"] = x[3]
-    d["v_y"] = 0.0
-    d["yaw"] = x[4]
-    d["yaw_rate"] = x[5]
-    d["slip"] = 0.0
-    return d
+def get_standardized_state_ks(x: np.ndarray) -> np.ndarray:
+    """[X,Y,Steering_Angle,Speed,YAW,YAW_RATE,SPLIP_ANGLE]"""
+    return np.asarray([x[0], x[1], x[2], x[3], x[4], 0.0, 0.0])

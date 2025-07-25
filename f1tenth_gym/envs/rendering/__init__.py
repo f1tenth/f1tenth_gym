@@ -30,18 +30,26 @@ def make_renderer(
         rendering frames per second, by default 100
     """
     cfg_file = pathlib.Path(__file__).parent.absolute() / "rendering.yaml"
-    render_spec = RenderSpec.from_yaml(cfg_file)
+    
+    render_spec = RenderSpec()
+    render_spec.from_yaml(cfg_file)
 
-    if render_spec.render_type == "pygame":
-        from .rendering_pygame import PygameEnvRenderer as EnvRenderer
-    elif render_spec.render_type == "pyqt6":
+    # if render_spec.render_type == "pygame": 
+    #     from .rendering_pygame import PygameEnvRenderer as EnvRenderer
+    if render_spec.render_type == "pyqt6":
         if render_mode in ["rgb_array", "rgb_array_list"]:
             os.environ["QT_QPA_PLATFORM"] = "offscreen"
         from .rendering_pyqt import PyQtEnvRenderer as EnvRenderer
+    elif render_spec.render_type == "pyqt6gl":
+        if render_mode in ["rgb_array", "rgb_array_list"]:
+            os.environ["QT_QPA_PLATFORM"] = "offscreen"
+            from .rendering_pyqt import PyQtEnvRenderer as EnvRenderer
+        else:
+            from .rendering_pyqtgl import PyQtEnvRendererGL as EnvRenderer
     else:
         raise ValueError(f"Unknown render type: {render_spec.render_type}")
 
-    if render_mode in ["human", "rgb_array", "human_fast"]:
+    if render_mode in ["human", "rgb_array", 'unlimited', "human_fast"]:
         renderer = EnvRenderer(
             params=params,
             track=track,

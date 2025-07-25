@@ -1,11 +1,10 @@
 import numpy as np
 from numba import njit
-from numba.typed import Dict
 
 from .utils import steering_constraint, accl_constraints
 
-
-def vehicle_dynamics_st(x: np.ndarray, u_init: np.ndarray, params: dict):
+@njit(cache=True)
+def vehicle_dynamics_st(x: np.ndarray, u_init: np.ndarray, params: np.ndarray) -> np.ndarray:
     """
     Single Track Vehicle Dynamics.
     From https://gitlab.lrz.de/tum-cps/commonroad-vehicle-models/-/blob/master/vehicleModels_commonRoad.pdf, section 7
@@ -16,7 +15,7 @@ def vehicle_dynamics_st(x: np.ndarray, u_init: np.ndarray, params: dict):
                 x1: y position in global coordinates
                 x2: steering angle of front wheels
                 x3: velocity in x direction
-                x4:yaw angle
+                x4: yaw angle
                 x5: yaw rate
                 x6: slip angle at vehicle center
             u (numpy.ndarray (2, )): control input vector (u1, u2)
@@ -56,6 +55,24 @@ def vehicle_dynamics_st(x: np.ndarray, u_init: np.ndarray, params: dict):
 
     # gravity constant m/s^2
     g = 9.81
+    mu = params[0]
+    C_Sf = params[1]  # front tire cornering stiffness [N/rad]  CF
+    C_Sr = params[2]  # rear tire cornering stiffness [N/rad]  CR
+    lf = params[3]  # distance from spring mass center of gravity to front axle [m]  LENA
+    lr = params[4]  # distance from spring mass center of gravity to rear axle [m]  LENB
+    h = params[5]  # M_s center of gravity above ground [m]  HS
+    m = params[6]  # vehicle mass [kg]  MASS
+    I = params[7]  # moment of inertia for sprung mass in yaw [kg m^2]  IZZ
+    s_min = params[8]  # minimum steering angle [rad]
+    s_max = params[9]  # maximum steering angle [rad]
+    sv_min = params[10]  # minimum steering velocity [rad/s]
+    sv_max = params[11]  # maximum steering velocity [rad/s]
+    v_switch = params[12]  # switching velocity [m/s]
+    a_max = params[13]  # maximum absolute acceleration [m/s^2]
+    v_min = params[14]  # minimum velocity [m/s]
+    v_max = params[15]  # maximum velocity [m/s]
+    # width = params[16]  # vehicle width [m]
+    # length = params[17]  # vehicle length [m]
 
     # constraints
     u = np.array(
@@ -63,18 +80,18 @@ def vehicle_dynamics_st(x: np.ndarray, u_init: np.ndarray, params: dict):
             steering_constraint(
                 DELTA,
                 u_init[0],
-                params["s_min"],
-                params["s_max"],
-                params["sv_min"],
-                params["sv_max"],
+                s_min,
+                s_max,
+                sv_min,
+                sv_max,
             ),
             accl_constraints(
                 V,
                 u_init[1],
-                params["v_switch"],
-                params["a_max"],
-                params["v_min"],
-                params["v_max"],
+                v_switch,
+                a_max,
+                v_min,
+                v_max,
             ),
         ]
     )
@@ -85,11 +102,11 @@ def vehicle_dynamics_st(x: np.ndarray, u_init: np.ndarray, params: dict):
     # switch to kinematic model for small velocities
     if V < 0.5:
         # wheelbase
-        lwb = params["lf"] + params["lr"]
-        BETA_HAT = np.arctan(np.tan(DELTA) * params["lr"] / lwb)
+        lwb = lf + lr
+        BETA_HAT = np.arctan(np.tan(DELTA) * lr / lwb)
         BETA_DOT = (
-            (1 / (1 + (np.tan(DELTA) * (params["lr"] / lwb)) ** 2))
-            * (params["lr"] / (lwb * np.cos(DELTA) ** 2))
+            (1 / (1 + (np.tan(DELTA) * (lr / lwb)) ** 2))
+            * (lr / (lwb * np.cos(DELTA) ** 2))
             * STEER_VEL
         )
         f = np.array(
@@ -110,8 +127,8 @@ def vehicle_dynamics_st(x: np.ndarray, u_init: np.ndarray, params: dict):
         )
     else:
         # system dynamics
-        glr = g * params["lr"] - ACCL * params["h"]
-        glf = g * params["lf"] + ACCL * params["h"]
+        glr = g * lr - ACCL * h
+        glf = g * lf + ACCL * h
         f = np.array(
             [
                 V * np.cos(PSI + BETA),  # X_DOT
@@ -120,29 +137,29 @@ def vehicle_dynamics_st(x: np.ndarray, u_init: np.ndarray, params: dict):
                 ACCL,  # V_DOT
                 PSI_DOT,  # PSI_DOT
                 (
-                    (params["mu"] * params["m"])
-                    / (params["I"] * (params["lf"] + params["lr"]))
+                    (mu * m)
+                    / (I * (lf + lr))
                 )
                 * (
-                    params["lf"] * params["C_Sf"] * (glr) * DELTA
+                    lf * C_Sf * (glr) * DELTA
                     + (
-                        params["lr"] * params["C_Sr"] * (glf)
-                        - params["lf"] * params["C_Sf"] * (glr)
+                        lr * C_Sr * (glf)
+                        - lf * C_Sf * (glr)
                     )
                     * BETA
                     - (
-                        params["lf"] * params["lf"] * params["C_Sf"] * (glr)
-                        + params["lr"] * params["lr"] * params["C_Sr"] * (glf)
+                        lf * lf * C_Sf * (glr)
+                        + lr * lr * C_Sr * (glf)
                     )
                     * (PSI_DOT / V)
                 ),  # PSI_DOT_DOT
-                (params["mu"] / (V * (params["lr"] + params["lf"])))
+                (mu / (V * (lr + lf)))
                 * (
-                    params["C_Sf"] * (glr) * DELTA
-                    - (params["C_Sr"] * (glf) + params["C_Sf"] * (glr)) * BETA
+                    C_Sf * (glr) * DELTA
+                    - (C_Sr * (glf) + C_Sf * (glr)) * BETA
                     + (
-                        params["C_Sr"] * (glf) * params["lr"]
-                        - params["C_Sf"] * (glr) * params["lf"]
+                        C_Sr * (glf) * lr
+                        - C_Sf * (glr) * lf
                     )
                     * (PSI_DOT / V)
                 )
@@ -152,17 +169,7 @@ def vehicle_dynamics_st(x: np.ndarray, u_init: np.ndarray, params: dict):
 
     return f
 
-
 @njit(cache=True)
-def get_standardized_state_st(x: np.ndarray) -> dict:
-    """[X,Y,DELTA,V_X, V_Y,YAW,YAW_RATE,SLIP]"""
-    d = dict()
-    d["x"] = x[0]
-    d["y"] = x[1]
-    d["delta"] = x[2]
-    d["v_x"] = x[3] * np.cos(x[6])
-    d["v_y"] = x[3] * np.sin(x[6])
-    d["yaw"] = x[4]
-    d["yaw_rate"] = x[5]
-    d["slip"] = x[6]
-    return d
+def get_standardized_state_st(x: np.ndarray) -> np.ndarray:
+    """[X,Y,Steering_Angle,Speed,YAW,YAW_RATE,V_Y]"""
+    return x
