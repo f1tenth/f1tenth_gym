@@ -4,7 +4,7 @@
 
 This is the repository of the F1TENTH Gym environment.
 
-This project is still under heavy developement.
+This project is still under heavy development.
 
 You can find the [documentation](https://f1tenth-gym.readthedocs.io/en/latest/) of the environment here.
 
