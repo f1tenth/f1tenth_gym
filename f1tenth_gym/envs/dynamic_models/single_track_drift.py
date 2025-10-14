@@ -159,14 +159,14 @@ def vehicle_dynamics_std(x: np.ndarray, u_init: np.ndarray, params: dict):
     f_ks = vehicle_dynamics_ks_cog(np.array(x_ks), u, params)
     # derivative of slip angle and yaw rate (kinematic)
     d_beta_ks = (params["lr"] * STEER_VEL) / (
-        lwb * np.cos(DELTA) ** 2 * (1 + (np.arctan(DELTA) ** 2 * params["lr"] / lwb) ** 2)
+        lwb * np.cos(DELTA) ** 2 * (1 + (np.tan(DELTA) ** 2 * params["lr"] / lwb) ** 2)
     )
     dd_psi_ks = (
         1
         / lwb
         * (
-            ACCL * np.cos(BETA) * np.arctan(DELTA)
-            - V * np.sin(BETA) * d_beta_ks * np.arctan(DELTA)
+            ACCL * np.cos(BETA) * np.tan(DELTA)
+            - V * np.sin(BETA) * d_beta_ks * np.tan(DELTA)
             + V * np.cos(BETA) * STEER_VEL / np.cos(DELTA) ** 2
         )
     )
