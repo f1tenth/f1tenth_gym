@@ -9,7 +9,7 @@ import numpy as np
 
 from .kinematic import vehicle_dynamics_ks, get_standardized_state_ks
 from .single_track import vehicle_dynamics_st, get_standardized_state_st
-from .single_track_drift import vehicle_dynamics_std, get_standardized_state_std
+from .single_track_drift import init_std, vehicle_dynamics_std, get_standardized_state_std
 from .multi_body import init_mb, vehicle_dynamics_mb, get_standardized_state_mb
 from .utils import pid_steer, pid_accl
 from typing import Optional
@@ -65,6 +65,9 @@ class DynamicModel(Enum):
         # If state is MultiBody, we must inflate the state to 29D
         if self == DynamicModel.MB:
             state = init_mb(state, params)
+        # If state is SingleTrackDrift, we must inflate to 9D
+        elif self == DynamicModel.STD:
+            state = init_std(state, params)
         return state
 
     @property

@@ -1,9 +1,10 @@
 import numpy as np
 from numba import njit
+from numba.typed import Dict
 
-from .utils import steering_constraint, accl_constraints
-from .tire_model import formula_longitudinal, formula_lateral, formula_longitudinal_comb, formula_lateral_comb
-from .kinematic import vehicle_dynamics_ks_cog
+from ..utils import steering_constraint, accl_constraints
+from ..tire_model import formula_longitudinal, formula_lateral, formula_longitudinal_comb, formula_lateral_comb
+from ..kinematic import vehicle_dynamics_ks_cog
 
 
 def vehicle_dynamics_std(x: np.ndarray, u_init: np.ndarray, params: dict):
@@ -11,8 +12,11 @@ def vehicle_dynamics_std(x: np.ndarray, u_init: np.ndarray, params: dict):
     Single Track Drift model.
     From: https://gitlab.lrz.de/tum-cps/commonroad-vehicle-models/-/blob/master/PYTHON/vehiclemodels/vehicle_dynamics_std.py?ref_type=heads
 
-        Args:
-            x (numpy.ndarray (9,)): vehicle state vector (x0, x1, x2, x3, x4, x5, x6, x7, x8)
+    Syntax:
+        f = vehicle_dynamics_std(x,u,p)
+
+    Inputs:
+        :param x: (numpy.ndarray (9,)): vehicle state vector (x0, x1, x2, x3, x4, x5, x6, x7, x8)
                 x[0]: x position in global coordinates
                 x[1]: y position in global coordinates
                 x[2]: steering angle of front wheels
@@ -22,14 +26,16 @@ def vehicle_dynamics_std(x: np.ndarray, u_init: np.ndarray, params: dict):
                 x[6]: slip angle at vehicle center
                 x[7]: angular speed of the front wheel
                 x[8]: angular speed of the rear wheel
-            u_init (numpy.ndarray (2,)): control input vector (u1, u2)
+        :param u_init: (numpy.ndarray (2,)): control input vector (u1, u2)
                 u_init[0]: steering angle velocity of front wheels
                 u_init[1]: longitudinal acceleration
-            params (dict): dictionary containing necessary parameters:
-                see f110_env.py:f1tenth_std_vehicle_params
+        :param params: (dict): dictionary containing necessary parameters:
 
-        Returns:
-            f (numpy.ndarray): right hand side of differential equations
+    Outputs:
+        :return f: (numpy.ndarray): right hand side of differential equations
+
+    Author: Teodor Ilie
+    Written: 18-October-2025
     """
     # Get states from state vector
     X = x[0]
@@ -125,9 +131,15 @@ def vehicle_dynamics_std(x: np.ndarray, u_init: np.ndarray, params: dict):
 
     # system dynamics
     d_v = (
-        1 / params["m"] * (-F_yf * np.sin(DELTA - BETA) + F_yr * np.sin(BETA) + F_xr * np.cos(BETA) + F_xf * np.cos(DELTA - BETA))
+        1
+        / params["m"]
+        * (-F_yf * np.sin(DELTA - BETA) + F_yr * np.sin(BETA) + F_xr * np.cos(BETA) + F_xf * np.cos(DELTA - BETA))
     )
-    dd_psi = 1 / params["I_z"] * (F_yf * np.cos(DELTA) * params["lf"] - F_yr * params["lr"] + F_xf * np.sin(DELTA) * params["lf"])
+    dd_psi = (
+        1
+        / params["I_z"]
+        * (F_yf * np.cos(DELTA) * params["lf"] - F_yr * params["lr"] + F_xf * np.sin(DELTA) * params["lf"])
+    )
     d_beta = (
         -PSI_DOT
         + 1
@@ -159,14 +171,14 @@ def vehicle_dynamics_std(x: np.ndarray, u_init: np.ndarray, params: dict):
     f_ks = vehicle_dynamics_ks_cog(np.array(x_ks), u, params)
     # derivative of slip angle and yaw rate (kinematic)
     d_beta_ks = (params["lr"] * STEER_VEL) / (
-        lwb * np.cos(DELTA) ** 2 * (1 + (np.arctan(DELTA) ** 2 * params["lr"] / lwb) ** 2)
+        lwb * np.cos(DELTA) ** 2 * (1 + (np.tan(DELTA) ** 2 * params["lr"] / lwb) ** 2)
     )
     dd_psi_ks = (
         1
         / lwb
         * (
-            ACCL * np.cos(BETA) * np.arctan(DELTA)
-            - V * np.sin(BETA) * d_beta_ks * np.arctan(DELTA)
+            ACCL * np.cos(BETA) * np.tan(DELTA)
+            - V * np.sin(BETA) * d_beta_ks * np.tan(DELTA)
             + V * np.cos(BETA) * STEER_VEL / np.cos(DELTA) ** 2
         )
     )
@@ -179,7 +191,7 @@ def vehicle_dynamics_std(x: np.ndarray, u_init: np.ndarray, params: dict):
     w_ks = 1 - w_std
 
     # output vector: mix results of dynamic and kinematic model
-    f = np.array (
+    f = np.array(
         [
             V * np.cos(BETA + PSI),
             V * np.sin(BETA + PSI),
@@ -192,7 +204,7 @@ def vehicle_dynamics_std(x: np.ndarray, u_init: np.ndarray, params: dict):
             w_std * d_omega_r + w_ks * d_omega_r_ks,
         ]
     )
-    
+
     # return f, the time derivatives of the input state x
     return f
 

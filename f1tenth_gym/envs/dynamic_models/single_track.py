@@ -121,7 +121,7 @@ def vehicle_dynamics_st(x: np.ndarray, u_init: np.ndarray, params: dict):
                 PSI_DOT,  # PSI_DOT
                 (
                     (params["mu"] * params["m"])
-                    / (params["I"] * (params["lf"] + params["lr"]))
+                    / (params["I_z"] * (params["lf"] + params["lr"]))
                 )
                 * (
                     params["lf"] * params["C_Sf"] * (glr) * DELTA
