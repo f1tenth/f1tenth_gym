@@ -88,13 +88,13 @@ class TestObservationInterface(unittest.TestCase):
         self.assertTrue(isinstance(env.observation_space, gym.spaces.Dict))
 
         # check that the observation space has the correct keys
-        for agent_id in env.agent_ids:
+        for agent_id in env.unwrapped.agent_ids:
             space = env.observation_space.spaces[agent_id].spaces
             self.assertTrue(all([k in space for k in features]))
             self.assertTrue(all([k in features for k in space]))
 
         # check that the observation space has the correct types
-        for agent_id in env.agent_ids:
+        for agent_id in env.unwrapped.agent_ids:
             space = env.observation_space.spaces[agent_id].spaces
             self.assertTrue(all([isinstance(space[k], Box) for k in features]))
             self.assertTrue(all([space[k].dtype == np.float32 for k in features]))
@@ -103,8 +103,8 @@ class TestObservationInterface(unittest.TestCase):
         obs, _ = env.reset()
         obs, _, _, _, _ = env.step(env.action_space.sample())
 
-        for i, agent_id in enumerate(env.agent_ids):
-            pose_x, pose_y, pose_theta = env.sim.agent_poses[i]
+        for i, agent_id in enumerate(env.unwrapped.agent_ids):
+            pose_x, pose_y, pose_theta = env.unwrapped.sim.agent_poses[i]
             obs_x, obs_y, obs_theta = (
                 obs[agent_id]["pose_x"],
                 obs[agent_id]["pose_y"],
@@ -133,7 +133,7 @@ class TestObservationInterface(unittest.TestCase):
         kinematic_features = ["pose_x", "pose_y", "pose_theta", "linear_vel_x", "delta"]
 
         # check kinematic features are in the observation space
-        for agent_id in env.agent_ids:
+        for agent_id in env.unwrapped.agent_ids:
             space = env.observation_space.spaces[agent_id].spaces
             self.assertTrue(all([k in space for k in kinematic_features]))
             self.assertTrue(all([k in kinematic_features for k in space]))
@@ -142,8 +142,8 @@ class TestObservationInterface(unittest.TestCase):
         obs, _ = env.reset()
         obs, _, _, _, _ = env.step(env.action_space.sample())
 
-        for i, agent_id in enumerate(env.agent_ids):
-            pose_x, pose_y, _, velx, pose_theta, _, _ = env.sim.agents[i].state
+        for i, agent_id in enumerate(env.unwrapped.agent_ids):
+            pose_x, pose_y, _, velx, pose_theta, _, _ = env.unwrapped.sim.agents[i].state
             obs_x, obs_y, obs_theta = (
                 obs[agent_id]["pose_x"],
                 obs[agent_id]["pose_y"],
@@ -173,7 +173,7 @@ class TestObservationInterface(unittest.TestCase):
         ]
 
         # check kinematic features are in the observation space
-        for agent_id in env.agent_ids:
+        for agent_id in env.unwrapped.agent_ids:
             space = env.observation_space.spaces[agent_id].spaces
             self.assertTrue(all([k in space for k in kinematic_features]))
             self.assertTrue(all([k in kinematic_features for k in space]))
@@ -182,8 +182,8 @@ class TestObservationInterface(unittest.TestCase):
         obs, _ = env.reset()
         obs, _, _, _, _ = env.step(env.action_space.sample())
 
-        for i, agent_id in enumerate(env.agent_ids):
-            pose_x, pose_y, delta, velx, pose_theta, _, beta = env.sim.agents[i].state
+        for i, agent_id in enumerate(env.unwrapped.agent_ids):
+            pose_x, pose_y, delta, velx, pose_theta, _, beta = env.unwrapped.sim.agents[i].state
 
             agent_obs = obs[agent_id]
             obs_x, obs_y, obs_theta = (
@@ -228,6 +228,5 @@ class TestObservationInterface(unittest.TestCase):
             env = self._make_env(config={"observation_config": {"type": obs_type_id}})
             check_env(
                 env.unwrapped,
-                f"Observation {obs_type_id} breaks the gymnasium API",
                 skip_render_check=True,
             )

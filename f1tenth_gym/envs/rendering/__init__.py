@@ -1,13 +1,14 @@
 import pathlib
+import os
 from typing import Any, Optional
 
 from .renderer import RenderSpec, EnvRenderer
-from ..track import Track
+# from ..track import Track This is due to a circular import
 
 
 def make_renderer(
     params: dict[str, Any],
-    track: Track,
+    track: "Track",
     agent_ids: list[str],
     render_mode: Optional[str] = None,
     render_fps: Optional[int] = 100,
@@ -28,13 +29,20 @@ def make_renderer(
     render_fps : int, optional
         rendering frames per second, by default 100
     """
-    from .rendering_pygame import PygameEnvRenderer
-
     cfg_file = pathlib.Path(__file__).parent.absolute() / "rendering.yaml"
     render_spec = RenderSpec.from_yaml(cfg_file)
 
+    if render_spec.render_type == "pygame":
+        from .rendering_pygame import PygameEnvRenderer as EnvRenderer
+    elif render_spec.render_type == "pyqt6":
+        if render_mode in ["rgb_array", "rgb_array_list"]:
+            os.environ["QT_QPA_PLATFORM"] = "offscreen"
+        from .rendering_pyqt import PyQtEnvRenderer as EnvRenderer
+    else:
+        raise ValueError(f"Unknown render type: {render_spec.render_type}")
+
     if render_mode in ["human", "rgb_array", "human_fast"]:
-        renderer = PygameEnvRenderer(
+        renderer = EnvRenderer(
             params=params,
             track=track,
             agent_ids=agent_ids,

@@ -5,6 +5,7 @@ import gymnasium as gym
 import numpy as np
 from numba import njit
 
+from f1tenth_gym.envs.f110_env import F110Env
 
 """
 Planner Helpers
@@ -187,6 +188,9 @@ class PurePursuitPlanner:
         self.lookahead_point = None
         self.current_index = None
 
+        self.lookahead_point_render = None
+        self.local_plan_render = None
+
     def load_waypoints(self, conf):
         """
         loads waypoints
@@ -201,8 +205,13 @@ class PurePursuitPlanner:
         Callback to render the lookahead point.
         """
         if self.lookahead_point is not None:
-            points = self.lookahead_point[:2][None]  # shape (1, 2)
-            e.render_points(points, color=(0, 0, 128), size=2)
+            points = self.lookahead_point[:2][None]  # shape (1, 2)~
+            if self.lookahead_point_render is None:
+                self.lookahead_point_render = e.render_points(
+                    points, color=(0, 0, 128), size=2
+                )
+            else:
+                self.lookahead_point_render.setData(points)
 
     def render_local_plan(self, e):
         """
@@ -210,7 +219,12 @@ class PurePursuitPlanner:
         """
         if self.current_index is not None:
             points = self.waypoints[self.current_index : self.current_index + 10, :2]
-            e.render_lines(points, color=(0, 128, 0), size=1)
+            if self.local_plan_render is None:
+                self.local_plan_render = e.render_lines(
+                    points, color=(0, 128, 0), size=1
+                )
+            else:
+                self.local_plan_render.updateItems(points)
 
     def _get_current_waypoint(
         self, waypoints, lookahead_distance, position, theta
@@ -287,29 +301,36 @@ def main():
     work = {
         "mass": 3.463388126201571,
         "lf": 0.15597534362552312,
-        "tlad": 0.82461887897713965,
-        "vgain": 1,
+        "tlad": 0.82461887897713965 * 10,
+        "vgain": 1.0,
     }
 
-    num_agents = 3
+    num_agents = 1
     env = gym.make(
         "f1tenth_gym:f1tenth-v0",
         config={
-            "map": "Spielberg",
+            "map": "Spielberg_blank",
             "num_agents": num_agents,
             "timestep": 0.01,
             "integrator": "rk4",
             "control_input": ["speed", "steering_angle"],
-            "model": "st",
+            "model": "mb",
             "observation_config": {"type": "kinematic_state"},
-            "params": {"mu": 1.0},
+            "params": F110Env.fullscale_vehicle_params(),
             "reset_config": {"type": "rl_random_static"},
+            "scale": 10.0,
         },
         render_mode="human",
     )
     track = env.unwrapped.track
 
-    planner = PurePursuitPlanner(track=track, wb=0.17145 + 0.15875)
+    planner = PurePursuitPlanner(
+        track=track,
+        wb=(
+            F110Env.fullscale_vehicle_params()["lf"]
+            + F110Env.fullscale_vehicle_params()["lr"]
+        ),
+    )
 
     env.unwrapped.add_render_callback(track.raceline.render_waypoints)
     env.unwrapped.add_render_callback(planner.render_local_plan)
@@ -333,7 +354,6 @@ def main():
                 work["vgain"],
             )
             action[i] = np.array([steer, speed])
-
         obs, step_reward, done, truncated, info = env.step(action)
         laptime += step_reward
         frame = env.render()
@@ -343,3 +363,12 @@ def main():
 
 if __name__ == "__main__":
     main()
+# %%
+work = {
+    "mass": 3.463388126201571,
+    "lf": 0.15597534362552312,
+    "tlad": 0.82461887897713965 * 10,
+    "vgain": 1,
+}
+
+num_agents = 1

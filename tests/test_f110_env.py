@@ -38,27 +38,27 @@ class TestEnvInterface(unittest.TestCase):
         # create a base environment and use configure() to change the width
         config_ext = {"params": {"width": 15.0}}
         base_env = self._make_env()
-        base_env.configure(config=config_ext)
+        base_env.unwrapped.configure(config=config_ext)
 
         # create an extended environment, with the width set on initialization
         extended_env = self._make_env(config=config_ext)
 
         # check consistency parameters in config
-        for par in base_env.config["params"]:
-            base_val = base_env.config["params"][par]
-            extended_val = extended_env.config["params"][par]
+        for par in base_env.unwrapped.config["params"]:
+            base_val = base_env.unwrapped.config["params"][par]
+            extended_val = extended_env.unwrapped.config["params"][par]
 
             self.assertEqual(base_val, extended_val, f"{par} should be the same")
 
         # check consistency in simulator parameters
-        for par in base_env.sim.params:
-            base_val = base_env.sim.params[par]
-            extended_val = extended_env.sim.params[par]
+        for par in base_env.unwrapped.sim.params:
+            base_val = base_env.unwrapped.sim.params[par]
+            extended_val = extended_env.unwrapped.sim.params[par]
 
             self.assertEqual(base_val, extended_val, f"{par} should be the same")
 
         # check consistency in agent parameters
-        for agent, ext_agent in zip(base_env.sim.agents, extended_env.sim.agents):
+        for agent, ext_agent in zip(base_env.unwrapped.sim.agents, extended_env.unwrapped.sim.agents):
             for par in agent.params:
                 base_val = agent.params[par]
                 extended_val = ext_agent.params[par]
@@ -100,11 +100,11 @@ class TestEnvInterface(unittest.TestCase):
         action_space_low = base_env.action_space.low
         action_space_high = base_env.action_space.high
 
-        params = base_env.sim.params.copy()
+        params = base_env.unwrapped.sim.params.copy()
         new_v_max = 5.0
         params["v_max"] = new_v_max
 
-        base_env.configure(config={"params": params})
+        base_env.unwrapped.configure(config={"params": params})
         new_action_space_low = base_env.action_space.low
         new_action_space_high = base_env.action_space.high
 
@@ -126,7 +126,7 @@ class TestEnvInterface(unittest.TestCase):
         Test that the acceleration action space is correctly configured.
         """
         base_env = self._make_env(config={"control_input": ["accl", "steering_speed"]})
-        params = base_env.sim.params
+        params = base_env.unwrapped.sim.params
         action_space_low = base_env.action_space.low
         action_space_high = base_env.action_space.high
 
@@ -156,7 +156,7 @@ class TestEnvInterface(unittest.TestCase):
             "num_agents": num_agents,
             "observation_config": {"type": "kinematic_state"},
         }
-        vec_env = gym.vector.make(
+        vec_env = gym.make_vec(
             "f1tenth_gym:f1tenth-v0", asynchronous=False, config=config, num_envs=num_envs
         )
 

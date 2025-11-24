@@ -26,12 +26,13 @@ Prototype of base classes
 Replacement of the old RaceCar, Simulator classes in C++
 Author: Hongrui Zheng
 """
+
 from __future__ import annotations
 import numpy as np
 from .dynamic_models import DynamicModel
 from .action import CarAction
 from .collision_models import collision_multiple, get_vertices
-from .integrator import EulerIntegrator, IntegratorType
+from .integrator import EulerIntegrator, Integrator
 from .laser_models import ScanSimulator2D, check_ttc_jit, ray_cast
 from .track import Track
 
@@ -52,12 +53,6 @@ class RaceCar(object):
         steer_angle_vel (float): current steering velocity input
         in_collision (bool): collision indicator
     """
-
-    # static objects that don't need to be stored in class instances
-    scan_simulator = None
-    cosines = None
-    scan_angles = None
-    side_distances = None
 
     def __init__(
         self,
@@ -90,7 +85,10 @@ class RaceCar(object):
         Returns:
             None
         """
-
+        self.scan_simulator = None
+        self.cosines = None
+        self.scan_angles = None
+        self.side_distances = None
         # initialization
         self.params = params
         self.seed = seed
@@ -101,9 +99,10 @@ class RaceCar(object):
         self.integrator = integrator
         self.action_type = action_type
         self.model = model
+        self.standard_state_fn = self.model.get_standardized_state_fn()
 
         # state of the vehicle
-        self.state = self.model.get_initial_state()
+        self.state = self.model.get_initial_state(params=self.params)
 
         # pose of opponents in the world
         self.opp_poses = None
@@ -123,47 +122,47 @@ class RaceCar(object):
         self.ttc_thresh = 0.005
 
         # initialize scan sim
-        if RaceCar.scan_simulator is None:
+        if self.scan_simulator is None:
             self.scan_rng = np.random.default_rng(seed=self.seed)
-            RaceCar.scan_simulator = ScanSimulator2D(num_beams, fov)
+            self.scan_simulator = ScanSimulator2D(num_beams, fov)
 
-            scan_ang_incr = RaceCar.scan_simulator.get_increment()
+            scan_ang_incr = self.scan_simulator.get_increment()
 
             # angles of each scan beam, distance from lidar to edge of car at each beam, and precomputed cosines of each angle
-            RaceCar.cosines = np.zeros((num_beams,))
-            RaceCar.scan_angles = np.zeros((num_beams,))
-            RaceCar.side_distances = np.zeros((num_beams,))
+            self.cosines = np.zeros((num_beams,))
+            self.scan_angles = np.zeros((num_beams,))
+            self.side_distances = np.zeros((num_beams,))
 
             dist_sides = params["width"] / 2.0
             dist_fr = (params["lf"] + params["lr"]) / 2.0
 
             for i in range(num_beams):
                 angle = -fov / 2.0 + i * scan_ang_incr
-                RaceCar.scan_angles[i] = angle
-                RaceCar.cosines[i] = np.cos(angle)
+                self.scan_angles[i] = angle
+                self.cosines[i] = np.cos(angle)
 
                 if angle > 0:
                     if angle < np.pi / 2:
                         # between 0 and pi/2
                         to_side = dist_sides / np.sin(angle)
                         to_fr = dist_fr / np.cos(angle)
-                        RaceCar.side_distances[i] = min(to_side, to_fr)
+                        self.side_distances[i] = min(to_side, to_fr)
                     else:
                         # between pi/2 and pi
                         to_side = dist_sides / np.cos(angle - np.pi / 2.0)
                         to_fr = dist_fr / np.sin(angle - np.pi / 2.0)
-                        RaceCar.side_distances[i] = min(to_side, to_fr)
+                        self.side_distances[i] = min(to_side, to_fr)
                 else:
                     if angle > -np.pi / 2:
                         # between 0 and -pi/2
                         to_side = dist_sides / np.sin(-angle)
                         to_fr = dist_fr / np.cos(-angle)
-                        RaceCar.side_distances[i] = min(to_side, to_fr)
+                        self.side_distances[i] = min(to_side, to_fr)
                     else:
                         # between -pi/2 and -pi
                         to_side = dist_sides / np.cos(-angle - np.pi / 2)
                         to_fr = dist_fr / np.sin(-angle - np.pi / 2)
-                        RaceCar.side_distances[i] = min(to_side, to_fr)
+                        self.side_distances[i] = min(to_side, to_fr)
 
     def update_params(self, params):
         """
@@ -178,14 +177,15 @@ class RaceCar(object):
         """
         self.params = params
 
-    def set_map(self, map: str | Track):
+    def set_map(self, map: str | Track, map_scale: float = 1.0):
         """
         Sets the map for scan simulator
 
         Args:
             map (str | Track): name of the map, or Track object
+            map_scale (float, default=1.0): scale of the map, larger scale means larger map
         """
-        RaceCar.scan_simulator.set_map(map)
+        self.scan_simulator.set_map(map, map_scale)
 
     def reset(self, pose):
         """
@@ -203,7 +203,7 @@ class RaceCar(object):
         # clear collision indicator
         self.in_collision = False
         # init state from pose
-        self.state = self.model.get_initial_state(pose=pose)
+        self.state = self.model.get_initial_state(pose=pose, params=self.params)
 
         self.steer_buffer = np.empty((0,))
         # reset scan random generator
@@ -310,10 +310,10 @@ class RaceCar(object):
         )
 
         # bound yaw angle
-        self.state[4] %= 2 * np.pi
+        self.state[4] %= 2 * np.pi  # TODO: This is a problem waiting to happen
 
         # update scan
-        current_scan = RaceCar.scan_simulator.scan(
+        current_scan = self.scan_simulator.scan(
             np.append(self.state[0:2], self.state[4]), self.scan_rng
         )
 
@@ -354,6 +354,16 @@ class RaceCar(object):
 
         agent_scans[agent_index] = new_scan
 
+    @property
+    def standard_state(self) -> dict:
+        """
+        Returns the state of the vehicle as an observation
+
+        Returns:
+            np.ndarray (7, ): state of the vehicle
+        """
+        return self.standard_state_fn(self.state)
+
 
 class Simulator(object):
     """
@@ -379,7 +389,7 @@ class Simulator(object):
         num_agents,
         seed,
         action_type: CarAction,
-        integrator=IntegratorType.RK4,
+        integrator=Integrator,
         model=DynamicModel.ST,
         time_step=0.01,
         ego_idx=0,
@@ -428,18 +438,19 @@ class Simulator(object):
         num_beams = self.agents[0].scan_simulator.num_beams
         self.agent_scans = np.empty((self.num_agents, num_beams))
 
-    def set_map(self, map: str | Track):
+    def set_map(self, map: str | Track, map_scale: float = 1.0):
         """
         Sets the map of the environment and sets the map for scan simulator of each agent
 
         Args:
             map (str | Track): name of the map, or Track object
+            map_scale (float, default=1.0): scale of the map, larger scale means larger map
 
         Returns:
             None
         """
         for agent in self.agents:
-            agent.set_map(map)
+            agent.set_map(map, map_scale)
 
     def update_params(self, params, agent_idx=-1):
         """

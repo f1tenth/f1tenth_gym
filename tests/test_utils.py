@@ -13,9 +13,9 @@ class TestUtilities(unittest.TestCase):
         custom_env = gym.make("f1tenth_gym:f1tenth-v0", config={"params": {"mu": 1.0}})
 
         # check all parameters are the same except for mu
-        for par in default_env.sim.params:
-            default_val = default_env.sim.params[par]
-            custom_val = custom_env.sim.params[par]
+        for par in default_env.unwrapped.sim.params:
+            default_val = default_env.unwrapped.sim.params[par]
+            custom_val = custom_env.unwrapped.sim.params[par]
 
             if par == "mu":
                 self.assertNotEqual(default_val, custom_val, "mu should be different")

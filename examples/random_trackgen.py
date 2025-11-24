@@ -37,6 +37,7 @@ import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 import shapely.geometry as shp
+from f1tenth_gym.envs.track import Track
 
 
 def main(args):
@@ -52,8 +53,9 @@ def main(args):
         while True:
             try:
                 print(f"[info] creating track {i}")
-                track, track_int, track_ext = create_track()
-                convert_track(track, track_int, track_ext, i, outdir)
+                WIDTH = 10.0
+                track, track_int, track_ext = create_track(WIDTH)
+                convert_track(track, track_int, track_ext, WIDTH, i, outdir)
                 print(f"[info] saved track {i} in {outdir}/")
                 break
             except Exception as _:  # noqa: F841
@@ -62,13 +64,12 @@ def main(args):
             print()
 
 
-def create_track():
+def create_track(track_width):
     CHECKPOINTS = 16
     SCALE = 6.0
     TRACK_RAD = 900 / SCALE
     TRACK_DETAIL_STEP = 21 / SCALE
     TRACK_TURN_RATE = 0.31
-    WIDTH = 10.0
 
     start_alpha = 0.0
 
@@ -183,15 +184,15 @@ def create_track():
     track_poly = shp.Polygon(track_xy)
 
     # Finding interior and exterior walls
-    track_xy_offset_in = track_poly.buffer(WIDTH)
-    track_xy_offset_out = track_poly.buffer(-WIDTH)
+    track_xy_offset_in = track_poly.buffer(track_width)
+    track_xy_offset_out = track_poly.buffer(-track_width)
     track_xy_offset_in_np = np.array(track_xy_offset_in.exterior.xy).T
     track_xy_offset_out_np = np.array(track_xy_offset_out.exterior.xy).T
 
     return track_xy, track_xy_offset_in_np, track_xy_offset_out_np
 
 
-def convert_track(track, track_int, track_ext, track_id, outdir):
+def convert_track(track, track_int, track_ext, track_width, track_id, outdir):
     # converts track to image and saves the centerline as waypoints
     fig, ax = plt.subplots()
     fig.set_size_inches(20, 20)
@@ -238,11 +239,16 @@ def convert_track(track, track_int, track_ext, track_id, outdir):
 
     # Saving centerline as a csv
     centerline_filepath = outdir / f"map{track_id}_centerline.csv"
+    x_m, y_m = xy_pixels[:, 0] * 0.05, xy_pixels[:, 1] * 0.05
     with open(centerline_filepath, "w") as waypoints_csv:
-        waypoints_csv.write("#x,y\n")
+        waypoints_csv.write("# x_m, y_m, w_tr_right_m, w_tr_left_m\n")
         for row in xy_pixels:
-            waypoints_csv.write(f"{0.05 * row[0]}, {0.05 * row[1]}\n")
+            waypoints_csv.write(f"{0.05 * row[0]}, {0.05 * row[1]}, {track_width}, {track_width}\n")
 
+    raceline_format = Track.from_refline(x=x_m, y=y_m, velx=np.ones_like(x_m) * 4.0)
+    raceline_format.spec.name = f"map{track_id}"
+    raceline_format.save_raceline(outdir)
+    print(f"[info] saved centerline in {centerline_filepath}")
 
 if __name__ == "__main__":
     import argparse
