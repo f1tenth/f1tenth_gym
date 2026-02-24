@@ -31,16 +31,26 @@ def accl_constraints(vel, accl, v_switch, a_max, v_min, v_max):
     """
     Acceleration constraints, adjusts the acceleration based on constraints
 
-        Args:
-            vel (float): current velocity of the vehicle
-            accl (float): unconstraint desired acceleration
-            v_switch (float): switching velocity (velocity at which the acceleration is no longer able to create wheel spin)
-            a_max (float): maximum allowed acceleration
-            v_min (float): minimum allowed velocity
-            v_max (float): maximum allowed velocity
+    Parameters
+    ----------
+    vel : float
+        current velocity of the vehicle
+    accl : float
+        unconstraint desired acceleration
+    v_switch : float
+        switching velocity (velocity at which the acceleration is no longer able to create wheel spin)
+    a_max : float
+        maximum allowed acceleration
+    v_min : float
+        minimum allowed velocity
+    v_max : float
+        maximum allowed velocity
 
-        Returns:
-            accl (float): adjusted acceleration
+    Returns
+    -------
+    accl : float
+        adjusted acceleration
+
     """
 
     # positive accl limit
@@ -64,16 +74,26 @@ def steering_constraint(steering_angle, steering_velocity, s_min, s_max, sv_min,
     """
     Steering constraints, adjusts the steering velocity based on constraints
 
-        Args:
-            steering_angle (float): current steering_angle of the vehicle
-            steering_velocity (float): unconstraint desired steering_velocity
-            s_min (float): minimum steering angle
-            s_max (float): maximum steering angle
-            sv_min (float): minimum steering velocity
-            sv_max (float): maximum steering velocity
+    Parameters
+    ----------
+    steering_angle : float
+        current steering_angle of the vehicle
+    steering_velocity : float
+        unconstraint desired steering_velocity
+    s_min : float
+        minimum steering angle
+    s_max : float
+        maximum steering angle
+    sv_min : float
+        minimum steering velocity
+    sv_max : float
+        maximum steering velocity
 
-        Returns:
-            steering_velocity (float): adjusted steering velocity
+    Returns
+    -------
+    steering_velocity : float
+        adjusted steering velocity
+
     """
 
     # constraint steering velocity
@@ -92,19 +112,31 @@ def vehicle_dynamics_ks(x, u_init, mu, C_Sf, C_Sr, lf, lr, h, m, I, s_min, s_max
     """
     Single Track Kinematic Vehicle Dynamics.
 
-        Args:
-            x (numpy.ndarray (3, )): vehicle state vector (x1, x2, x3, x4, x5)
-                x1: x position in global coordinates
-                x2: y position in global coordinates
-                x3: steering angle of front wheels
-                x4: velocity in x direction
-                x5: yaw angle
-            u (numpy.ndarray (2, )): control input vector (u1, u2)
-                u1: steering angle velocity of front wheels
-                u2: longitudinal acceleration
+    Parameters
+    ----------
+    x : numpy.ndarray (5,)
+        Vehicle state vector (x1, x2, x3, x4, x5):
+        x1: x position in global coordinates,
+        x2: y position in global coordinates,
+        x3: steering angle of front wheels,
+        x4: velocity in x direction,
+        x5: yaw angle.
+    u_init : numpy.ndarray (2,)
+        Control input vector (u1, u2):
+        u1: steering angle velocity of front wheels,
+        u2: longitudinal acceleration.
+    mu, C_Sf, C_Sr, lf, lr, h, m, I : float
+        Vehicle parameters.
+    s_min, s_max, sv_min, sv_max : float
+        Steering constraints.
+    v_switch, a_max, v_min, v_max : float
+        Velocity/acceleration constraints.
 
-        Returns:
-            f (numpy.ndarray): right hand side of differential equations
+    Returns
+    -------
+    f : numpy.ndarray
+        right hand side of differential equations
+
     """
     # wheelbase
     lwb = lf + lr
@@ -125,21 +157,33 @@ def vehicle_dynamics_st(x, u_init, mu, C_Sf, C_Sr, lf, lr, h, m, I, s_min, s_max
     """
     Single Track Dynamic Vehicle Dynamics.
 
-        Args:
-            x (numpy.ndarray (3, )): vehicle state vector (x1, x2, x3, x4, x5, x6, x7)
-                x1: x position in global coordinates
-                x2: y position in global coordinates
-                x3: steering angle of front wheels
-                x4: velocity in x direction
-                x5: yaw angle
-                x6: yaw rate
-                x7: slip angle at vehicle center
-            u (numpy.ndarray (2, )): control input vector (u1, u2)
-                u1: steering angle velocity of front wheels
-                u2: longitudinal acceleration
+    Parameters
+    ----------
+    x : numpy.ndarray (7,)
+        Vehicle state vector (x1, x2, x3, x4, x5, x6, x7):
+        x1: x position in global coordinates,
+        x2: y position in global coordinates,
+        x3: steering angle of front wheels,
+        x4: velocity in x direction,
+        x5: yaw angle,
+        x6: yaw rate,
+        x7: slip angle at vehicle center.
+    u_init : numpy.ndarray (2,)
+        Control input vector (u1, u2):
+        u1: steering angle velocity of front wheels,
+        u2: longitudinal acceleration.
+    mu, C_Sf, C_Sr, lf, lr, h, m, I : float
+        Vehicle parameters.
+    s_min, s_max, sv_min, sv_max : float
+        Steering constraints.
+    v_switch, a_max, v_min, v_max : float
+        Velocity/acceleration constraints.
 
-        Returns:
-            f (numpy.ndarray): right hand side of differential equations
+    Returns
+    -------
+    f : numpy.ndarray
+        right hand side of differential equations
+
     """
 
     # gravity constant m/s^2
@@ -180,13 +224,20 @@ def pid(speed, steer, current_speed, current_steer, max_sv, max_a, max_v, min_v)
     """
     Basic controller for speed/steer -> accl./steer vel.
 
-        Args:
-            speed (float): desired input speed
-            steer (float): desired input steering angle
+    Parameters
+    ----------
+    speed : float
+        desired input speed
+    steer : float
+        desired input steering angle
 
-        Returns:
-            accl (float): desired input acceleration
-            sv (float): desired input steering velocity
+    Returns
+    -------
+    accl : float
+        desired input acceleration
+    sv : float
+        desired input steering velocity
+
     """
     # steering
     steer_diff = steer - current_steer

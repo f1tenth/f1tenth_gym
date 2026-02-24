@@ -55,12 +55,13 @@ class EnvRenderer(pyglet.window.Window):
         """
         Class constructor
 
-        Args:
-            width (int): width of the window
-            height (int): height of the window
+        Parameters
+        ----------
+        width : int
+            width of the window
+        height : int
+            height of the window
 
-        Returns:
-            None
         """
         conf = Config(sample_buffers=1,
                       samples=4,
@@ -112,12 +113,13 @@ class EnvRenderer(pyglet.window.Window):
         """
         Update the map being drawn by the renderer. Converts image to a list of 3D points representing each obstacle pixel in the map.
 
-        Args:
-            map_path (str): absolute path to the map without extensions
-            map_ext (str): extension for the map image file
+        Parameters
+        ----------
+        map_path : str
+            absolute path to the map without extensions
+        map_ext : str
+            extension for the map image file
 
-        Returns:
-            None
         """
 
         # load map metadata
@@ -159,12 +161,13 @@ class EnvRenderer(pyglet.window.Window):
 
         Potential improvements on current behavior: zoom/pan resets on window resize.
 
-        Args:
-            width (int): new width of window
-            height (int): new height of window
+        Parameters
+        ----------
+        width : int
+            new width of window
+        height : int
+            new height of window
 
-        Returns:
-            None
         """
 
         # call overrided function
@@ -183,16 +186,21 @@ class EnvRenderer(pyglet.window.Window):
         """
         Callback function on mouse drag, overrides inherited method.
 
-        Args:
-            x (int): Distance in pixels from the left edge of the window.
-            y (int): Distance in pixels from the bottom edge of the window.
-            dx (int): Relative X position from the previous mouse position.
-            dy (int): Relative Y position from the previous mouse position.
-            buttons (int): Bitwise combination of the mouse buttons currently pressed.
-            modifiers (int): Bitwise combination of any keyboard modifiers currently active.
+        Parameters
+        ----------
+        x : int
+            Distance in pixels from the left edge of the window.
+        y : int
+            Distance in pixels from the bottom edge of the window.
+        dx : int
+            Relative X position from the previous mouse position.
+        dy : int
+            Relative Y position from the previous mouse position.
+        buttons : int
+            Bitwise combination of the mouse buttons currently pressed.
+        modifiers : int
+            Bitwise combination of any keyboard modifiers currently active.
 
-        Returns:
-            None
         """
 
         # pan camera
@@ -205,14 +213,17 @@ class EnvRenderer(pyglet.window.Window):
         """
         Callback function on mouse scroll, overrides inherited method.
 
-        Args:
-            x (int): Distance in pixels from the left edge of the window.
-            y (int): Distance in pixels from the bottom edge of the window.
-            scroll_x (float): Amount of movement on the horizontal axis.
-            scroll_y (float): Amount of movement on the vertical axis.
+        Parameters
+        ----------
+        x : int
+            Distance in pixels from the left edge of the window.
+        y : int
+            Distance in pixels from the bottom edge of the window.
+        scroll_x : float
+            Amount of movement on the horizontal axis.
+        scroll_y : float
+            Amount of movement on the vertical axis.
 
-        Returns:
-            None
         """
 
         # Get scale factor
@@ -243,14 +254,11 @@ class EnvRenderer(pyglet.window.Window):
         """
         Callback function when the 'x' is clicked on the window, overrides inherited method. Also throws exception to end the python program when in a loop.
 
-        Args:
-            None
+        Raises
+        ------
+        Exception
+            with a message that indicates the rendering window was closed
 
-        Returns:
-            None
-
-        Raises:
-            Exception: with a message that indicates the rendering window was closed
         """
 
         super().on_close()
@@ -259,12 +267,7 @@ class EnvRenderer(pyglet.window.Window):
     def on_draw(self):
         """
         Function when the pyglet is drawing. The function draws the batch created that includes the map points, the agent polygons, and the information text, and the fps display.
-        
-        Args:
-            None
 
-        Returns:
-            None
         """
 
         # if map and poses doesn't exist, raise exception
@@ -299,11 +302,11 @@ class EnvRenderer(pyglet.window.Window):
         """
         Updates the renderer with the latest observation from the gym environment, including the agent poses, and the information text.
 
-        Args:
-            obs (dict): observation dict from the gym env
+        Parameters
+        ----------
+        obs : dict
+            observation dict from the gym env
 
-        Returns:
-            None
         """
 
         self.ego_idx = obs['ego_idx']
