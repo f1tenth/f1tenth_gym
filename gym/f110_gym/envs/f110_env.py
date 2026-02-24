@@ -56,41 +56,43 @@ class F110Env(gym.Env):
     
     Env should be initialized by calling gym.make('f110_gym:f110-v0', **kwargs)
 
-    Args:
-        kwargs:
-            seed (int, default=12345): seed for random state and reproducibility
-            
-            map (str, default='vegas'): name of the map used for the environment. Currently, available environments include: 'berlin', 'vegas', 'skirk'. You could use a string of the absolute path to the yaml file of your custom map.
-        
-            map_ext (str, default='png'): image extension of the map image file. For example 'png', 'pgm'
-        
-            params (dict, default={'mu': 1.0489, 'C_Sf':, 'C_Sr':, 'lf': 0.15875, 'lr': 0.17145, 'h': 0.074, 'm': 3.74, 'I': 0.04712, 's_min': -0.4189, 's_max': 0.4189, 'sv_min': -3.2, 'sv_max': 3.2, 'v_switch':7.319, 'a_max': 9.51, 'v_min':-5.0, 'v_max': 20.0, 'width': 0.31, 'length': 0.58}): dictionary of vehicle parameters.
-            mu: surface friction coefficient
-            C_Sf: Cornering stiffness coefficient, front
-            C_Sr: Cornering stiffness coefficient, rear
-            lf: Distance from center of gravity to front axle
-            lr: Distance from center of gravity to rear axle
-            h: Height of center of gravity
-            m: Total mass of the vehicle
-            I: Moment of inertial of the entire vehicle about the z axis
-            s_min: Minimum steering angle constraint
-            s_max: Maximum steering angle constraint
-            sv_min: Minimum steering velocity constraint
-            sv_max: Maximum steering velocity constraint
-            v_switch: Switching velocity (velocity at which the acceleration is no longer able to create wheel spin)
-            a_max: Maximum longitudinal acceleration
-            v_min: Minimum longitudinal velocity
-            v_max: Maximum longitudinal velocity
-            width: width of the vehicle in meters
-            length: length of the vehicle in meters
+    Parameters
+    ----------
+    seed : int, default 12345
+        seed for random state and reproducibility
+    map : str, default 'vegas'
+        name of the map used for the environment. Currently, available environments include: 'berlin', 'vegas', 'skirk'. You could use a string of the absolute path to the yaml file of your custom map.
+    map_ext : str, default 'png'
+        image extension of the map image file. For example 'png', 'pgm'
+    params : dict, default {'mu': 1.0489, 'C_Sf':, 'C_Sr':, 'lf': 0.15875, 'lr': 0.17145, 'h': 0.074, 'm': 3.74, 'I': 0.04712, 's_min': -0.4189, 's_max': 0.4189, 'sv_min': -3.2, 'sv_max': 3.2, 'v_switch':7.319, 'a_max': 9.51, 'v_min':-5.0, 'v_max': 20.0, 'width': 0.31, 'length': 0.58}
+        dictionary of vehicle parameters.
+        mu: surface friction coefficient
+        C_Sf: Cornering stiffness coefficient, front
+        C_Sr: Cornering stiffness coefficient, rear
+        lf: Distance from center of gravity to front axle
+        lr: Distance from center of gravity to rear axle
+        h: Height of center of gravity
+        m: Total mass of the vehicle
+        I: Moment of inertial of the entire vehicle about the z axis
+        s_min: Minimum steering angle constraint
+        s_max: Maximum steering angle constraint
+        sv_min: Minimum steering velocity constraint
+        sv_max: Maximum steering velocity constraint
+        v_switch: Switching velocity (velocity at which the acceleration is no longer able to create wheel spin)
+        a_max: Maximum longitudinal acceleration
+        v_min: Minimum longitudinal velocity
+        v_max: Maximum longitudinal velocity
+        width: width of the vehicle in meters
+        length: length of the vehicle in meters
+    num_agents : int, default 2
+        number of agents in the environment
+    timestep : float, default 0.01
+        physics timestep
+    ego_idx : int, default 0
+        ego's index in list of agents
+    lidar_dist : float, default 0
+        vertical distance between LiDAR and backshaft
 
-            num_agents (int, default=2): number of agents in the environment
-
-            timestep (float, default=0.01): physics timestep
-
-            ego_idx (int, default=0): ego's index in list of agents
-            
-            lidar_dist (float, default=0): vertical distance between LiDAR and backshaft
     """
     metadata = {'render.modes': ['human', 'human_fast']}
 
@@ -204,13 +206,14 @@ class F110Env(gym.Env):
     def _check_done(self):
         """
         Check if the current rollout is done
-        
-        Args:
-            None
 
-        Returns:
-            done (bool): whether the rollout is done
-            toggle_list (list[int]): each agent's toggle list for crossing the finish zone
+        Returns
+        -------
+        done : bool
+            whether the rollout is done
+        toggle_list : list[int]
+            each agent's toggle list for crossing the finish zone
+
         """
 
         # this is assuming 2 agents
@@ -248,12 +251,12 @@ class F110Env(gym.Env):
     def _update_state(self, obs_dict):
         """
         Update the env's states according to observations
-        
-        Args:
-            obs_dict (dict): dictionary of observation
 
-        Returns:
-            None
+        Parameters
+        ----------
+        obs_dict : dict
+            dictionary of observation
+
         """
         self.poses_x = obs_dict['poses_x']
         self.poses_y = obs_dict['poses_y']
@@ -264,14 +267,23 @@ class F110Env(gym.Env):
         """
         Step function for the gym env
 
-        Args:
-            action (np.ndarray(num_agents, 2))
+        Parameters
+        ----------
+        action : np.ndarray (num_agents, 2)
+            Control input for each agent. First column is desired steering
+            angle, second column is desired velocity.
 
-        Returns:
-            obs (dict): observation of the current step
-            reward (float, default=self.timestep): step reward, currently is physics timestep
-            done (bool): if the simulation is done
-            info (dict): auxillary information dictionary
+        Returns
+        -------
+        obs : dict
+            observation of the current step
+        reward : float, default self.timestep
+            step reward, currently is physics timestep
+        done : bool
+            if the simulation is done
+        info : dict
+            auxillary information dictionary
+
         """
         
         # call simulation step
@@ -307,14 +319,22 @@ class F110Env(gym.Env):
         """
         Reset the gym environment by given poses
 
-        Args:
-            poses (np.ndarray (num_agents, 3)): poses to reset agents to
+        Parameters
+        ----------
+        poses : np.ndarray (num_agents, 3)
+            Poses to reset agents to. Each row is [x, y, theta].
 
-        Returns:
-            obs (dict): observation of the current step
-            reward (float, default=self.timestep): step reward, currently is physics timestep
-            done (bool): if the simulation is done
-            info (dict): auxillary information dictionary
+        Returns
+        -------
+        obs : dict
+            observation of the current step
+        reward : float, default self.timestep
+            step reward, currently is physics timestep
+        done : bool
+            if the simulation is done
+        info : dict
+            auxillary information dictionary
+
         """
         # reset counters and data members
         self.current_time = 0.0
@@ -352,25 +372,27 @@ class F110Env(gym.Env):
         """
         Updates the map used by simulation
 
-        Args:
-            map_path (str): absolute path to the map yaml file
-            map_ext (str): extension of the map image file
+        Parameters
+        ----------
+        map_path : str
+            absolute path to the map yaml file
+        map_ext : str
+            extension of the map image file
 
-        Returns:
-            None
         """
         self.sim.set_map(map_path, map_ext)
 
     def update_params(self, params, index=-1):
         """
         Updates the parameters used by simulation for vehicles
-        
-        Args:
-            params (dict): dictionary of parameters
-            index (int, default=-1): if >= 0 then only update a specific agent's params
 
-        Returns:
-            None
+        Parameters
+        ----------
+        params : dict
+            dictionary of parameters
+        index : int, default -1
+            if >= 0 then only update a specific agent's params
+
         """
         self.sim.update_params(params, agent_idx=index)
 
@@ -378,8 +400,12 @@ class F110Env(gym.Env):
         """
         Add extra drawing function to call during rendering.
 
-        Args:
-            callback_func (function (EnvRenderer) -> None): custom function to called during render()
+        Parameters
+        ----------
+        callback_func : callable
+            Custom function to be called during render(). Takes an
+            EnvRenderer as argument.
+
         """
 
         F110Env.render_callbacks.append(callback_func)
@@ -388,13 +414,13 @@ class F110Env(gym.Env):
         """
         Renders the environment with pyglet. Use mouse scroll in the window to zoom in/out, use mouse click drag to pan. Shows the agents, the map, current fps (bottom left corner), and the race information near as text.
 
-        Args:
-            mode (str, default='human'): rendering mode, currently supports:
-                'human': slowed down rendering such that the env is rendered in a way that sim time elapsed is close to real time elapsed
-                'human_fast': render as fast as possible
+        Parameters
+        ----------
+        mode : str, default 'human'
+            rendering mode, currently supports:
+            'human': slowed down rendering such that the env is rendered in a way that sim time elapsed is close to real time elapsed
+            'human_fast': render as fast as possible
 
-        Returns:
-            None
         """
         assert mode in ['human', 'human_fast']
         

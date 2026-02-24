@@ -46,17 +46,26 @@ class RaceCar(object):
     """
     Base level race car class, handles the physics and laser scan of a single vehicle
 
-    Data Members:
-        params (dict): vehicle parameters dictionary
-        is_ego (bool): ego identifier
-        time_step (float): physics timestep
-        num_beams (int): number of beams in laser
-        fov (float): field of view of laser
+    Attributes
+    ----------
+    params : dict
+        vehicle parameters dictionary
+    is_ego : bool
+        ego identifier
+    time_step : float
+        physics timestep
+    num_beams : int
+        number of beams in laser
+    fov : float
+        field of view of laser
         state (np.ndarray (7, )): state vector [x, y, theta, vel, steer_angle, ang_vel, slip_angle]
         odom (np.ndarray(13, )): odometry vector [x, y, z, qx, qy, qz, qw, linear_x, linear_y, linear_z, angular_x, angular_y, angular_z]
-        accel (float): current acceleration input
-        steer_angle_vel (float): current steering velocity input
-        in_collision (bool): collision indicator
+    accel : float
+        current acceleration input
+    steer_angle_vel : float
+        current steering velocity input
+    in_collision : bool
+        collision indicator
 
     """
 
@@ -70,16 +79,21 @@ class RaceCar(object):
         """
         Init function
 
-        Args:
-            params (dict): vehicle parameter dictionary, includes {'mu', 'C_Sf', 'C_Sr', 'lf', 'lr', 'h', 'm', 'I', 's_min', 's_max', 'sv_min', 'sv_max', 'v_switch', 'a_max': 9.51, 'v_min', 'v_max', 'length', 'width'}
-            is_ego (bool, default=False): ego identifier
-            time_step (float, default=0.01): physics sim time step
-            num_beams (int, default=1080): number of beams in the laser scan
-            fov (float, default=4.7): field of view of the laser
-            lidar_dist (float, default=0): vertical distance between LiDAR and backshaft
+        Parameters
+        ----------
+        params : dict
+            vehicle parameter dictionary, includes {'mu', 'C_Sf', 'C_Sr', 'lf', 'lr', 'h', 'm', 'I', 's_min', 's_max', 'sv_min', 'sv_max', 'v_switch', 'a_max': 9.51, 'v_min', 'v_max', 'length', 'width'}
+        is_ego : bool, default False
+            ego identifier
+        time_step : float, default 0.01
+            physics sim time step
+        num_beams : int, default 1080
+            number of beams in the laser scan
+        fov : float, default 4.7
+            field of view of the laser
+        lidar_dist : float, default 0
+            vertical distance between LiDAR and backshaft
 
-        Returns:
-            None
         """
 
         # initialization
@@ -162,33 +176,37 @@ class RaceCar(object):
         Updates the physical parameters of the vehicle
         Note that does not need to be called at initialization of class anymore
 
-        Args:
-            params (dict): new parameters for the vehicle
+        Parameters
+        ----------
+        params : dict
+            new parameters for the vehicle
 
-        Returns:
-            None
         """
         self.params = params
     
     def set_map(self, map_path, map_ext):
         """
         Sets the map for scan simulator
-        
-        Args:
-            map_path (str): absolute path to the map yaml file
-            map_ext (str): extension of the map image file
+
+        Parameters
+        ----------
+        map_path : str
+            absolute path to the map yaml file
+        map_ext : str
+            extension of the map image file
+
         """
         RaceCar.scan_simulator.set_map(map_path, map_ext)
 
     def reset(self, pose):
         """
         Resets the vehicle to a pose
-        
-        Args:
-            pose (np.ndarray (3, )): pose to reset the vehicle to
 
-        Returns:
-            None
+        Parameters
+        ----------
+        pose : np.ndarray (3,)
+            Pose to reset the vehicle to [x, y, theta].
+
         """
         # clear control inputs
         self.accel = 0.0
@@ -207,11 +225,14 @@ class RaceCar(object):
         """
         Ray cast onto other agents in the env, modify original scan
 
-        Args:
-            scan (np.ndarray, (n, )): original scan range array
+        Parameters
+        ----------
+        scan : np.ndarray (n,)
+            Original scan range array.
 
-        Returns:
-            new_scan (np.ndarray, (n, )): modified scan
+        Returns
+        -------
+
         """
 
         # starting from original scan
@@ -233,11 +254,10 @@ class RaceCar(object):
 
         state is [x, y, steer_angle, vel, yaw_angle, yaw_rate, slip_angle]
 
-        Args:
-            current_scan
+        Parameters
+        ----------
+        current_scan
 
-        Returns:
-            None
         """
         
         in_collision = check_ttc_jit(current_scan, self.state[3], self.scan_angles, self.cosines, self.side_distances, self.ttc_thresh)
@@ -257,12 +277,17 @@ class RaceCar(object):
         """
         Steps the vehicle's physical simulation
 
-        Args:
-            steer (float): desired steering angle
-            vel (float): desired longitudinal velocity
+        Parameters
+        ----------
+        steer : float
+            desired steering angle
+        vel : float
+            desired longitudinal velocity
 
-        Returns:
-            current_scan
+        Returns
+        -------
+        current_scan
+
         """
 
         # state is [x, y, steer_angle, vel, yaw_angle, yaw_rate, slip_angle]
@@ -416,11 +441,11 @@ class RaceCar(object):
         """
         Updates the vehicle's information on other vehicles
 
-        Args:
-            opp_poses (np.ndarray(num_other_agents, 3)): updated poses of other agents
+        Parameters
+        ----------
+        opp_poses : np.ndarray (num_other_agents, 3)
+            Updated poses of other agents.
 
-        Returns:
-            None
         """
         self.opp_poses = opp_poses
 
@@ -430,12 +455,11 @@ class RaceCar(object):
         Steps the vehicle's laser scan simulation
         Separated from update_pose because needs to update scan based on NEW poses of agents in the environment
 
-        Args:
-            agent scans list (modified in-place),
-            agent index (int)
+        Parameters
+        ----------
+        agent_scans_list : modified in-place
+        agent index : int
 
-        Returns:
-            None
         """
 
         current_scan = agent_scans[agent_index]
@@ -452,11 +476,15 @@ class Simulator(object):
     """
     Simulator class, handles the interaction and update of all vehicles in the environment
 
-    Data Members:
-        num_agents (int): number of agents in the environment
-        time_step (float): physics time step
+    Attributes
+    ----------
+    num_agents : int
+        number of agents in the environment
+    time_step : float
+        physics time step
         agent_poses (np.ndarray(num_agents, 3)): all poses of all agents
-        agents (list[RaceCar]): container for RaceCar objects
+    agents : list[RaceCar]
+        container for RaceCar objects
         collisions (np.ndarray(num_agents, )): array of collision indicator for each agent
         collision_idx (np.ndarray(num_agents, )): which agent is each agent in collision with
 
@@ -466,16 +494,21 @@ class Simulator(object):
         """
         Init function
 
-        Args:
-            params (dict): vehicle parameter dictionary, includes {'mu', 'C_Sf', 'C_Sr', 'lf', 'lr', 'h', 'm', 'I', 's_min', 's_max', 'sv_min', 'sv_max', 'v_switch', 'a_max', 'v_min', 'v_max', 'length', 'width'}
-            num_agents (int): number of agents in the environment
-            seed (int): seed of the rng in scan simulation
-            time_step (float, default=0.01): physics time step
-            ego_idx (int, default=0): ego vehicle's index in list of agents
-            lidar_dist (float, default=0): vertical distance between LiDAR and backshaft
+        Parameters
+        ----------
+        params : dict
+            vehicle parameter dictionary, includes {'mu', 'C_Sf', 'C_Sr', 'lf', 'lr', 'h', 'm', 'I', 's_min', 's_max', 'sv_min', 'sv_max', 'v_switch', 'a_max', 'v_min', 'v_max', 'length', 'width'}
+        num_agents : int
+            number of agents in the environment
+        seed : int
+            seed of the rng in scan simulation
+        time_step : float, default 0.01
+            physics time step
+        ego_idx : int, default 0
+            ego vehicle's index in list of agents
+        lidar_dist : float, default 0
+            vertical distance between LiDAR and backshaft
 
-        Returns:
-            None
         """
         self.num_agents = num_agents
         self.seed = seed
@@ -500,12 +533,13 @@ class Simulator(object):
         """
         Sets the map of the environment and sets the map for scan simulator of each agent
 
-        Args:
-            map_path (str): path to the map yaml file
-            map_ext (str): extension for the map image file
+        Parameters
+        ----------
+        map_path : str
+            path to the map yaml file
+        map_ext : str
+            extension for the map image file
 
-        Returns:
-            None
         """
         for agent in self.agents:
             agent.set_map(map_path, map_ext)
@@ -515,12 +549,13 @@ class Simulator(object):
         """
         Updates the params of agents, if an index of an agent is given, update only that agent's params
 
-        Args:
-            params (dict): dictionary of params, see details in docstring of __init__
-            agent_idx (int, default=-1): index for agent that needs param update, if negative, update all agents
+        Parameters
+        ----------
+        params : dict
+            dictionary of params, see details in docstring of __init__
+        agent_idx : int, default -1
+            index for agent that needs param update, if negative, update all agents
 
-        Returns:
-            None
         """
         if agent_idx < 0:
             # update params for all
@@ -537,11 +572,6 @@ class Simulator(object):
         """
         Checks for collision between agents using GJK and agents' body vertices
 
-        Args:
-            None
-
-        Returns:
-            None
         """
         # get vertices of all agents
         all_vertices = np.empty((self.num_agents, 4, 2))
@@ -554,11 +584,17 @@ class Simulator(object):
         """
         Steps the simulation environment
 
-        Args:
-            control_inputs (np.ndarray (num_agents, 2)): control inputs of all agents, first column is desired steering angle, second column is desired velocity
-        
-        Returns:
-            observations (dict): dictionary for observations: poses of agents, current laser scan of each agent, collision indicators, etc.
+        Parameters
+        ----------
+        control_inputs : np.ndarray (num_agents, 2)
+            Control inputs of all agents, first column is desired steering
+            angle, second column is desired velocity.
+
+        Returns
+        -------
+        observations : dict
+            dictionary for observations: poses of agents, current laser scan of each agent, collision indicators, etc.
+
         """
 
 
@@ -615,11 +651,11 @@ class Simulator(object):
         """
         Resets the simulation environment by given poses
 
-        Arges:
-            poses (np.ndarray (num_agents, 3)): poses to reset agents to
+        Parameters
+        ----------
+        poses : np.ndarray (num_agents, 3)
+            Poses to reset agents to. Each row is [x, y, theta].
 
-        Returns:
-            None
         """
         
         if poses.shape[0] != self.num_agents:

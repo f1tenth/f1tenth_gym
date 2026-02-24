@@ -36,11 +36,14 @@ def perpendicular(pt):
     """
     Return a 2-vector's perpendicular vector
 
-    Args:
-        pt (np.ndarray, (2,)): input vector
+    Parameters
+    ----------
+    pt : np.ndarray (2,)
+        Input vector.
 
-    Returns:
-        pt (np.ndarray, (2,)): perpendicular vector
+    Returns
+    -------
+
     """
     temp = pt[0]
     pt[0] = pt[1]
@@ -53,11 +56,18 @@ def tripleProduct(a, b, c):
     """
     Return triple product of three vectors
 
-    Args:
-        a, b, c (np.ndarray, (2,)): input vectors
+    Parameters
+    ----------
+    a : np.ndarray (2,)
+        First input vector.
+    b : np.ndarray (2,)
+        Second input vector.
+    c : np.ndarray (2,)
+        Third input vector.
 
-    Returns:
-        (np.ndarray, (2,)): triple product
+    Returns
+    -------
+
     """
     ac = a.dot(c)
     bc = b.dot(c)
@@ -69,11 +79,14 @@ def avgPoint(vertices):
     """
     Return the average point of multiple vertices
 
-    Args:
-        vertices (np.ndarray, (n, 2)): the vertices we want to find avg on
+    Parameters
+    ----------
+    vertices : np.ndarray (n, 2)
+        The vertices to find average of.
 
-    Returns:
-        avg (np.ndarray, (2,)): average point of the vertices
+    Returns
+    -------
+
     """
     return np.sum(vertices, axis=0)/vertices.shape[0]
 
@@ -83,11 +96,18 @@ def indexOfFurthestPoint(vertices, d):
     """
     Return the index of the vertex furthest away along a direction in the list of vertices
 
-    Args:
-        vertices (np.ndarray, (n, 2)): the vertices we want to find avg on
+    Parameters
+    ----------
+    vertices : np.ndarray (n, 2)
+        The vertices to search.
+    d : np.ndarray (2,)
+        Direction vector.
 
-    Returns:
-        idx (int): index of the furthest point
+    Returns
+    -------
+    idx : int
+        index of the furthest point
+
     """
     return np.argmax(vertices.dot(d))
 
@@ -97,13 +117,18 @@ def support(vertices1, vertices2, d):
     """
     Minkowski sum support function for GJK
 
-    Args:
-        vertices1 (np.ndarray, (n, 2)): vertices of the first body
-        vertices2 (np.ndarray, (n, 2)): vertices of the second body
-        d (np.ndarray, (2, )): direction to find the support along
+    Parameters
+    ----------
+    vertices1 : np.ndarray (n, 2)
+        Vertices of the first body.
+    vertices2 : np.ndarray (n, 2)
+        Vertices of the second body.
+    d : np.ndarray (2,)
+        Direction to find the support along.
 
-    Returns:
-        support (np.ndarray, (n, 2)): Minkowski sum
+    Returns
+    -------
+
     """
     i = indexOfFurthestPoint(vertices1, d)
     j = indexOfFurthestPoint(vertices2, -d)
@@ -115,12 +140,18 @@ def collision(vertices1, vertices2):
     """
     GJK test to see whether two bodies overlap
 
-    Args:
-        vertices1 (np.ndarray, (n, 2)): vertices of the first body
-        vertices2 (np.ndarray, (n, 2)): vertices of the second body
+    Parameters
+    ----------
+    vertices1 : np.ndarray (n, 2)
+        Vertices of the first body.
+    vertices2 : np.ndarray (n, 2)
+        Vertices of the second body.
 
-    Returns:
-        overlap (boolean): True if two bodies collide
+    Returns
+    -------
+    overlap : boolean
+        True if two bodies collide
+
     """
     index = 0
     simplex = np.empty((3, 2))
@@ -186,12 +217,14 @@ def collision_multiple(vertices):
     """
     Check pair-wise collisions for all provided vertices
 
-    Args:
-        vertices (np.ndarray (num_bodies, 4, 2)): all vertices for checking pair-wise collision
+    Parameters
+    ----------
+    vertices : np.ndarray (num_bodies, 4, 2)
+        All vertices for checking pair-wise collision.
 
-    Returns:
-        collisions (np.ndarray (num_vertices, )): whether each body is in collision
-        collision_idx (np.ndarray (num_vertices, )): which index of other body is each index's body is in collision, -1 if not in collision
+    Returns
+    -------
+
     """
     collisions = np.zeros((vertices.shape[0], ))
     collision_idx = -1 * np.ones((vertices.shape[0], ))
@@ -220,11 +253,11 @@ def get_trmtx(pose):
     """
     Get transformation matrix of vehicle frame -> global frame
 
-    Args:
-        pose (np.ndarray (3, )): current pose of the vehicle
+    Parameters
+    ----------
+    pose : np.ndarray (3,)
+        Current pose of the vehicle.
 
-    return:
-        H (np.ndarray (4, 4)): transformation matrix
     """
     x = pose[0]
     y = pose[1]
@@ -239,13 +272,16 @@ def get_vertices(pose, length, width):
     """
     Utility function to return vertices of the car body given pose and size
 
-    Args:
-        pose (np.ndarray, (3, )): current world coordinate pose of the vehicle
-        length (float): car length
-        width (float): car width
+    Parameters
+    ----------
+    length : float
+        car length
+    width : float
+        car width
 
-    Returns:
-        vertices (np.ndarray, (4, 2)): corner vertices of the vehicle body
+    Returns
+    -------
+
     """
     H = get_trmtx(pose)
     rl = H.dot(np.asarray([[-length/2],[width/2],[0.], [1.]])).flatten()
