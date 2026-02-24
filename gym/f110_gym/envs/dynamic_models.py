@@ -21,27 +21,54 @@ Author: Hongrui Zheng
 """
 
 import numpy as np
-from numba import njit
+from numba import njit, types
+from numba.typed import Dict
 
 import unittest
 import time
 
+
+# Keys expected in the params typed dict for dynamics functions:
+# 'mu', 'C_Sf', 'C_Sr', 'lf', 'lr', 'h', 'm', 'I',
+# 's_min', 's_max', 'sv_min', 'sv_max', 'v_switch', 'a_max', 'v_min', 'v_max'
+
+def create_numba_params(params_dict):
+    """
+    Convert a plain Python dict of vehicle parameters to a numba typed Dict.
+
+        Args:
+            params_dict (dict): plain Python dictionary with string keys and float values
+
+        Returns:
+            numba_dict (numba.typed.Dict): typed dictionary compatible with njit functions
+    """
+    numba_dict = Dict.empty(
+        key_type=types.unicode_type,
+        value_type=types.float64,
+    )
+    for key, value in params_dict.items():
+        numba_dict[key] = float(value)
+    return numba_dict
+
 @njit(cache=True)
-def accl_constraints(vel, accl, v_switch, a_max, v_min, v_max):
+def accl_constraints(vel, accl, params):
     """
     Acceleration constraints, adjusts the acceleration based on constraints
 
         Args:
             vel (float): current velocity of the vehicle
             accl (float): unconstraint desired acceleration
-            v_switch (float): switching velocity (velocity at which the acceleration is no longer able to create wheel spin)
-            a_max (float): maximum allowed acceleration
-            v_min (float): minimum allowed velocity
-            v_max (float): maximum allowed velocity
+            params (numba.typed.Dict): vehicle parameter dictionary containing
+                v_switch, a_max, v_min, v_max
 
         Returns:
             accl (float): adjusted acceleration
     """
+
+    v_switch = params['v_switch']
+    a_max = params['a_max']
+    v_min = params['v_min']
+    v_max = params['v_max']
 
     # positive accl limit
     if vel > v_switch:
@@ -60,21 +87,24 @@ def accl_constraints(vel, accl, v_switch, a_max, v_min, v_max):
     return accl
 
 @njit(cache=True)
-def steering_constraint(steering_angle, steering_velocity, s_min, s_max, sv_min, sv_max):
+def steering_constraint(steering_angle, steering_velocity, params):
     """
     Steering constraints, adjusts the steering velocity based on constraints
 
         Args:
             steering_angle (float): current steering_angle of the vehicle
             steering_velocity (float): unconstraint desired steering_velocity
-            s_min (float): minimum steering angle
-            s_max (float): maximum steering angle
-            sv_min (float): minimum steering velocity
-            sv_max (float): maximum steering velocity
+            params (numba.typed.Dict): vehicle parameter dictionary containing
+                s_min, s_max, sv_min, sv_max
 
         Returns:
             steering_velocity (float): adjusted steering velocity
     """
+
+    s_min = params['s_min']
+    s_max = params['s_max']
+    sv_min = params['sv_min']
+    sv_max = params['sv_max']
 
     # constraint steering velocity
     if (steering_angle <= s_min and steering_velocity <= 0) or (steering_angle >= s_max and steering_velocity >= 0):
@@ -88,7 +118,7 @@ def steering_constraint(steering_angle, steering_velocity, s_min, s_max, sv_min,
 
 
 @njit(cache=True)
-def vehicle_dynamics_ks(x, u_init, mu, C_Sf, C_Sr, lf, lr, h, m, I, s_min, s_max, sv_min, sv_max, v_switch, a_max, v_min, v_max):
+def vehicle_dynamics_ks(x, u_init, params):
     """
     Single Track Kinematic Vehicle Dynamics.
 
@@ -102,15 +132,16 @@ def vehicle_dynamics_ks(x, u_init, mu, C_Sf, C_Sr, lf, lr, h, m, I, s_min, s_max
             u (numpy.ndarray (2, )): control input vector (u1, u2)
                 u1: steering angle velocity of front wheels
                 u2: longitudinal acceleration
+            params (numba.typed.Dict): vehicle parameter dictionary
 
         Returns:
             f (numpy.ndarray): right hand side of differential equations
     """
     # wheelbase
-    lwb = lf + lr
+    lwb = params['lf'] + params['lr']
 
     # constraints
-    u = np.array([steering_constraint(x[2], u_init[0], s_min, s_max, sv_min, sv_max), accl_constraints(x[3], u_init[1], v_switch, a_max, v_min, v_max)])
+    u = np.array([steering_constraint(x[2], u_init[0], params), accl_constraints(x[3], u_init[1], params)])
 
     # system dynamics
     f = np.array([x[3]*np.cos(x[4]),
@@ -121,7 +152,7 @@ def vehicle_dynamics_ks(x, u_init, mu, C_Sf, C_Sr, lf, lr, h, m, I, s_min, s_max
     return f
 
 @njit(cache=True)
-def vehicle_dynamics_st(x, u_init, mu, C_Sf, C_Sr, lf, lr, h, m, I, s_min, s_max, sv_min, sv_max, v_switch, a_max, v_min, v_max):
+def vehicle_dynamics_st(x, u_init, params):
     """
     Single Track Dynamic Vehicle Dynamics.
 
@@ -137,16 +168,25 @@ def vehicle_dynamics_st(x, u_init, mu, C_Sf, C_Sr, lf, lr, h, m, I, s_min, s_max
             u (numpy.ndarray (2, )): control input vector (u1, u2)
                 u1: steering angle velocity of front wheels
                 u2: longitudinal acceleration
+            params (numba.typed.Dict): vehicle parameter dictionary
 
         Returns:
             f (numpy.ndarray): right hand side of differential equations
     """
+    mu = params['mu']
+    C_Sf = params['C_Sf']
+    C_Sr = params['C_Sr']
+    lf = params['lf']
+    lr = params['lr']
+    h = params['h']
+    m = params['m']
+    I = params['I']
 
     # gravity constant m/s^2
     g = 9.81
 
     # constraints
-    u = np.array([steering_constraint(x[2], u_init[0], s_min, s_max, sv_min, sv_max), accl_constraints(x[3], u_init[1], v_switch, a_max, v_min, v_max)])
+    u = np.array([steering_constraint(x[2], u_init[0], params), accl_constraints(x[3], u_init[1], params)])
 
     # switch to kinematic model for small velocities
     if abs(x[3]) < 0.5:
@@ -155,7 +195,7 @@ def vehicle_dynamics_st(x, u_init, mu, C_Sf, C_Sr, lf, lr, h, m, I, s_min, s_max
 
         # system dynamics
         x_ks = x[0:5]
-        f_ks = vehicle_dynamics_ks(x_ks, u, mu, C_Sf, C_Sr, lf, lr, h, m, I, s_min, s_max, sv_min, sv_max, v_switch, a_max, v_min, v_max)
+        f_ks = vehicle_dynamics_ks(x_ks, u, params)
         f = np.hstack((f_ks, np.array([u[1]/lwb*np.tan(x[2])+x[3]/(lwb*np.cos(x[2])**2)*u[0],
         0])))
 
@@ -220,37 +260,35 @@ def pid(speed, steer, current_speed, current_steer, max_sv, max_a, max_v, min_v)
 
     return accl, sv
 
-def func_KS(x, t, u, mu, C_Sf, C_Sr, lf, lr, h, m, I, s_min, s_max, sv_min, sv_max, v_switch, a_max, v_min, v_max):
-    f = vehicle_dynamics_ks(x, u, mu, C_Sf, C_Sr, lf, lr, h, m, I, s_min, s_max, sv_min, sv_max, v_switch, a_max, v_min, v_max)
+def func_KS(x, t, u, params):
+    f = vehicle_dynamics_ks(x, u, params)
     return f
 
-def func_ST(x, t, u, mu, C_Sf, C_Sr, lf, lr, h, m, I, s_min, s_max, sv_min, sv_max, v_switch, a_max, v_min, v_max):
-    f = vehicle_dynamics_st(x, u, mu, C_Sf, C_Sr, lf, lr, h, m, I, s_min, s_max, sv_min, sv_max, v_switch, a_max, v_min, v_max)
+def func_ST(x, t, u, params):
+    f = vehicle_dynamics_st(x, u, params)
     return f
 
 class DynamicsTest(unittest.TestCase):
     def setUp(self):
         # test params
-        self.mu = 1.0489
-        self.C_Sf = 21.92/1.0489
-        self.C_Sr = 21.92/1.0489
-        self.lf = 0.3048*3.793293
-        self.lr = 0.3048*4.667707
-        self.h = 0.3048*2.01355
-        self.m = 4.4482216152605/0.3048*74.91452
-        self.I = 4.4482216152605*0.3048*1321.416
-
-        #steering constraints
-        self.s_min = -1.066  #minimum steering angle [rad]
-        self.s_max = 1.066  #maximum steering angle [rad]
-        self.sv_min = -0.4  #minimum steering velocity [rad/s]
-        self.sv_max = 0.4  #maximum steering velocity [rad/s]
-
-        #longitudinal constraints
-        self.v_min = -13.6  #minimum velocity [m/s]
-        self.v_max = 50.8  #minimum velocity [m/s]
-        self.v_switch = 7.319  #switching velocity [m/s]
-        self.a_max = 11.5  #maximum absolute acceleration [m/s^2]
+        self.params = create_numba_params({
+            'mu': 1.0489,
+            'C_Sf': 21.92/1.0489,
+            'C_Sr': 21.92/1.0489,
+            'lf': 0.3048*3.793293,
+            'lr': 0.3048*4.667707,
+            'h': 0.3048*2.01355,
+            'm': 4.4482216152605/0.3048*74.91452,
+            'I': 4.4482216152605*0.3048*1321.416,
+            's_min': -1.066,
+            's_max': 1.066,
+            'sv_min': -0.4,
+            'sv_max': 0.4,
+            'v_min': -13.6,
+            'v_max': 50.8,
+            'v_switch': 7.319,
+            'a_max': 11.5,
+        })
 
     def test_derivatives(self):
         # ground truth derivatives
@@ -265,12 +303,12 @@ class DynamicsTest(unittest.TestCase):
         acc = 0.63*g
         u = np.array([v_delta,  acc])
 
-        f_ks = vehicle_dynamics_ks(x_ks, u, self.mu, self.C_Sf, self.C_Sr, self.lf, self.lr, self.h, self.m, self.I, self.s_min, self.s_max, self.sv_min, self.sv_max, self.v_switch, self.a_max, self.v_min, self.v_max)
-        f_st = vehicle_dynamics_st(x_st, u, self.mu, self.C_Sf, self.C_Sr, self.lf, self.lr, self.h, self.m, self.I, self.s_min, self.s_max, self.sv_min, self.sv_max, self.v_switch, self.a_max, self.v_min, self.v_max)
+        f_ks = vehicle_dynamics_ks(x_ks, u, self.params)
+        f_st = vehicle_dynamics_st(x_st, u, self.params)
 
         start = time.time()
         for i in range(10000):
-            f_st = vehicle_dynamics_st(x_st, u, self.mu, self.C_Sf, self.C_Sr, self.lf, self.lr, self.h, self.m, self.I, self.s_min, self.s_max, self.sv_min, self.sv_max, self.v_switch, self.a_max, self.v_min, self.v_max)
+            f_st = vehicle_dynamics_st(x_st, u, self.params)
         duration = time.time() - start
         avg_fps = 10000/duration
 
@@ -303,9 +341,9 @@ class DynamicsTest(unittest.TestCase):
         u = np.array([0., 0.])
 
         # simulate single-track model
-        x_roll_st = odeint(func_ST, x0_ST, t, args=(u, self.mu, self.C_Sf, self.C_Sr, self.lf, self.lr, self.h, self.m, self.I, self.s_min, self.s_max, self.sv_min, self.sv_max, self.v_switch, self.a_max, self.v_min, self.v_max))
+        x_roll_st = odeint(func_ST, x0_ST, t, args=(u, self.params))
         # simulate kinematic single-track model
-        x_roll_ks = odeint(func_KS, x0_KS, t, args=(u, self.mu, self.C_Sf, self.C_Sr, self.lf, self.lr, self.h, self.m, self.I, self.s_min, self.s_max, self.sv_min, self.sv_max, self.v_switch, self.a_max, self.v_min, self.v_max))
+        x_roll_ks = odeint(func_KS, x0_KS, t, args=(u, self.params))
 
         self.assertTrue(all(x_roll_st[-1]==x0_ST))
         self.assertTrue(all(x_roll_ks[-1]==x0_KS))
@@ -335,9 +373,9 @@ class DynamicsTest(unittest.TestCase):
         u = np.array([0., -0.7*g])
 
         # simulate single-track model
-        x_dec_st = odeint(func_ST, x0_ST, t, args=(u, self.mu, self.C_Sf, self.C_Sr, self.lf, self.lr, self.h, self.m, self.I, self.s_min, self.s_max, self.sv_min, self.sv_max, self.v_switch, self.a_max, self.v_min, self.v_max))
+        x_dec_st = odeint(func_ST, x0_ST, t, args=(u, self.params))
         # simulate kinematic single-track model
-        x_dec_ks = odeint(func_KS, x0_KS, t, args=(u, self.mu, self.C_Sf, self.C_Sr, self.lf, self.lr, self.h, self.m, self.I, self.s_min, self.s_max, self.sv_min, self.sv_max, self.v_switch, self.a_max, self.v_min, self.v_max))
+        x_dec_ks = odeint(func_KS, x0_KS, t, args=(u, self.params))
 
         # ground truth for single-track model
         x_dec_st_gt = [-3.4335000000000013, 0.0000000000000000, 0.0000000000000000, -6.8670000000000018, 0.0000000000000000, 0.0000000000000000, 0.0000000000000000]
@@ -373,9 +411,9 @@ class DynamicsTest(unittest.TestCase):
         u = np.array([0.15, 0.63*g])
 
         # simulate single-track model
-        x_acc_st = odeint(func_ST, x0_ST, t, args=(u, self.mu, self.C_Sf, self.C_Sr, self.lf, self.lr, self.h, self.m, self.I, self.s_min, self.s_max, self.sv_min, self.sv_max, self.v_switch, self.a_max, self.v_min, self.v_max))
+        x_acc_st = odeint(func_ST, x0_ST, t, args=(u, self.params))
         # simulate kinematic single-track model
-        x_acc_ks = odeint(func_KS, x0_KS, t, args=(u, self.mu, self.C_Sf, self.C_Sr, self.lf, self.lr, self.h, self.m, self.I, self.s_min, self.s_max, self.sv_min, self.sv_max, self.v_switch, self.a_max, self.v_min, self.v_max))
+        x_acc_ks = odeint(func_KS, x0_KS, t, args=(u, self.params))
 
         # ground truth for single-track model
         x_acc_st_gt = [3.0731976046859715, 0.2869835398304389, 0.1500000000000000, 6.1802999999999999, 0.1097747074946325, 0.3248268063223301, 0.0697547542798040]
@@ -410,9 +448,9 @@ class DynamicsTest(unittest.TestCase):
         u = np.array([0.15, 0.])
 
         # simulate single-track model
-        x_left_st = odeint(func_ST, x0_ST, t, args=(u, self.mu, self.C_Sf, self.C_Sr, self.lf, self.lr, self.h, self.m, self.I, self.s_min, self.s_max, self.sv_min, self.sv_max, self.v_switch, self.a_max, self.v_min, self.v_max))
+        x_left_st = odeint(func_ST, x0_ST, t, args=(u, self.params))
         # simulate kinematic single-track model
-        x_left_ks = odeint(func_KS, x0_KS, t, args=(u, self.mu, self.C_Sf, self.C_Sr, self.lf, self.lr, self.h, self.m, self.I, self.s_min, self.s_max, self.sv_min, self.sv_max, self.v_switch, self.a_max, self.v_min, self.v_max))
+        x_left_ks = odeint(func_KS, x0_KS, t, args=(u, self.params))
 
         # ground truth for single-track model
         x_left_st_gt = [0.0000000000000000, 0.0000000000000000, 0.1500000000000000, 0.0000000000000000, 0.0000000000000000, 0.0000000000000000, 0.0000000000000000]
