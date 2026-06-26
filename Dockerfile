@@ -24,11 +24,9 @@ FROM ubuntu:20.04
 
 ARG DEBIAN_FRONTEND="noninteractive"
 ENV LIBGL_ALWAYS_INDIRECT=1
-ENV NVIDIA_VISIBLE_DEVICES \
-    ${NVIDIA_VISIBLE_DEVICES:-all}
+ENV NVIDIA_VISIBLE_DEVICES="all"
 
-ENV NVIDIA_DRIVER_CAPABILITIES \
-    ${NVIDIA_DRIVER_CAPABILITIES:+$NVIDIA_DRIVER_CAPABILITIES,}graphics
+ENV NVIDIA_DRIVER_CAPABILITIES="graphics,utility"
 
 RUN apt-get update --fix-missing && \
     apt-get install -y \
@@ -42,7 +40,7 @@ RUN apt-get update --fix-missing && \
                     fontconfig \
                     libfreetype6-dev
 
-RUN pip3 install --upgrade pip
+RUN pip3 install "pip<24.1"
 RUN pip3 install PyOpenGL \
                  PyOpenGL_accelerate
 
