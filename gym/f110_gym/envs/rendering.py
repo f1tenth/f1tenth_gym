@@ -62,13 +62,10 @@ class EnvRenderer(pyglet.window.Window):
         Returns:
             None
         """
-        conf = Config(sample_buffers=1,
-                      samples=4,
-                      depth_size=16,
-                      double_buffer=True)
+        #removed anti aliasing config, makes rendering easier on modern devices
+        conf = Config()
         super().__init__(width, height, config=conf, resizable=True, vsync=False, *args, **kwargs)
 
-        # gl init
         glClearColor(9/255, 32/255, 87/255, 1.)
 
         # initialize camera values
