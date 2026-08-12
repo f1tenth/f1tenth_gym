@@ -1,0 +1,7 @@
+.git
+.github
+docs
+**/__pycache__
+*.egg-info
+.pytest_cache
+Dockerfile
