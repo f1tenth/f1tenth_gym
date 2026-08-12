@@ -61,8 +61,13 @@ RUN pip3 install --upgrade pip
 
 COPY . /f1tenth_gym
 
-RUN cd /f1tenth_gym && \
-    pip3 install -e .
+# arm64: PyQt6 6.7.1 is the newest release with an aarch64 wheel compatible
+# with Ubuntu 22.04's glibc 2.35 — newer ones need glibc >= 2.39, so pip
+# falls back to the sdist and fails looking for qmake (seen on Apple
+# Silicon). x86_64 is unaffected by the constraint.
+RUN echo 'pyqt6 == 6.7.1; platform_machine == "aarch64"' > /tmp/pip-constraints.txt && \
+    cd /f1tenth_gym && \
+    pip3 install -c /tmp/pip-constraints.txt -e .
 
 # Smoke test: step the env and render a frame offscreen. Also bakes the
 # default track (downloaded on first use) into the image.
