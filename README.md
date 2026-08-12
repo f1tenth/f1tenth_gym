@@ -46,10 +46,17 @@ python examples/waypoint_follow.py
 
 ### Using Docker
 
-A Dockerfile is also provided with support for the GUI with nvidia-docker (nvidia GPU required):
+A Dockerfile is also provided. The image renders headless by default (Qt offscreen), no GPU required:
 ```bash
-docker build -t f1tenth_gym_container -f Dockerfile .
-docker run --gpus all -it -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix f1tenth_gym_container
+docker build -t f1tenth_gym .
+docker run -it f1tenth_gym
+# inside the container:
+python3 examples/waypoint_follow.py
+```
+
+To render to a display instead, forward your X server and override the Qt platform:
+```bash
+docker run -it -e QT_QPA_PLATFORM=xcb -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix f1tenth_gym
 ```
 
 ## Citing
