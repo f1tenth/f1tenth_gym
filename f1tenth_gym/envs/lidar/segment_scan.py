@@ -18,7 +18,7 @@ class SegmentScanSimulator2D:
             angle_min: First beam angle relative to heading, or None to derive it.
             angle_max: Last beam angle, or None to derive it.
             std_dev: Observation noise standard deviation, applied by ``scan``.
-            min_range: Lower bound used by the environment's observation clipping.
+            min_range: Threshold below which the environment reports zero.
             max_range: Longest reported range, and the radius the tile table covers.
             tile_size: Tile side in metres for the candidate table.
             device: ``"cpu"`` or ``"gpu"`` for the jitted kernel.

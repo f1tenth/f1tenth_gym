@@ -96,8 +96,8 @@ def observed_scan(
     """Apply the mutable environment's observed-range noise contract.
 
     Gaussian per-step noise and the episode-fixed bias are added first. Values
-    are then clipped to the configured sensor interval, after which dropout
-    replaces selected beams with exactly ``range_max``.
+    below ``range_min`` become zero and values above ``range_max`` are clipped,
+    after which dropout replaces selected beams with exactly ``range_max``.
     """
     expected = (config.num_agents, config.num_beams)
     if clean_ranges.shape != expected:
@@ -121,7 +121,8 @@ def observed_scan(
     )
     range_min = jnp.asarray(params.range_min, dtype=dtype)
     range_max = jnp.asarray(params.range_max, dtype=dtype)
-    observed = jnp.clip(observed, range_min, range_max)
+    observed = jnp.minimum(observed, range_max)
+    observed = jnp.where(observed < range_min, jnp.zeros_like(observed), observed)
     dropped = jax.random.uniform(dropout_key, expected, dtype=dtype) < jnp.asarray(
         params.dropout_prob, dtype=dtype
     )

@@ -30,6 +30,20 @@ def _env(**lidar):
 
 
 class TestLidarNoise(unittest.TestCase):
+    def test_ranges_below_min_are_zero(self):
+        base_env = _env()
+        limited_env = _env(range_min=29.9)
+        try:
+            base = _scan_at_fixed_pose(base_env)
+            limited = _scan_at_fixed_pose(limited_env)
+        finally:
+            base_env.close()
+            limited_env.close()
+
+        expected = np.where(base < 29.9, 0.0, base)
+        np.testing.assert_array_equal(limited, expected)
+        self.assertTrue(np.any(limited == 0.0))
+
     def test_dropout_sets_beams_to_max_range(self):
         base = _scan_at_fixed_pose(_env())
         base_frac = float((base >= _MAX - 1e-3).mean())

@@ -396,9 +396,10 @@ and selects a map row per environment.
 Clean exact scans use masked ray-tile candidates, the current LiDAR mounting
 calculation and simultaneous all-edge opponent occlusion. Runtime
 `range_max` must not exceed the ray table's preprocessed reach. Observed scans
-add key-driven Gaussian noise and reset-fixed per-beam bias, clip to the sensor
-interval, then replace dropped beams with `range_max`; the fixed bias lives in
-`ScanState` rather than structural config. Functional wall contact vmaps the
+add key-driven Gaussian noise and reset-fixed per-beam bias, zero values below
+`range_min`, cap values above `range_max`, then replace dropped beams with
+`range_max`; the fixed bias lives in `ScanState` rather than structural config.
+Functional wall contact vmaps the
 existing pure manifolds/Jacobi solver across agents and converts KS/ST native
 state to/from rigid-body velocity without host marshalling. It preserves the
 current host oracle's CoG tile lookup and its discarded speculative-only clamp;

@@ -483,7 +483,8 @@ class F110Simulator:
             noisy_scan = adjusted_scan + rng.normal(0.0, simulator.std_dev, size=simulator.num_beams)
             if lidar_cfg.range_bias_std > 0.0:
                 noisy_scan = noisy_scan + self.scan_bias[agent_idx]
-            noisy_scan = np.clip(noisy_scan, simulator.min_range, simulator.max_range)
+            noisy_scan = np.minimum(noisy_scan, simulator.max_range)
+            noisy_scan[noisy_scan < simulator.min_range] = 0.0
             if lidar_cfg.dropout_prob > 0.0:
                 dropped = rng.random(simulator.num_beams) < lidar_cfg.dropout_prob
                 noisy_scan[dropped] = simulator.max_range

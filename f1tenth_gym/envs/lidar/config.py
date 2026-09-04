@@ -24,7 +24,7 @@ class LiDARConfig:
         num_beams: Number of laser beams in the scan.
         angle_min: Start angle of scan in radians.
         angle_max: End angle of scan in radians.
-        range_min: Minimum range in meters, readings below are clipped.
+        range_min: Minimum range in meters; shorter readings are reported as zero.
         range_max: Maximum range in meters, readings above are clipped.
         noise_std: Standard deviation of Gaussian noise on range readings.
         dropout_prob: Per-beam, per-step probability that a beam returns a

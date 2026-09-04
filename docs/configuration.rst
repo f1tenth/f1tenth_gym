@@ -390,7 +390,8 @@ angle beyond ±π raises with a did-you-pass-degrees hint.
      - Must be ``<= π`` and ``> angle_min``.
    * - ``range_min``
      - ``0.0``
-     - Readings below are clipped; ``>= 0`` and ``< range_max``.
+     - Readings below this threshold are reported as ``0``; ``>= 0`` and
+       ``< range_max``.
    * - ``range_max``
      - ``30.0``
      - Readings above are clipped; ``> 0``.

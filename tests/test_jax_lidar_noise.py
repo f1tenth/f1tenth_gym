@@ -33,9 +33,9 @@ def scan_params(**updates):
 
 
 class TestObservedScanContract(unittest.TestCase):
-    def test_bias_then_clip_then_dropout_order(self):
+    def test_bias_then_range_limits_then_dropout_order(self):
         clean = jnp.array(
-            [[0.1, 1.0, 9.8, 10.0, 4.0], [0.3, 2.0, 9.5, 5.0, 7.0]],
+            [[0.1, 1.0, 9.8, 10.0, 4.0], [0.2, 2.0, 9.5, 5.0, 7.0]],
             dtype=jnp.float32,
         )
         bias = jnp.array(
@@ -46,8 +46,11 @@ class TestObservedScanContract(unittest.TestCase):
         actual = observed_scan(
             jax.random.key(1), clean, state, CONFIG, scan_params()
         )
-        expected = np.clip(np.asarray(clean + bias), 0.2, 10.0)
+        raw = np.asarray(clean + bias)
+        expected = np.where(raw < 0.2, 0.0, np.minimum(raw, 10.0))
         np.testing.assert_array_equal(actual, expected)
+        self.assertEqual(float(actual[0, 0]), 0.0)
+        self.assertAlmostEqual(float(actual[1, 0]), 0.2, places=6)
 
         params = scan_params(dropout_prob=0.5)
         key = jax.random.key(9)
