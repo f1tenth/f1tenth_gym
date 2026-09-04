@@ -222,6 +222,10 @@ class F110Env(gym.Env):
         self.render_config = None
 
         self.track = self._resolve_track()
+        # A track without a reference line has no Frenet frame and nothing to
+        # count laps against; run plain simulation instead of failing at reset.
+        if self.track.centerline is None:
+            self.compute_frenet = False
 
         self.sim = F110Simulator(
             env_config=self.env_config,
@@ -258,7 +262,11 @@ class F110Env(gym.Env):
         self._reward_prev_s = np.zeros((self.num_agents,))
         self.sim_time = 0.0
 
-        if self.loop_counter_mode is LoopCounterMode.WINDING_ANGLE and self.track is not None:
+        if (
+            self.loop_counter_mode is LoopCounterMode.WINDING_ANGLE
+            and self.track is not None
+            and self.track.centerline is not None
+        ):
             cl = self.track.centerline
             # Polygon area centroid (Shoelace formula) — true centroid of the enclosed area,
             # guaranteed inside for convex tracks and robust for typical racing circuits.

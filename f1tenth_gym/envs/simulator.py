@@ -265,7 +265,11 @@ class F110Simulator:
                 [self.state.state[i, 0], self.state.state[i, 1], self.state.state[i, 4]],
                 dtype=np.float32,
             )
-            if self.config.simulation_config.compute_frenet_frame and self.track is not None:
+            if (
+                self.config.simulation_config.compute_frenet_frame
+                and self.track is not None
+                and self.track.centerline is not None
+            ):
                 # anchor Frenet at the CoG (standard_state), matching the
                 # observed pose_x/pose_y whatever the model's native frame
                 self.state.frenet[i] = np.array(
@@ -343,7 +347,11 @@ class F110Simulator:
         if self.contact is not None:
             self._resolve_contacts()
 
-        if self.config.simulation_config.compute_frenet_frame and self.track is not None:
+        if (
+            self.config.simulation_config.compute_frenet_frame
+            and self.track is not None
+            and self.track.centerline is not None
+        ):
             for agent_idx in range(self.num_agents):
                 # CoG-anchored (standard_state), matching the observed pose
                 std = self.state.standard_state[agent_idx]
