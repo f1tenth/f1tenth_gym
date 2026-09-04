@@ -1,6 +1,7 @@
 import os
 import time
 import unittest
+from types import SimpleNamespace
 from unittest import mock
 
 import numpy as np
@@ -11,8 +12,9 @@ from f1tenth_gym.envs.env_config import (
     SimulationConfig,
 )
 from f1tenth_gym.envs.f110_env import RenderClock
+from f1tenth_gym.envs.lidar import LiDARConfig
 from f1tenth_gym.envs.observation import ObservationType
-from f1tenth_gym.envs.rendering import make_renderer
+from f1tenth_gym.envs.rendering import make_lidar_scan_callback, make_renderer
 import gymnasium as gym
 
 # rgb_array/human rendering uses the GL backend, which needs an X display
@@ -194,6 +196,51 @@ class TestRenderConfigFields(unittest.TestCase):
             RenderConfig(window_size=0)
 
 
+class TestLidarCallback(unittest.TestCase):
+    def test_points_use_active_lr_and_the_full_lidar_transform(self):
+        class Capture:
+            def __init__(self, points):
+                self.points = points
+
+            def update(self, points):
+                self.points = points
+
+        class FakeRenderer:
+            def __init__(self):
+                self.params = SimpleNamespace(lr=0.2)
+                self.obs = {
+                    "agent_0": {
+                        "scan": np.array([1.0], dtype=np.float32),
+                        "std_state": np.array(
+                            [2.0, -1.0, 0.0, 0.0, np.pi / 2, 0.0, 0.0],
+                            dtype=np.float32,
+                        ),
+                    }
+                }
+                self.capture = None
+
+            def get_points_renderer(self, points, **_kwargs):
+                self.capture = Capture(points)
+                return self.capture
+
+        lidar = LiDARConfig(
+            num_beams=1,
+            angle_min=0.0,
+            angle_max=0.5,
+            base_link_to_lidar_tf=(0.3, 0.1, 0.25),
+        )
+        renderer = FakeRenderer()
+        callback = make_lidar_scan_callback("agent_0", lidar)
+        callback(renderer)
+
+        sensor_origin = np.array([1.9, -0.9])
+        heading = np.pi / 2 + 0.25
+        expected = sensor_origin + np.array([np.cos(heading), np.sin(heading)])
+        np.testing.assert_allclose(
+            renderer.capture.points[0], expected, atol=2.0e-7
+        )
+
+
 class TestNoDisplayGuidance(unittest.TestCase):
     """make_renderer must fail loudly with setup guidance when no display exists."""
 
@@ -270,5 +317,4 @@ class TestRenderClock(unittest.TestCase):
         self.assertTrue(clk.display_due())
         # immediate second call not due (1ms period not elapsed)
         self.assertFalse(clk.display_due())
-
 

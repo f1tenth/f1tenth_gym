@@ -321,6 +321,8 @@ and applies dropout. Collision response uses independent contact geometry.
 Build the ray table for at least the sensor's longest range. ``JaxSimulator``
 checks that invariant before constructing the traced scan parameters because a
 smaller table could silently omit a reachable wall. A larger preprocessed reach
-is safe. The functional calculation deliberately preserves the current
-simulator's numerical mounting transform: ``base_link_to_lidar_tf`` is applied
-directly to the supported model's CoG-referenced pose.
+is safe. ``base_link_to_lidar_tf`` is measured from ``base_link``, whereas the
+supported models use a different longitudinal origin. Both simulator paths
+therefore subtract the active vehicle's ``lr`` from the configured x offset.
+The functional path keeps ``lr`` traced, so the mount remains correct under
+batching and domain randomization.

@@ -17,7 +17,7 @@ from f1tenth_gym.envs.dynamic_models import (
 from f1tenth_gym.envs.dynamic_models.jax_core import DynamicsRuntimeParams
 from f1tenth_gym.envs.jax_core import CoreParams
 from f1tenth_gym.envs.episode import EpisodeParams
-from f1tenth_gym.envs.lidar.functional import ScanParams
+from f1tenth_gym.envs.lidar.functional import ScanParams, lidar_poses
 from f1tenth_gym.envs.dynamic_models.randomization import (
     ACTIVE_VEHICLE_FIELDS,
     ActiveVehicleParams,
@@ -258,6 +258,23 @@ class TestCoreReplacement(unittest.TestCase):
         self.assertAlmostEqual(
             float(base.body.centre_x),
             -float(VEHICLE.lr) + float(VEHICLE.collision_body_center_x),
+            places=6,
+        )
+        state = jnp.zeros((1, 7), dtype=jnp.float32)
+        base_lidar = lidar_poses(
+            state, base.scan, base.dynamics.vehicle.lr
+        )
+        updated_lidar = lidar_poses(
+            state, updated.scan, updated.dynamics.vehicle.lr
+        )
+        self.assertAlmostEqual(
+            float(base_lidar[0, 0]),
+            float(base.scan.offset_x) - float(VEHICLE.lr),
+            places=6,
+        )
+        self.assertAlmostEqual(
+            float(updated_lidar[0, 0]),
+            float(base.scan.offset_x) - 0.42,
             places=6,
         )
 

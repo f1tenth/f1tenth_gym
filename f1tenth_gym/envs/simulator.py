@@ -390,9 +390,13 @@ class F110Simulator:
         return ScanCache(angles=beam_angles)
 
 
-    def _lidar_pose_from_base(self, pose: np.ndarray) -> np.ndarray:
+    def _lidar_pose_from_cog(self, pose: np.ndarray) -> np.ndarray:
+        """Transform a model's CoG pose into the configured LiDAR frame."""
         tf = self.config.lidar_config.base_link_to_lidar_tf
-        dx, dy, dtheta = tf
+        # Model poses are CoG-referenced, while base_link is at the rear axle.
+        # ``lr`` is the longitudinal distance from the rear axle to the CoG.
+        dx = float(tf[0]) - float(self.vehicle_params.lr)
+        dy, dtheta = tf[1:]
         if dx == 0.0 and dy == 0.0 and dtheta == 0.0:
             return pose
         cos_yaw = math.cos(pose[2])
@@ -457,7 +461,7 @@ class F110Simulator:
 
         for agent_idx, simulator in enumerate(self.scan_sims):
             pose = self.state.poses[agent_idx]
-            scan_pose = self._lidar_pose_from_base(pose)
+            scan_pose = self._lidar_pose_from_cog(pose)
 
             # Clean wall scan, then opponent occlusion.
             scan_clean = simulator.scan(scan_pose, rng=None)

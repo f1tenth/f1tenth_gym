@@ -32,7 +32,8 @@ class LiDARConfig:
         range_bias_std: Std of a per-beam systematic range bias, drawn once per
             episode (reproducible with reset(seed=...)), modelling calibration
             error. Constant across a rollout, unlike noise_std.
-        base_link_to_lidar_tf: (x, y, yaw) offset from base_link in meters/radians.
+        base_link_to_lidar_tf: (x, y, yaw) offset from the rear-axle
+            base_link in meters/radians.
         scan_device: JAX device used for exact segment intersection. Async
             process vectorization must use a spawn context after JAX initializes.
 
@@ -50,7 +51,7 @@ class LiDARConfig:
     noise_std: float = 0.01
     dropout_prob: float = 0.0
     range_bias_std: float = 0.0
-    # (x, y, yaw) offset from base_link in meters/radians.
+    # (x, y, yaw) offset from the rear-axle base_link in meters/radians.
     base_link_to_lidar_tf: tuple[float, float, float] = (0.275, 0.0, 0.0)
     scan_device: str = "cpu"
 

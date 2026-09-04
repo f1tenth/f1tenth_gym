@@ -406,8 +406,9 @@ angle beyond ±π raises with a did-you-pass-degrees hint.
      - Std of a per-beam systematic bias drawn once per episode; ``>= 0``.
    * - ``base_link_to_lidar_tf``
      - ``(0.275, 0.0, 0.0)``
-     - ``(x, y, yaw)`` sensor offset from ``base_link`` in metres/radians.
-       Unvalidated.
+     - ``(x, y, yaw)`` sensor offset from ``base_link`` in metres/radians. The
+       simulator subtracts the active vehicle's ``lr`` from x when converting
+       it to the model state frame. Unvalidated.
    * - ``scan_device``
      - ``"cpu"``
      - ``"cpu"`` or ``"gpu"`` for the JAX segment-intersection kernel.

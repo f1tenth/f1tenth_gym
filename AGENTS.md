@@ -239,6 +239,9 @@ Supported model-native poses share one frame:
 - `ST` native `x/y` is CoG referenced and has state dimension 7.
 - `standard_state`, derived observations, and Frenet coordinates are also CoG
   referenced. The rear-axle KS equation remains a test oracle only.
+- `base_link_to_lidar_tf` is rear-axle referenced. Scan geometry resolves its
+  longitudinal component as `tf_x - lr` against the active vehicle, including
+  per-episode domain-randomization draws.
 
 `DynamicModel.get_initial_state()` currently attaches `state_dim` and
 `control_dim` to the enum member as a side effect. The simulator calls it
@@ -297,7 +300,7 @@ rather than equality.
 | `envs/rendering/` | PyQt6/OpenGL renderer, objects, callbacks |
 | `envs/wrappers.py` | single-agent and observation-delay wrappers |
 | `examples/` | waypoint following, video, telemetry, synthetic tracks, native JAX PPO |
-| `tests/` | 710 collected tests across 55 `test_*.py` files |
+| `tests/` | 714 collected tests across 55 `test_*.py` files |
 | `docs/` | Sphinx user documentation plus behavioral measurements |
 
 ## Configuration model

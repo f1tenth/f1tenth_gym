@@ -4,6 +4,7 @@ The range is two ordinary ``VehicleParameters`` (low/high); a field with
 ``low == high`` is not randomized.
 """
 import unittest
+from unittest import mock
 
 import gymnasium as gym
 import numpy as np
@@ -96,6 +97,19 @@ class TestDomainRandomization(unittest.TestCase):
         env.reset(seed=2)
         self.assertEqual(env.unwrapped.vehicle_params.m, BASE.m)
         env.close()
+
+    def test_randomized_lr_is_forwarded_to_the_renderer(self):
+        env = _mk(_dr(lr=(0.1, 0.3)))
+        renderer = mock.Mock()
+        env.unwrapped.renderer = renderer
+        try:
+            env.reset(seed=2)
+            renderer.update_params.assert_called_once_with(
+                env.unwrapped.sim.vehicle_params
+            )
+        finally:
+            env.unwrapped.renderer = None
+            env.close()
 
     def test_config_stays_hashable(self):
         # VehicleParameters is frozen and hashable, so an EnvConfig carrying a DR

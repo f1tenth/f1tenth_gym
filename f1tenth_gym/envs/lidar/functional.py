@@ -138,12 +138,22 @@ def beam_angles(config: ScanConfig, dtype: Any = jnp.float32) -> jax.Array:
     ) * jnp.asarray(increment, dtype=dtype)
 
 
-def lidar_poses(model_state: jax.Array, params: ScanParams) -> jax.Array:
-    """Transform supported model states' CoG poses to their LiDAR frames."""
+def lidar_poses(
+    model_state: jax.Array,
+    params: ScanParams,
+    rear_axle_to_cog: Any,
+) -> jax.Array:
+    """Transform supported model states' CoG poses to their LiDAR frames.
+
+    ``ScanParams`` retains the configured base-link-relative mount. Supported
+    model poses are CoG-referenced, so the active vehicle's ``lr`` translates
+    that mount back from the rear-axle ``base_link`` before applying it.
+    """
     base_poses = model_state[:, jnp.asarray((0, 1, 4))]
     offset = jnp.stack(
         (
-            jnp.asarray(params.offset_x, dtype=model_state.dtype),
+            jnp.asarray(params.offset_x, dtype=model_state.dtype)
+            - jnp.asarray(rear_axle_to_cog, dtype=model_state.dtype),
             jnp.asarray(params.offset_y, dtype=model_state.dtype),
             jnp.asarray(params.offset_yaw, dtype=model_state.dtype),
         )
@@ -199,6 +209,7 @@ def clean_scan(
     body: BodyParams,
     config: ScanConfig,
     params: ScanParams,
+    rear_axle_to_cog: Any,
 ) -> jax.Array:
     """Compute noise-free wall ranges shortened by opponent bodies."""
     if model_state.ndim != 2 or model_state.shape[0] != config.num_agents:
@@ -210,7 +221,7 @@ def clean_scan(
         raise ValueError(
             f"state_dim must be 5 (KS) or 7 (ST), got {model_state.shape[1]}"
         )
-    poses = lidar_poses(model_state, params)
+    poses = lidar_poses(model_state, params, rear_axle_to_cog)
     base_poses = model_state[:, jnp.asarray((0, 1, 4))]
     vertices = jax.vmap(lambda pose: body_vertices(pose, body))(base_poses)
     angles = beam_angles(config, model_state.dtype)

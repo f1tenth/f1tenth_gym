@@ -217,6 +217,7 @@ def _observed_scans(
             params.body,
             config.scan,
             params.scan,
+            params.dynamics.vehicle.lr,
         )
         return observed_scan(
             key,

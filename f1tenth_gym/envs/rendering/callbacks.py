@@ -18,7 +18,7 @@ def polar_to_cartesian(
     pose_x: float,
     pose_y: float,
     pose_theta: float,
-    lidar_offset: tuple[float, float] = (0.0, 0.0),
+    lidar_offset: tuple[float, float] | tuple[float, float, float] = (0.0, 0.0),
 ) -> np.ndarray:
     """Convert polar LiDAR scan to Cartesian coordinates in world frame.
     
@@ -28,7 +28,8 @@ def polar_to_cartesian(
         pose_x: Robot x position in world frame.
         pose_y: Robot y position in world frame.
         pose_theta: Robot heading in world frame (radians).
-        lidar_offset: (x, y) offset of lidar from robot base_link.
+        lidar_offset: ``(x, y)`` or ``(x, y, yaw)`` transform from the robot
+            pose to the LiDAR frame.
         
     Returns:
         Array of shape (N, 2) with Cartesian (x, y) coordinates in world frame.
@@ -37,9 +38,13 @@ def polar_to_cartesian(
     x_lidar = ranges * np.cos(angles)
     y_lidar = ranges * np.sin(angles)
     
-    # Apply lidar offset in robot frame
-    x_robot = x_lidar + lidar_offset[0]
-    y_robot = y_lidar + lidar_offset[1]
+    # Transform points from the LiDAR frame into the robot's CoG frame.
+    lidar_x, lidar_y = lidar_offset[:2]
+    lidar_yaw = lidar_offset[2] if len(lidar_offset) == 3 else 0.0
+    cos_lidar = np.cos(lidar_yaw)
+    sin_lidar = np.sin(lidar_yaw)
+    x_robot = lidar_x + cos_lidar * x_lidar - sin_lidar * y_lidar
+    y_robot = lidar_y + sin_lidar * x_lidar + cos_lidar * y_lidar
     
     # Rotate to world frame
     cos_theta = np.cos(pose_theta)
@@ -82,7 +87,7 @@ def make_lidar_scan_callback(
         lidar_config.num_beams,
         dtype=np.float32,
     )
-    lidar_offset = lidar_config.base_link_to_lidar_tf[:2]
+    base_link_transform = lidar_config.base_link_to_lidar_tf
     max_range = lidar_config.range_max
     
     # Apply subsampling to angles
@@ -117,10 +122,18 @@ def make_lidar_scan_callback(
             return
         
         # Convert to Cartesian
+        # Observed vehicle poses are CoG-referenced. The configured mount is
+        # relative to base_link at the rear axle, so resolve it with the
+        # renderer's active vehicle parameters (including episode DR draws).
+        lidar_transform = (
+            float(base_link_transform[0]) - float(env_renderer.params.lr),
+            float(base_link_transform[1]),
+            float(base_link_transform[2]),
+        )
         points = polar_to_cartesian(
             scan_valid, angles_valid,
             float(std_state[0]), float(std_state[1]), float(std_state[4]),
-            lidar_offset,
+            lidar_transform,
         )
         
         # Create or update renderer
@@ -130,4 +143,3 @@ def make_lidar_scan_callback(
             state["renderer"].update(points)
     
     return callback
-

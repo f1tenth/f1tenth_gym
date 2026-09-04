@@ -601,9 +601,12 @@ class F110Env(gym.Env):
 
         # Domain randomization: sample vehicle params for this episode (from the
         # env RNG, so it is reproducible with reset(seed=...)) and push them to
-        # the sim (rebuilds params array + scan/collision caches).
+        # the simulator and renderer.
         if self.dr_cfg.randomized_fields():
-            self.sim.update_params(self._sample_vehicle_params())
+            episode_params = self._sample_vehicle_params()
+            self.sim.update_params(episode_params)
+            if self.renderer is not None:
+                self.renderer.update_params(episode_params)
 
         # Derive the LiDAR-noise seed from the env RNG (which gymnasium seeds
         # from reset(seed=...)), so the noise stream is controlled by the reset

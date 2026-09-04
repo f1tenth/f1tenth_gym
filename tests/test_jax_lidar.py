@@ -10,7 +10,13 @@ import jax.numpy as jnp
 import numpy as np
 
 from f1tenth_gym.envs.collision_models import get_vertices
-from f1tenth_gym.envs.dynamic_models import F1TENTH_VEHICLE_PARAMETERS
+from f1tenth_gym.envs.collision_models import CollisionCheckMode
+from f1tenth_gym.envs.dynamic_models import (
+    DynamicModel,
+    F1TENTH_VEHICLE_PARAMETERS,
+)
+from f1tenth_gym.envs.env_config import EnvConfig, SimulationConfig
+from f1tenth_gym.envs.f110_env import F110Env
 from f1tenth_gym.envs.lidar.config import LiDARConfig
 from f1tenth_gym.envs.lidar import ray_cast
 from f1tenth_gym.envs.lidar.segment_scan import SegmentScanSimulator2D
@@ -49,23 +55,53 @@ def scan_config(num_agents, num_beams=120, angle_min=-HALF_FOV,
 
 
 class TestRigidTransforms(unittest.TestCase):
-    def test_lidar_mount_matches_the_current_host_calculation(self):
-        lidar = LiDARConfig(
-            num_beams=4,
-            base_link_to_lidar_tf=(0.31, -0.07, 0.23),
-            noise_std=0.0,
-        )
-        params = ScanParams.from_lidar_config(lidar)
+    def test_lidar_mount_is_resolved_from_rear_axle_base_link(self):
+        vehicle = F1TENTH_VEHICLE_PARAMETERS.with_updates(lr=0.42)
         poses = np.array(
             [[1.2, -3.4, 0.8], [-0.2, 4.1, -2.7]], dtype=np.float32
         )
-        got = np.asarray(lidar_poses(model_states(poses), params))
-        fake = type("SimulatorConfig", (), {})()
-        fake.config = type("EnvConfig", (), {"lidar_config": lidar})()
-        expected = np.stack(
-            [F110Simulator._lidar_pose_from_base(fake, pose) for pose in poses]
+        for transform in ((0.0, 0.0, 0.0), (0.31, -0.07, 0.23)):
+            with self.subTest(transform=transform):
+                lidar = LiDARConfig(
+                    num_beams=4,
+                    base_link_to_lidar_tf=transform,
+                    noise_std=0.0,
+                )
+                params = ScanParams.from_lidar_config(lidar)
+                dx = transform[0] - vehicle.lr
+                expected = poses.copy()
+                cosine = np.cos(poses[:, 2])
+                sine = np.sin(poses[:, 2])
+                expected[:, 0] += dx * cosine - transform[1] * sine
+                expected[:, 1] += dx * sine + transform[1] * cosine
+                expected[:, 2] += transform[2]
+
+                functional = np.asarray(
+                    lidar_poses(model_states(poses), params, vehicle.lr)
+                )
+                fake = type("SimulatorConfig", (), {})()
+                fake.config = type("EnvConfig", (), {"lidar_config": lidar})()
+                fake.vehicle_params = vehicle
+                mutable = np.stack(
+                    [
+                        F110Simulator._lidar_pose_from_cog(fake, pose)
+                        for pose in poses
+                    ]
+                )
+                np.testing.assert_allclose(functional, expected, atol=1.0e-6)
+                np.testing.assert_allclose(mutable, expected, atol=1.0e-6)
+
+    def test_lidar_mount_accepts_traced_lr_without_recompilation(self):
+        params = ScanParams.from_lidar_config(
+            LiDARConfig(num_beams=4, base_link_to_lidar_tf=(0.3, 0.0, 0.0))
         )
-        np.testing.assert_allclose(got, expected, atol=1.0e-6)
+        state = model_states([[1.0, 2.0, 0.0]])
+        run = jax.jit(lambda lr: lidar_poses(state, params, lr))
+
+        first = np.asarray(run(jnp.float32(0.1)))
+        second = np.asarray(run(jnp.float32(0.25)))
+        self.assertAlmostEqual(float(first[0, 0]), 1.2, places=6)
+        self.assertAlmostEqual(float(second[0, 0]), 1.05, places=6)
 
     def test_body_vertices_match_the_host_with_the_cog_offset(self):
         vehicle = F1TENTH_VEHICLE_PARAMETERS.with_updates(
@@ -121,14 +157,16 @@ class TestFunctionalWallScan(unittest.TestCase):
         ).astype(np.float32)
         fake = type("SimulatorConfig", (), {})()
         fake.config = type("EnvConfig", (), {"lidar_config": self.lidar})()
+        fake.vehicle_params = self.vehicle
         run = jax.jit(
             lambda state: clean_scan(
-                state, self.table, self.body, self.config, self.params
+                state, self.table, self.body, self.config, self.params,
+                self.vehicle.lr,
             )
         )
         for pose in poses:
             got = np.asarray(run(model_states([pose]))[0])
-            sensor_pose = F110Simulator._lidar_pose_from_base(fake, pose)
+            sensor_pose = F110Simulator._lidar_pose_from_cog(fake, pose)
             expected = self.host.scan(sensor_pose, rng=None)
             np.testing.assert_allclose(got, expected, atol=2.0e-3)
 
@@ -142,6 +180,7 @@ class TestFunctionalWallScan(unittest.TestCase):
             self.body,
             self.config,
             params,
+            self.vehicle.lr,
         )
         np.testing.assert_array_equal(
             np.asarray(got), np.full(got.shape, MAX_RANGE, dtype=np.float32)
@@ -169,7 +208,8 @@ class TestFunctionalWallScan(unittest.TestCase):
         params = replace(self.params, offset_x=0.0, offset_y=0.0,
                          offset_yaw=0.0)
         got = clean_scan(
-            model_states([[0.0, 0.0, 0.0]]), table, self.body, config, params
+            model_states([[0.0, 0.0, 0.0]]), table, self.body, config, params,
+            self.vehicle.lr,
         )
         self.assertEqual(float(got[0, 0]), MAX_RANGE)
 
@@ -181,6 +221,60 @@ class TestFunctionalWallScan(unittest.TestCase):
 
 
 class TestOpponentOcclusion(unittest.TestCase):
+    def test_base_link_mount_avoids_a_false_min_range_arc_at_an_opponent(self):
+        blank = Track.from_track_name("Spielberg_blank", 1.0)
+        vehicle = F1TENTH_VEHICLE_PARAMETERS
+        lidar = LiDARConfig(
+            num_beams=3,
+            angle_min=-0.1,
+            angle_max=0.1,
+            range_min=0.1,
+            range_max=10.0,
+            noise_std=0.0,
+        )
+        config = EnvConfig(
+            map_name=blank,
+            num_agents=2,
+            params=vehicle,
+            simulation_config=SimulationConfig(
+                dynamics_model=DynamicModel.ST,
+                compute_frenet_frame=False,
+                max_laps=None,
+            ),
+            lidar_config=lidar,
+            collision_check=CollisionCheckMode.NONE,
+            render_enabled=False,
+        )
+        poses = np.array(
+            [[0.0, 0.0, 0.0], [0.59, 0.0, 0.0]], dtype=np.float32
+        )
+
+        env = F110Env(config)
+        try:
+            observation, _ = env.reset(seed=3, options={"poses": poses})
+            mutable_range = float(observation["agent_0"]["scan"][1])
+        finally:
+            env.close()
+
+        table = preprocess_track(blank, vehicle, ray_max_range=lidar.range_max)
+        functional = clean_scan(
+            model_states(poses),
+            table,
+            BodyParams.from_vehicle_parameters(vehicle),
+            scan_config(2, 3, lidar.angle_min, lidar.angle_max),
+            ScanParams.from_lidar_config(lidar),
+            vehicle.lr,
+        )
+        functional_range = float(functional[0, 1])
+
+        # The cars have a 1 cm bumper gap. The correct origin is 0.10355 m
+        # ahead of ego's CoG, putting the opponent face 0.1901 m away. Applying
+        # the 0.275 m mount directly to the CoG instead yields 0.01865 m, which
+        # the observed scan turns into a misleading range_min arc.
+        self.assertGreater(mutable_range, lidar.range_min)
+        self.assertAlmostEqual(mutable_range, 0.1901, places=5)
+        self.assertAlmostEqual(functional_range, 0.1901, places=5)
+
     def test_random_opponents_match_the_current_brute_force_result(self):
         rng = np.random.default_rng(9)
         pose = np.array([0.0, 0.0, 0.0], dtype=np.float32)
@@ -273,7 +367,8 @@ class TestTransformability(unittest.TestCase):
     def test_clean_scan_jits_evaluates_shapes_and_has_a_finite_pose_gradient(self):
         run = jax.jit(
             lambda state: clean_scan(
-                state, self.table, self.body, self.config, self.params
+                state, self.table, self.body, self.config, self.params,
+                self.vehicle.lr,
             )
         )
         state = model_states([self.pose])
@@ -301,7 +396,8 @@ class TestTransformability(unittest.TestCase):
         run = jax.jit(
             jax.vmap(
                 lambda one_state, one_body, one_params: clean_scan(
-                    one_state, self.table, one_body, self.config, one_params
+                    one_state, self.table, one_body, self.config, one_params,
+                    self.vehicle.lr,
                 )
             )
         )
@@ -344,7 +440,9 @@ class TestValidation(unittest.TestCase):
         body = BodyParams.from_vehicle_parameters(vehicle)
         params = ScanParams(MAX_RANGE, 0.0, 0.0, 0.0)
         with self.assertRaisesRegex(ValueError, "model_state"):
-            clean_scan(jnp.zeros((1, 7)), track, body, config, params)
+            clean_scan(
+                jnp.zeros((1, 7)), track, body, config, params, vehicle.lr
+            )
 
 
 if __name__ == "__main__":
