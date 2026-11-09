@@ -1,4 +1,4 @@
-![Python 3.11–3.14](https://github.com/f1tenth/f1tenth_gym/actions/workflows/ci.yml/badge.svg)
+![Python 3.11–3.15](https://github.com/f1tenth/f1tenth_gym/actions/workflows/ci.yml/badge.svg)
 ![Docker](https://github.com/f1tenth/f1tenth_gym/actions/workflows/docker.yml/badge.svg)
 # The F1TENTH Gym environment
 
@@ -9,11 +9,11 @@ This project is still under heavy developement.
 You can find the [documentation](https://f1tenth-gym.readthedocs.io/en/latest/) of the environment here.
 
 ## Quickstart
-Use Python 3.11–3.14 (Python 3.14 recommended) in a fresh virtual environment.
+Use Python 3.11–3.15 in a fresh virtual environment (Python 3.15 verified).
 Do not reuse an environment containing the old NumPy/Gym pins. From a checkout:
 
 ```bash
-python3.14 -m venv .venv
+python3.15 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
 python -m pip install -e .

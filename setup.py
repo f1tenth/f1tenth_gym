@@ -9,7 +9,7 @@ setup(name='f110_gym',
       packages=find_packages(where='gym'),
       package_data={'f110_gym': ['envs/maps/*.yaml', 'envs/maps/*.png',
                                  'envs/maps/*.pgm']},
-      python_requires='>=3.11,<3.15',
+      python_requires='>=3.11,<3.16',
       # Keep the legacy Gym API and pyglet renderer; newer major versions
       # change the reset/step contract and OpenGL drawing API respectively.
       install_requires=['gym==0.26.2',

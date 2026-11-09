@@ -7,12 +7,12 @@ examples are modified. The default experiment is a short segment on the supplied
 
 ## Run (from repository root)
 
-Use the repository's installed dependencies, including the Python 3.14-compatible
-versions. For Bash (Fish uses `activate.fish`):
+Use the repository's installed dependencies on Python 3.11–3.15. For Bash (Fish
+uses `activate.fish`):
 
 ```bash
-python3.14 -m venv .venv-py314  # only if it does not already exist
-source .venv-py314/bin/activate
+python3.15 -m venv .venv-py315  # only if it does not already exist
+source .venv-py315/bin/activate
 python -m pip install -e .
 
 # Default: eight simulated seconds, headless, left passing attempt
