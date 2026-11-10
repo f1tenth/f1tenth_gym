@@ -241,6 +241,37 @@ class TrackMap:
         bounds[sides] = base + low
         return float(-bounds[0]), float(bounds[1])
 
+    def footprints_safe(self, poses, length, width, margin):
+        """Certify finite Nx3 (x, y, yaw) poses with footprint_safe's grid.
+
+        Return an (N,) boolean array using one clear_many query across all
+        rectangles. Empty (0, 3) input returns an empty array without a query.
+        Dimensions and margin must be finite and nonnegative, even when empty.
+        """
+        poses = np.asarray(poses, dtype=float)
+        if poses.ndim != 2 or poses.shape[1] != 3 or not np.all(np.isfinite(poses)):
+            raise ValueError('poses must be a finite Nx3 array')
+        length = _nonnegative(length, 'length')
+        width = _nonnegative(width, 'width')
+        margin = _nonnegative(margin, 'margin')
+        if len(poses) == 0:
+            return np.empty(0, dtype=bool)
+        spacing = self.resolution / 2
+        nx = max(1, int(np.ceil(length / spacing)))
+        ny = max(1, int(np.ceil(width / spacing)))
+        dx, dy = length / nx, width / ny
+        required = margin + np.hypot(dx, dy) / 2
+        x = -length / 2 + (np.arange(nx) + .5) * dx
+        y = -width / 2 + (np.arange(ny) + .5) * dy
+        gx, gy = np.meshgrid(x, y, indexing='ij')
+        local = np.column_stack((gx.ravel(), gy.ravel()))
+        c, s = np.cos(poses[:, 2]), np.sin(poses[:, 2])
+        rotations = np.stack((np.stack((c, -s), axis=-1),
+                              np.stack((s, c), axis=-1)), axis=1)
+        samples = local @ rotations.swapaxes(1, 2) + poses[:, None, :2]
+        distances = self.clear_many(samples.reshape(-1, 2)).reshape(len(poses), -1)
+        return np.all((distances > 0) & (distances >= required), axis=1)
+
     def footprint_safe(self, position, yaw, length, width, margin):
         """Conservatively certify the whole centred rectangle plus margin.
 

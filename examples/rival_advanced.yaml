@@ -1,0 +1,25 @@
+# Simulation evaluation only. Simulated sensing is truth-derived, not hardware perception.
+track_config: config_example_map.yaml
+settings:
+  timestep: 0.02
+  duration: 8.0
+  seed: 12345
+  # Both starts lie on a usable line segment; other sections are stress-tested.
+  start_s: 26.0
+  initial_gap: 4.5
+  defender_speed: 2.0
+  attacker_speed: 2.8
+robust:
+  region: inside
+  control_period: 0.1
+  horizon: 1.5
+  prediction_dt: 0.1
+  # Explicit bound for this simulated adversary suite, NOT a hardware guarantee.
+  max_opponent_speed: 4.0
+sensor:
+  noise_std: 0.03
+  speed_noise_std: 0.1
+  latency: 0.1
+  update_period: 0.1
+  dropout: 0.05
+  max_age: 0.5

@@ -8,6 +8,13 @@ This project is still under heavy developement.
 
 You can find the [documentation](https://f1tenth-gym.readthedocs.io/en/latest/) of the environment here.
 
+## R.I.V.A.L. defensive simulation
+
+The upgraded simulation-only controller, noisy/delayed tracking, adaptive attackers,
+and stress runner are documented in [the advanced guide](examples/README_RIVAL_ADVANCED.md).
+The [original baseline](examples/README_RIVAL.md) remains available for comparison.
+Neither controller is validated for deployment on a real vehicle.
+
 ## Quickstart
 Use Python 3.11–3.15 in a fresh virtual environment (Python 3.15 verified).
 Do not reuse an environment containing the old NumPy/Gym pins. From a checkout:

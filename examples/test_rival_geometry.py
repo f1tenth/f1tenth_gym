@@ -231,6 +231,77 @@ class TrackMapTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             track.footprint_safe([np.nan, 0], yaw, length, width, margin)
 
+    def test_footprints_safe_matches_scalar_randomized(self):
+        free = np.ones((80, 100), dtype=bool)
+        free[20:35, 30:45] = False
+        free[50, :70] = False
+        origin = np.array([5., -3., .63])
+        track = self.make_map(free, origin=origin)
+        rng = np.random.default_rng(123)
+        c, s = np.cos(origin[2]), np.sin(origin[2])
+        rotation = np.array([[c, -s], [s, c]])
+        local = rng.uniform([-1., -1.], [11., 9.], (300, 2))
+        poses = np.column_stack((local @ rotation.T + origin[:2],
+                                 rng.uniform(-8 * np.pi, 8 * np.pi, len(local))))
+        for length, width, margin in ((.58, .31, .02), (.23, .11, .1),
+                                      (0, 0, 0), (.4, 0, .03), (0, .3, 0)):
+            with self.subTest(length=length, width=width, margin=margin):
+                expected = np.array([track.footprint_safe(p[:2], p[2], length,
+                                                         width, margin) for p in poses])
+                actual = track.footprints_safe(poses, length, width, margin)
+                self.assertEqual(actual.shape, (len(poses),))
+                self.assertEqual(actual.dtype, np.dtype(bool))
+                np.testing.assert_array_equal(actual, expected)
+                self.assertTrue(np.any(actual))
+                self.assertTrue(np.any(~actual))
+
+    def test_footprints_safe_single_query_grid_and_threshold(self):
+        track = self.make_map(np.ones((60, 60), dtype=bool))
+        poses = np.array([[2., 3., .73], [1., 2., -1.2], [3., 2., np.pi]])
+        length, width, margin = .23, .11, .02
+        nx, ny = 5, 3
+        required = margin + np.hypot(length / nx, width / ny) / 2
+        scalar_samples = []
+        with patch.object(track, 'clear_many',
+                          return_value=np.full(nx * ny, required)) as query:
+            for pose in poses:
+                track.footprint_safe(pose[:2], pose[2], length, width, margin)
+                scalar_samples.append(query.call_args.args[0])
+        distances = np.full((len(poses), nx * ny), required)
+        distances[1, 7] -= 1e-9
+        with patch.object(track, 'clear_many', return_value=distances.ravel()) as query:
+            with patch.object(track, 'footprint_safe', side_effect=AssertionError('Scalar footprint')):
+                with patch.object(track, 'clear', side_effect=AssertionError('Scalar query')):
+                    actual = track.footprints_safe(poses, length, width, margin)
+        np.testing.assert_array_equal(actual, [True, False, True])
+        query.assert_called_once()
+        np.testing.assert_array_equal(query.call_args.args[0],
+                                      np.concatenate(scalar_samples))
+        with patch.object(track, 'clear_many', return_value=np.array([0., 1., 0.])) as query:
+            np.testing.assert_array_equal(track.footprints_safe(poses, 0, 0, 0),
+                                          [False, True, False])
+        query.assert_called_once()
+        self.assertEqual(query.call_args.args[0].shape, (3, 2))
+
+    def test_footprints_safe_validation_and_empty(self):
+        track = self.make_map(np.ones((20, 20), dtype=bool))
+        with patch.object(track, 'clear_many', side_effect=AssertionError('Empty query')):
+            result = track.footprints_safe(np.empty((0, 3)), .6, .3, .1)
+        self.assertEqual(result.shape, (0,))
+        self.assertEqual(result.dtype, np.dtype(bool))
+        for invalid in ([], [1, 2, 3], [[1, 2]], [[1, 2, 3, 4]],
+                        np.empty((0, 2)), np.zeros((1, 1, 3)),
+                        [[np.nan, 0, 0]], [[0, np.inf, 0]], [[0, 0, -np.inf]]):
+            with self.subTest(poses=invalid), self.assertRaises(ValueError):
+                track.footprints_safe(invalid, .6, .3, .1)
+        for poses in (np.empty((0, 3)), [[1, 1, 0]]):
+            for index in range(3):
+                for invalid in (-1, np.nan, np.inf):
+                    dimensions = [.6, .3, .1]
+                    dimensions[index] = invalid
+                    with self.subTest(index=index, invalid=invalid), self.assertRaises(ValueError):
+                        track.footprints_safe(poses, *dimensions)
+
     def test_clear_many_matches_scalar_including_outside(self):
         free = np.ones((20, 30), dtype=bool)
         free[4:8, 10:13] = False

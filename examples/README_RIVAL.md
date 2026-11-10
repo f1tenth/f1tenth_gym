@@ -5,6 +5,10 @@ MOBIL, or an official IAC rulebook. No Gym physics, observation fields, or exist
 examples are modified. The default experiment is a short segment on the supplied
 156.356 m closed example racing line, not a full-lap benchmark.
 
+For the newer uncertainty-aware trajectory controller, scan/synthetic sensing,
+adaptive attackers, and stress evaluation, see [the advanced guide](README_RIVAL_ADVANCED.md).
+This file describes the original baseline, which is retained for comparison.
+
 ## Run (from repository root)
 
 Use the repository's installed dependencies on Python 3.11–3.15. For Bash (Fish
