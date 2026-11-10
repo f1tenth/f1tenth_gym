@@ -13,7 +13,7 @@
 
 Installation
 =================
-``f1tenth_gym`` supports Python 3.11–3.14; Python 3.14 is recommended.
+``f1tenth_gym`` supports Python 3.11–3.15.
 Use a fresh virtual environment rather than upgrading an old Python 3.8 environment.
 The existing four-value reset/step API is preserved. Rendering requires system
 OpenGL/GLU libraries and a working display.
@@ -43,7 +43,7 @@ The environment is a Python package, and only depends on ``numpy``, ``scipy``, `
 
 .. code:: bash
 
-    $ python3.14 -m venv .venv
+    $ python3.15 -m venv .venv
     $ source .venv/bin/activate
     $ python -m pip install --upgrade pip
     $ python -m pip install -e .

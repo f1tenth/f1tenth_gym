@@ -1,0 +1,38 @@
+# Paths are relative to this file; track_config supplies map and waypoint columns.
+track_config: config_example_map.yaml
+settings:
+  timestep: 0.02
+  duration: 8.0
+  laps: 1
+  seed: 12345
+  start_s: 23.0
+  initial_gap: 3.0
+  defender_speed: 2.0
+  attacker_speed: 2.8
+  lookahead: 0.85
+  wheelbase: 0.3302
+  car_length: 0.58
+  car_width: 0.31
+  boundary_margin: 0.04
+  center_margin: 0.02
+  legal_min: -1.2
+  legal_max: 1.2
+  inner_fraction: 0.95
+  curvature_threshold: 0.015
+  max_offset_search: 3.0
+  offset_rate: 0.25
+  minimum_gap: 0.7
+  time_headway: 0.6
+  comfortable_braking: 2.0
+  reference_acceleration: 2.0
+  reaction_threshold: 1.3
+  closing_threshold: 0.05
+  prediction_horizon: 1.0
+  separation_margin: 0.12
+  usefulness_threshold: 0.015
+  move_penalty: 0.08
+  pass_offset: 0.75
+  pass_start: 1.0
+  pass_ramp: 2.0
+  max_steer: 0.4189
+  max_steer_rate: 1.5
