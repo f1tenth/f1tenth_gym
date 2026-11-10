@@ -19,6 +19,7 @@ from rival_strategy import CarState, desired_gap, rate_limit
 class RobustConfig:
     horizon: float = 1.5
     prediction_dt: float = .1
+    max_physics_dt: float = .01
     control_period: float = .1
     max_acceleration: float = 2.
     max_braking: float = 3.
@@ -28,7 +29,11 @@ class RobustConfig:
     max_lateral_accel: float = 3.
     region: str = 'inside'
     envelope_spacing: float = .5
+    reference_smoothing_length: float = 3.
+    reference_clearance_reserve: float = .12
     commitment_time: float = .8
+    tracking_bias: float = .3
+    recovery_min_progress: float = .1
     max_opponent_acceleration: float = 2.
     max_opponent_lateral_speed: float = .8
     max_opponent_speed: float = 8.
@@ -36,7 +41,7 @@ class RobustConfig:
     lateral_tracking_margin: float = .08
     min_defense_ttc: float = 2.
     safe_time_headway: float = .6
-    rollout_speed_fractions: tuple = (1., .7, .35, 0.)
+    rollout_speed_fractions: tuple = (1., .7, .35, .2, .1, 0.)
     boundaries_path: str | None = None
     uncertainty_multiplier: float = 2.
     escape_speed_fraction: float = 1.2
@@ -57,7 +62,7 @@ class RobustConfig:
                 value = getattr(self, f.name)
                 if not np.isfinite(value) or value < 0:
                     raise ValueError(f'{f.name} must be finite and nonnegative')
-        positive = ('horizon', 'prediction_dt', 'control_period', 'max_acceleration',
+        positive = ('horizon', 'prediction_dt', 'max_physics_dt', 'control_period', 'max_acceleration',
                     'max_braking', 'max_jerk', 'max_lateral_rate',
                     'max_lateral_acceleration', 'max_lateral_accel', 'envelope_spacing')
         if any(getattr(self, key) <= 0 for key in positive):
@@ -135,6 +140,27 @@ class TrackEnvelope:
         self.hi = np.minimum(hi, c.legal_max)
         invalid = self.raw_lo > self.raw_hi
         self.lo[invalid], self.hi[invalid] = 1., -1.
+        self.reference_offsets = np.clip(np.zeros_like(self.s), self.lo, self.hi)
+        if np.all(self.lo <= self.hi):
+            from rival_reference import clearance_reference, smoothed_reference
+            from rival_geometry import TrackMap
+            if isinstance(track, TrackMap):
+                # A center offset inside the legal band need not fit the full
+                # oriented car. Prepare a body-clear path, rather than arriving
+                # at a margin violation from which every preview rejects t=0.
+                self.reference_offsets, self.reference_diagnostics = clearance_reference(
+                    line, track, self.s, self.lo, self.hi, c.car_length, c.car_width,
+                    c.boundary_margin + r.reference_clearance_reserve,
+                    r.reference_smoothing_length)
+            else:
+                self.reference_offsets, self.reference_diagnostics = smoothed_reference(
+                    self.s, self.lo, self.hi, line.length, r.reference_smoothing_length)
+        else:
+            # Preserve explicit invalid bands; smoothing must never bridge an
+            # infeasible road section or manufacture a legal route through it.
+            self.reference_diagnostics = dict(solver_success=False,
+                reason='empty legal bands; no globally feasible reference')
+        self._reference_slopes = (np.roll(self.reference_offsets, -1) - self.reference_offsets) / spacing
 
     def interval(self, s):
         return (float(np.interp(s % self.line.length, self.s, self.lo, period=self.line.length)),
@@ -144,7 +170,15 @@ class TrackEnvelope:
         lo, hi = self.interval(s)
         if lo > hi:
             raise ValueError(f'No estimated legal corridor at s={s % self.line.length:.3f}')
-        return float(np.clip(0., lo, hi))
+        return self.reference(s)
+
+    def reference(self, s):
+        return float(np.interp(s % self.line.length, self.s, self.reference_offsets,
+                               period=self.line.length))
+
+    def reference_slope(self, s):
+        return float(np.interp(s % self.line.length, self.s, self._reference_slopes,
+                               period=self.line.length))
 
 
 def stopping_distance(speed, braking, latency=0.):
@@ -284,10 +318,16 @@ class RobustDefender:
         self._assumption_broken = False
 
     def _goal(self, state, bias):
-        lo, hi = self.envelope.interval(state.s)
-        preview_lo, preview_hi = self.envelope.interval(state.s + max(.5, state.speed * .6))
-        nominal = float(np.clip(0., preview_lo, preview_hi)) if preview_lo <= preview_hi else self.target
-        return float(np.clip(nominal + bias, lo, hi)) if lo <= hi else self.target
+        # This offset is attached to the pursuit point, not the current body.
+        # Clamping it against today's band prevents anticipation of a narrowing
+        # or shifting corridor, eventually leaving only a standstill candidate.
+        preview_s = state.s + self.vehicle.lookahead
+        lo, hi = self.envelope.interval(preview_s)
+        if lo > hi:
+            return self.target
+        nominal = (self.envelope.reference(preview_s) if isinstance(self.envelope, TrackEnvelope)
+                   else float(np.clip(0., lo, hi)))
+        return float(np.clip(nominal + bias, lo, hi))
 
     def _command(self, state, target, lateral_rate, acceleration, steering, command_speed,
                  bias, desired_speed, dt):
@@ -298,6 +338,10 @@ class RobustDefender:
         curvature = max(abs(self.line.curvature(state.s + ds)) for ds in (0., c.lookahead, 2 * c.lookahead))
         turn_speed = math.sqrt(r.max_lateral_accel / max(curvature, 1e-3))
         desired_speed = min(desired_speed, turn_speed)
+        if isinstance(self.envelope, TrackEnvelope):
+            slope = max(abs(self.envelope.reference_slope(state.s + ds))
+                        for ds in (0., c.lookahead, 2 * c.lookahead))
+            desired_speed = min(desired_speed, .8 * r.max_lateral_rate / max(slope, 1e-6))
         desired_accel = np.clip((desired_speed - command_speed) / max(dt, 1e-6), -r.max_braking, r.max_acceleration)
         acceleration = rate_limit(acceleration, desired_accel, r.max_jerk, dt)
         # Reserve enough nonnegative speed to release braking acceleration at
@@ -349,9 +393,10 @@ class RobustDefender:
             trajectory.append([x, y, yaw, speed, s, d, target])
             lo, hi = self.envelope.interval(s)
             tolerance = r.lateral_tracking_margin + max(0., initial_error - .1 * t)
+            target_lo, target_hi = self.envelope.interval(s + c.lookahead)
             violation = max(violation, lo - d - tolerance, d - hi - tolerance,
-                            lo - target - tolerance, target - hi - tolerance)
-            if lo > hi:
+                            target_lo - target - tolerance, target - target_hi - tolerance)
+            if lo > hi or target_lo > target_hi:
                 violation = max(violation, 1.)
             max_lateral_acceleration = max(max_lateral_acceleration,
                 speed ** 2 * abs(math.tan(steering)) / c.wheelbase)
@@ -412,7 +457,8 @@ class RobustDefender:
         times = np.linspace(0., r.horizon, int(np.ceil(r.horizon / forecast_dt)) + 1)
         predictions, inflation = opponent_hypotheses(estimate, self.line, times, r)
         self._hypothesis_count = len(predictions)
-        nominal = self.envelope.nominal(ego.s) if self.envelope.interval(ego.s)[0] <= self.envelope.interval(ego.s)[1] else self.target
+        target_s = ego.s + c.lookahead
+        nominal = self.envelope.nominal(target_s) if self.envelope.interval(target_s)[0] <= self.envelope.interval(target_s)[1] else self.target
         gap, closing, ttc = math.inf, 0., math.inf
         opponent_d = ego.d
         if estimate is not None and estimate.valid:
@@ -427,7 +473,12 @@ class RobustDefender:
                 max(0., estimate.state.speed), closing, c))
         may_defend = defense and react and not alongside and ttc >= r.min_defense_ttc
         current_bias = self.target - nominal
-        biases = [0., current_bias]
+        # A geometrically legal reference still has tracking lag. Search small
+        # corrections even without a passing threat; otherwise a feasible zero-
+        # speed nominal path can hide every forward recovery around a corner.
+        biases = [0., current_bias, -r.tracking_bias, r.tracking_bias]
+        if abs(ego.speed) < .3:
+            biases += [-2 * r.tracking_bias, 2 * r.tracking_bias]
         if may_defend:
             biases += [-.6, -.3, .3, .6, opponent_d + estimate.lateral_speed * .5 - nominal]
         # If lateral overlap is imminent, never chase the opponent's lane.
@@ -473,7 +524,10 @@ class RobustDefender:
             rollouts = [self._rollout(ego, current_bias, 0., times, predictions, inflation)]
         feasible = [p for p in rollouts if p.feasible]
         if feasible:
-            best = max(feasible, key=lambda p: p.score)
+            progressing = [p for p in feasible if p.progress > r.recovery_min_progress]
+            # Do not award a permanent safe-looking standstill a better utility
+            # than an actually checked forward route merely for small offset.
+            best = max(progressing or feasible, key=lambda p: p.score)
             if not fresh:
                 mode, reason = 'degraded', 'opponent unobserved/stale; no tactical block; map checks only' if estimate is None else 'stale estimate; inflated predictions and reduced speed'
             elif alongside or ttc < r.min_defense_ttc:
@@ -482,6 +536,8 @@ class RobustDefender:
                 mode, reason = 'defend', 'useful trajectory passed all sampled hypothesis checks'
             elif 0 < gap < 8.:
                 mode, reason = 'follow', 'lead-car braking/headway speed cap'
+            elif abs(best.bias) > .05:
+                mode, reason = 'recovery', 'checked forward tracking correction; no tactical block'
             else:
                 mode, reason = 'cruise', 'nominal progress; no worthwhile legal defensive trajectory'
         else:

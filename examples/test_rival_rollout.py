@@ -6,7 +6,7 @@ import math
 import sys
 import time
 import unittest
-from unittest.mock import Mock
+
 
 import numpy as np
 
@@ -38,10 +38,7 @@ def fixture():
 
 
 def reference(line, envelope, ego, controls, bias, desired, times, c, r, track):
-    # A real mock is intentional: future parent dispatch must retain this path.
-    proxy = Mock(spec=['interval'])
-    proxy.interval.side_effect = envelope.interval
-    parent = RobustDefender(line, track, c, r, controls[0], envelope=proxy)
+    parent = RobustDefender(line, track, c, r, controls[0], envelope=envelope)
     (parent.target, parent._lateral_rate, parent._acceleration,
      parent._steering, parent._speed_command) = controls
     commands = []
@@ -53,29 +50,31 @@ def reference(line, envelope, ego, controls, bias, desired, times, c, r, track):
         return result
 
     parent._command = record
-    result = parent._rollout(ego, bias, desired, times,
-                             np.empty((0, len(times), 3)), np.zeros(len(times)))
+    path, raw_violation, raw_peak = parent._trajectory_python(ego, bias, desired, times)
     peak = max((row[3] ** 2 * abs(math.tan(cmd[3])) / c.wheelbase
-                for row, cmd in zip(result.trajectory[1:], commands)), default=0.)
-    # Independently reconstruct the raw legal violation, before parent's final
-    # max with the lateral acceleration excess.
+                for row, cmd in zip(path[1:], commands)), default=0.)
+    # Reconstruct raw legal violation independently of the parent helper.
     lo, hi = envelope.interval(ego.s)
     initial_error = max(0., lo - ego.d, ego.d - hi)
     violation = 0.
-    for row, t in zip(result.trajectory[1:], times[1:]):
+    for row, t in zip(path[1:], times[1:]):
         lo, hi = envelope.interval(row[4])
+        plo, phi = envelope.interval(row[4] + c.lookahead)
         tolerance = r.lateral_tracking_margin + max(0., initial_error - .1 * t)
         violation = max(violation, lo - row[5] - tolerance, row[5] - hi - tolerance,
-                        lo - row[6] - tolerance, row[6] - hi - tolerance)
-        if lo > hi:
+                        plo - row[6] - tolerance, row[6] - phi - tolerance)
+        if lo > hi or plo > phi:
             violation = max(violation, 1.)
-    np.testing.assert_allclose(result.violation, max(violation, peak - r.max_lateral_accel, 0.), atol=1e-12)
-    return result.trajectory, violation, peak
+    np.testing.assert_allclose(raw_violation, violation, atol=1e-12)
+    np.testing.assert_allclose(raw_peak, peak, atol=1e-12)
+    return path, raw_violation, raw_peak
 
 
 class RolloutTests(unittest.TestCase):
     def test_parent_parity(self):
         line, envelope, c, r, track = fixture()
+        envelope.reference_offsets[:] = .6 * np.sin(2 * np.pi * envelope.s / line.length)
+        envelope._reference_slopes[:] = np.diff(np.r_[envelope.reference_offsets, envelope.reference_offsets[0]]) / np.diff(np.r_[envelope.s, line.length])
         times = np.arange(76) * .02
         rng = np.random.default_rng(12)
         cases = [(line.length - .2, 0., 3., 0., (.1, -.2, 0., .1, 3.), 0.),
@@ -100,6 +99,41 @@ class RolloutTests(unittest.TestCase):
                     expected = reference(line, envelope, ego, controls, .35, desired, times, c, r, track)
                     for a, b in zip(actual, expected):
                         np.testing.assert_allclose(a, b, rtol=2e-11, atol=2e-11)
+
+    def test_reference_slope_speed_cap(self):
+        line, envelope, c, r, track = fixture()
+        s = 3.
+        x, y = line.sample(s)
+        ego = CarState(s, 0., 2., x, y, line.heading(s))
+        args = (line, envelope, ego, (0., 0., 0., 0., 2.), 0., 5.,
+                np.arange(51) * .02, c, r)
+        baseline = simulate_trajectory(*args)
+        # Deliberately steep stored slopes isolate the cap from goal tracking.
+        # Mutating precomputed arrays must be observed on the very next call.
+        envelope._reference_slopes[:] = 4.
+        actual = simulate_trajectory(*args)
+        for a, b in zip(actual, reference(*args, track)):
+            np.testing.assert_allclose(a, b, atol=2e-11, rtol=2e-11)
+        self.assertLess(actual[0][-1, 3], baseline[0][-1, 3] - .5)
+
+    def test_pinch_target_uses_future_band(self):
+        line = ClosedRaceline([[0, 0], [40, 0], [40, 40], [0, 40]])
+        c = Settings(legal_min=-3., legal_max=3., lookahead=2.)
+        r = RobustConfig(region='track', envelope_spacing=.1)
+        track = BroadTrack()
+        envelope = TrackEnvelope(line, track, c, r)
+        envelope.lo[:] = -.2
+        envelope.hi[:] = np.where(envelope.s < 11., .1, 1.)
+        envelope.reference_offsets[:] = .6
+        envelope._reference_slopes[:] = 0.
+        ego = CarState(10., 0., 0., 10., 0., 0.)
+        args = (line, envelope, ego, (.6, 0., 0., 0., 0.), 0., 0.,
+                np.array([0., .02]), c, r)
+        actual = simulate_trajectory(*args)
+        for a, b in zip(actual, reference(*args, track)):
+            np.testing.assert_allclose(a, b, atol=2e-11, rtol=2e-11)
+        self.assertGreater(actual[0][-1, 6], envelope.interval(actual[0][-1, 4])[1])
+        self.assertEqual(actual[1], 0.)
 
     def test_projection_ties_and_nonuniform_times(self):
         line, envelope, c, r, track = fixture()

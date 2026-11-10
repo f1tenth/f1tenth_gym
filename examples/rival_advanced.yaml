@@ -14,6 +14,11 @@ robust:
   control_period: 0.1
   horizon: 1.5
   prediction_dt: 0.1
+  # Substep the unchanged RK4 dynamics; 0.02 s is unstable near low speeds.
+  max_physics_dt: 0.01
+  reference_smoothing_length: 3.0
+  # Extra clearance for the planned reference, not a reduced runtime wall margin.
+  reference_clearance_reserve: 0.12
   # Explicit bound for this simulated adversary suite, NOT a hardware guarantee.
   max_opponent_speed: 4.0
 sensor:

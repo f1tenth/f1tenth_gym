@@ -341,6 +341,44 @@ class RobustTests(unittest.TestCase):
         self.assertEqual(controller._solve.call_count, 1)
         self.assertFalse(controller._solve.call_args.args[3])
 
+    def test_checked_forward_recovery_beats_safe_looking_standstill(self):
+        from rival_robust import _Rollout
+        controller = self.controller()
+        ego = self.state(speed=0.)
+
+        def candidate(state, bias, speed, times, predictions, inflation):
+            path = np.tile([state.x, state.y, state.yaw, 0., state.s, state.d, bias],
+                           (len(times), 1))
+            moving_repair = abs(bias - .3) < 1e-8 and abs(speed - .4) < 1e-8
+            safe = speed == 0. or moving_repair
+            return _Rollout(bias, speed, path, safe, True, True,
+                            1., 1., 0., .2 if moving_repair else 0.)
+
+        controller._rollout = Mock(side_effect=candidate)
+        result = controller.step(0., ego, self.estimate(s=0., speed=0.), defense=False)
+        self.assertEqual(result.mode, 'recovery')
+        self.assertTrue(result.feasible)
+        self.assertAlmostEqual(controller._desired_speed, .4)
+        self.assertGreater(result.speed, 0.)
+        self.assertAlmostEqual(controller._best.bias, .3)
+
+    def test_recovery_does_not_force_an_unchecked_forward_route(self):
+        from rival_robust import _Rollout
+        controller = self.controller()
+        ego = self.state(speed=0.)
+
+        def candidate(state, bias, speed, times, predictions, inflation):
+            path = np.tile([state.x, state.y, state.yaw, 0., state.s, state.d, bias],
+                           (len(times), 1))
+            return _Rollout(bias, speed, path, speed == 0., True, True,
+                            1., 1., 0., speed * self.cfg.horizon)
+
+        controller._rollout = Mock(side_effect=candidate)
+        result = controller.step(0., ego, self.estimate(), defense=False)
+        self.assertTrue(result.feasible)
+        self.assertEqual(controller._desired_speed, 0.)
+        self.assertEqual(result.speed, 0.)
+
     def test_minimax_fallback_is_explicitly_unsafe(self):
         controller = self.controller()
         result = controller.step(0., self.state(), self.estimate(s=10., d=0., speed=2.))

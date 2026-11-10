@@ -8,8 +8,9 @@ attacks, model-bound violations, and real-time deadline misses. There is no robo
 actuation interface or hardware arming path.
 
 The original `rival_baseline.py` and its policy are retained for comparison. Gym
-physics, observations, and the four-value `reset`/`step` API are unchanged. Actions
-remain rows of `[steering_angle, speed]`.
+equations, observations, and the four-value `reset`/`step` API are unchanged.
+The advanced runner now integrates those equations in smaller substeps for
+numerical stability. Actions remain rows of `[steering_angle, speed]`.
 
 ## Run
 
@@ -52,6 +53,82 @@ Compilation and inference timings are not hidden by the metrics. A hardware
 system would need an explicit warmup/arming gate and an independently enforced
 control deadline; this runner supplies neither.
 
+## Longer runs and the corner-stall fix
+
+```bash
+# Up to five simulated minutes; also stops when both cars finish the lap goal
+python examples/rival_advanced.py --scenario adaptive --duration 300 --render
+
+# Optional fail-fast diagnostic, not an automatic reset or successful finish
+python examples/rival_advanced.py --scenario adaptive --duration 300 --stall-timeout 10
+
+# Real-Gym long regressions (normally skipped to keep unit tests quick)
+RIVAL_LONG_TESTS=1 RIVAL_SOAK_TESTS=1 python -m unittest discover -s examples -p test_rival_longrun.py -v
+```
+
+`--duration` is a **maximum simulated duration**, not a wall-time promise. The
+default goal is one lap per car, so the repaired default adaptive run finishes
+at about **113.6 simulated seconds**, before a 300-second limit. Long-test names
+refer to their time budgets; early genuine lap-goal completion is accepted.
+The tests do not silently restart, reset a stuck car, or ignore Gym's done signal.
+
+Several distinct causes were fixed:
+
+1. **Numerical instability:** 20 ms RK4 integration produced exploding yaw/slip
+   near the dynamic model's low-speed switch. Replaying identical commands at
+   10 ms and 5 ms removed that explosion. The advanced runner retains 20 ms
+   commands and uses `robust.max_physics_dt: 0.01` to substep the unchanged Gym.
+   Any inner-step collision, off-track, done, or numerical failure stops the action
+   immediately and preserves partial elapsed time. Nonfinite observations or
+   yaw rates over 100 rad/s are explicitly reported, never called a safe stop.
+   The simulator's sample-based steering delay consequently has a different
+   physical duration at the smaller integration step; this is recorded rather
+   than claimed to be bit-for-bit equivalent to the unstable 20 ms simulation.
+2. **Late corner preparation:** a bounded periodic smooth reference anticipates
+   required offsets. Lookahead targets are checked against the band at their
+   lookahead station; the current body is checked at its own station. Speeds
+   anticipate spatial-reference slope as well as curvature.
+3. **Safe-looking standstill:** recovery offset/crawl candidates are available
+   without a passing threat, and a checked forward route wins over unnecessary
+   standstill. Failing map/collision checks still cannot be forced through.
+4. **Insufficient full-body reference clearance:** reference refinement checks the
+   oriented rectangle, not just the center offset, inside the original legal
+   band. `reference_clearance_reserve: 0.12` adds preparation room **on top of**
+   the unchanged 0.04 m runtime boundary margin. Empty body-clear bands fail
+   explicitly. Nodal clearance is not a swept tracking guarantee.
+5. **Attacker recovery deadlocks:** nominal catch-up replaces edge chasing when
+   there is no nearby passing opportunity. Guarded recovery searches legal
+   corrections/crawl speeds and requires actual predicted progress. Both cars
+   use the same explicit body-rule tracking budget; existing rule errors may
+   request strictly improving repair, not passing credit. Hard wall-margin,
+   collision, and target-legality checks remain separate and observable.
+
+CSV rows are streamed per **action cycle**, with inner-physics-step counts and
+partial-cycle timing. Checkpoints are written while running, labeled incomplete;
+only final run/aggregate JSON is authoritative. `--progress-interval 10` prints
+periodic simulated time, wall time, per-car progress and rolling stall state.
+Five-second signed-progress windows detect local stops that whole-run averages
+miss; `--stall-timeout` terminates explicitly as `stalled`, never success.
+
+Final default-adaptive validation, Python 3.15.2 / Gym 0.26.2:
+
+| Outcome | Defender | Attacker |
+|---|---:|---:|
+| Lap goal finished at | 83.30 s | 113.60 s |
+| Last-five-second progress at finish | 8.210 m | 8.666 m |
+| Maximum local-stall duration | 0 s | 0 s |
+| Collision / off-track / numerical failure | 0 / 0 / 0 | 0 / 0 / 0 |
+
+The standard suite passed 152 tests (the two expensive long tests are skipped
+unless enabled); nine existing simulator/API/dynamics tests also passed. The
+real-Gym 60-second regression and the up-to-300-second goal-bounded regression
+both passed. CI runs the 60-second regression on Python 3.15. They independently reconstruct rolling progress from CSV, check every
+step for failures, and do not rely only on the final summary. This establishes
+that the repaired **default scenario** keeps moving through the track; it does
+not establish all scenarios, official rule compliance, safe real-time deployment,
+or superior defensive performance. Unresolved model decisions and CPU deadline
+misses remain reported.
+
 ## What changed
 
 ### 1. The defender no longer consumes exact opponent state
@@ -88,7 +165,8 @@ compares offset-bias and speed candidates over a 1.5-second horizon, with:
 
 - Command filters integrated at the **actual actuation cadence**, not the coarser
   planning period. `prediction_dt` is an upper bound on check spacing; the default
-  checks use the smaller 20 ms physics interval.
+  checks use the 20 ms command interval. Actual Gym integration is substepped at
+    10 ms by default; command timing and jerk limits are unchanged.
 - Bounded acceleration, braking, emitted-command jerk, steering slew, lateral
   target velocity, and lateral target acceleration. Braking reserves speed to
   release deceleration smoothly instead of clipping at zero and violating jerk.
@@ -203,7 +281,8 @@ unknown adversary.
 
 ## Output and comparison semantics
 
-Each physics step is written to CSV, plus strict JSON run/aggregate summaries:
+Each action cycle is written to CSV, with counts/timing for its physics substeps,
+plus strict JSON run/aggregate summaries:
 
 - Control mode/reason, commands and derivatives, target and actual Frenet states.
 - Hypothesis clearance, sensor age/error/availability, and unresolved decisions.
@@ -234,9 +313,12 @@ and adversary. Its shaping, legal-region estimator, and replanning cadence diffe
 it is an informative baseline, not a perfectly isolated single-factor ablation.
 The original `rival_baseline.py` remains available unchanged.
 
-## Final validation: Python 3.15.2, Gym 0.26.2
+## Earlier short-run validation: Python 3.15.2, Gym 0.26.2
 
-- **103 RIVAL tests passed**; **7 existing Gym/API/dynamics tests passed**.
+These measurements describe the earlier implementation before the long-run fixes
+above; preserve them as failure evidence, not current timing/performance numbers.
+
+- **103 RIVAL tests passed**; **7 existing Gym/API/dynamics tests passed** at that revision.
 - Twelve current-config stress cases, up to 4 simulated seconds each: **0 collision
   runs, 0 raster off-track runs, 0 defender-failure runs**. However, **9 attacks
   were invalid/ineffective**, only **3 were eligible attack tests**, and there were

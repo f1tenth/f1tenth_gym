@@ -2,9 +2,12 @@
 
 Four-tuple Gym, [steer, speed]. Synchronous CPU wall times are diagnostics:
 no wall-time delay is added to simulated sensing, tracking or actuation.
+Settings.timestep is the action period, not the Gym integration timestep.
+Commands/sensors/slew remain at that period; held commands use smaller physics steps.
 """
 import argparse
 import csv
+from collections import deque
 from dataclasses import asdict, replace
 from types import SimpleNamespace
 import json
@@ -52,25 +55,177 @@ class PassMetric:
         return False
 
 
-def attack_outcome(progress, elapsed, collisions, offtrack, requested_steps,
-                   executed_steps, unresolved_steps):
-    """Attacker invalidity is not a defended attack or a defender failure."""
+class RunStream:
+    """Incremental action CSV and explicitly nonfinal, atomically replaced checkpoints."""
+    def __init__(self, output):
+        self.output = Path(output)
+        self.output.parent.mkdir(parents=True, exist_ok=True)
+        if not self.output.parent.is_dir():
+            raise ValueError(f'Output parent is not a directory: {self.output.parent}')
+        self.stream = self.output.with_suffix('.csv').open('w', newline='')
+        # Reusing an output name starts a new run. A killed rerun must not
+        # leave an older successful summary beside a newly partial CSV.
+        self.output.with_suffix('.json').unlink(missing_ok=True)
+        self.output.with_suffix('.checkpoint.json').unlink(missing_ok=True)
+        self.writer = None
+        self.row_count = self.last_flush_count = 0
+        self.last_flush_time = self.last_row_time = 0.
+
+    def write_row(self, row):
+        # The caller supplies a completed action row, including partial-cycle
+        # end fields. Do not freeze the header from a pre-physics draft row.
+        if self.writer is None:
+            self.writer = csv.DictWriter(self.stream, fieldnames=list(row))
+            self.writer.writeheader()
+        self.writer.writerow(clean(row))
+        self.row_count += 1
+        self.last_row_time = float(row['step_end_time'])
+        if (self.row_count == 1 or self.row_count % 50 == 0
+                or self.last_row_time - self.last_flush_time >= 1. - 1e-9):
+            self.flush()
+
+    def flush(self):
+        self.stream.flush()
+        self.last_flush_count = self.row_count
+        self.last_flush_time = self.last_row_time
+
+    def checkpoint(self, snapshot):
+        self.flush()
+        payload = clean(dict(snapshot, incomplete=True, completed=False, status='incomplete',
+            csv_rows=self.row_count, last_csv_sim_time=self.last_row_time,
+            note='diagnostic checkpoint only, not a final result or successful run'))
+        path = self.output.with_suffix('.checkpoint.json')
+        temporary = path.with_suffix('.json.tmp')
+        temporary.write_text(json.dumps(payload, indent=2, allow_nan=False))
+        temporary.replace(path)
+
+    def close(self):
+        self.stream.close()  # Also flushes any final buffered rows on exceptions.
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, traceback):
+        self.close()
+        return False
+
+
+class StallMetric:
+    """Signed progress over an interpolated five-second window, per car.
+
+    A stall is confirmed once a full window advances less than .25 m. Its
+    onset is the start of that qualifying window; reverse travel also stalls.
+    No whole-run average can clear an ongoing local stall.
+    """
+    def __init__(self, window=5., minimum_progress=.25):
+        self.window, self.minimum_progress = window, minimum_progress
+        self.history = deque([(0., np.zeros(2))])
+        self.rolling_progress = np.zeros(2)
+        self.active = np.zeros(2, dtype=bool)
+        self.start = [None, None]
+        self.last_start = [None, None]
+        self.max_time = np.zeros(2)
+        self.current_time = np.zeros(2)
+
+    def update(self, t, progress):
+        values = np.asarray(progress, dtype=float).copy()
+        self.history.append((t, values))
+        cutoff = max(0., t - self.window)
+        while len(self.history) > 2 and self.history[1][0] <= cutoff:
+            self.history.popleft()
+        ta, a = self.history[0]
+        tb, b = self.history[1]
+        fraction = (cutoff - ta) / (tb - ta) if tb > ta else 0.
+        baseline = a + np.clip(fraction, 0., 1.) * (b - a)
+        self.rolling_progress = values - baseline
+        active = (t >= self.window - 1e-9) & (self.rolling_progress < self.minimum_progress)
+        newly_active = active & ~self.active
+        for i in range(2):
+            if newly_active[i]:
+                self.start[i] = self.last_start[i] = max(0., t - self.window)
+            if active[i]:
+                self.current_time[i] = t - self.start[i]
+                self.max_time[i] = max(self.max_time[i], self.current_time[i])
+            else:
+                self.start[i] = None
+                self.current_time[i] = 0.
+        self.active = active
+        return newly_active
+
+    def timed_out(self, timeout):
+        return timeout is not None and bool(np.any(self.active & (self.current_time >= timeout - 1e-9)))
+
+    def summary(self):
+        return dict(window_seconds=self.window, minimum_signed_progress=self.minimum_progress,
+            last_rolling_progress=self.rolling_progress, locally_stalled=self.active,
+            stall_start=self.start, last_stall_start=self.last_start,
+            current_stall_time=self.current_time, max_stall_time=self.max_time,
+            note='per-car [defender, attacker]; onset is start of first qualifying full window; signed progress, not distance travelled')
+
+
+def integration_schedule(action_period, max_physics_dt):
+    if not np.isfinite(max_physics_dt) or max_physics_dt <= 0:
+        raise ValueError('max_physics_dt must be finite and positive')
+    count = int(np.ceil(action_period / max_physics_dt))
+    return action_period / count, count
+
+
+def numerical_failures(obs):
+    """Public observations only; no angle wrapping or private-state repair."""
     failures = []
+    fields = ('poses_x', 'poses_y', 'poses_theta', 'linear_vels_x',
+              'linear_vels_y', 'ang_vels_z')
+    for i in range(len(obs['poses_x'])):
+        reasons = [f'nonfinite:{key}' for key in fields if not np.isfinite(obs[key][i])]
+        if np.isfinite(obs['ang_vels_z'][i]) and abs(obs['ang_vels_z'][i]) > 100.:
+            reasons.append('yaw_rate_exceeds_100_rad_s')
+        failures.append(reasons)
+    return failures
+
+
+def held_action_steps(env, actions, substeps, integration_dt, start_time, track, cfg):
+    """Yield every physics result; never step past an inner failure/done."""
+    held = np.asarray(actions, dtype=float).copy()
+    for index in range(substeps):
+        obs, _, done, _ = env.step(held.copy())
+        numerical = numerical_failures(obs)
+        collision = np.asarray(obs['collisions'], dtype=bool)
+        offtrack = np.array([False if numerical[i] else not track.footprint_safe(
+            [obs['poses_x'][i], obs['poses_y'][i]], obs['poses_theta'][i],
+            cfg.car_length, cfg.car_width, 0.) for i in range(len(numerical))])
+        reason = ('numerical_instability' if any(numerical) else
+                  'collision' if collision.any() else 'offtrack' if offtrack.any() else
+                  'gym_done' if done else None)
+        yield SimpleNamespace(obs=obs, done=done, numerical=numerical,
+            collision=collision, offtrack=offtrack, reason=reason, count=index + 1,
+            elapsed=start_time + (index + 1) * integration_dt)
+        if reason is not None:
+            return
+
+
+def attack_outcome(progress, elapsed, collisions, offtrack, requested_steps,
+                   executed_steps, unresolved_steps, numerical=None, local_stalled=None):
+    """Attacker invalidity is not a defended attack or a defender failure."""
+    numerical = [False, False] if numerical is None else numerical
+    failures = []
+    if numerical[1]:
+        failures.append('attacker_numerical_instability')
     if collisions[1]:
         failures.append('attacker_collision')
     if offtrack[1]:
         failures.append('attacker_offtrack')
-    if requested_steps and progress[1] < .2 * elapsed:
+    if requested_steps and (progress[1] < .2 * elapsed or
+                            (local_stalled is not None and local_stalled[1])):
         failures.append('attacker_stalled')
     if requested_steps and not executed_steps:
         failures.append('no_executed_sampled_feasible_attack')
     if unresolved_steps:
         failures.append('attacker_unresolved_preview')
     return dict(invalid_attack=bool(failures), invalid_attack_reasons=failures,
-                defender_failure=bool(collisions[0] or offtrack[0]),
+                defender_failure=bool(collisions[0] or offtrack[0] or numerical[0]),
                 attacker_failure=bool(failures),
                 attacker_physical_failure=bool(collisions[1] or offtrack[1]),
-                attack_evaluation_eligible=bool(requested_steps and executed_steps and not failures),
+                attack_evaluation_eligible=bool(requested_steps and executed_steps and not failures and not any(numerical)),
                 defended_attack_credit=False,
                 note='eligibility is not successful-defense credit; attacker fallback/stall/offtrack must not be scored as defended attacks')
 
@@ -89,23 +244,24 @@ class EvaluationBounds:
         self.invalid_interval_steps = np.zeros(2, dtype=int)
         self.sensor_counts = dict(speed=0, acceleration=0, lateral_speed=0)
 
-    def update(self, states, previous, envelope, sensor):
+    def update(self, states, previous, envelope, sensor, dt=None):
+        dt = self.dt if dt is None else dt
         row = {}
         for i, (label, state) in enumerate(zip(('ego', 'attacker'), states)):
             lo, hi = envelope.interval(state.s)
             valid = np.isfinite(lo) and np.isfinite(hi) and lo <= hi
             magnitude = max(lo - state.d, state.d - hi, 0.) if valid else None
             violation = not valid or magnitude > self.tolerance
-            self.duration[i] += self.dt * int(violation)
+            self.duration[i] += dt * int(violation)
             self.invalid_interval_steps[i] += int(not valid)
             if valid:
                 self.max_magnitude[i] = max(self.max_magnitude[i], magnitude)
-                self.excess_integral[i] += max(0., magnitude - self.tolerance) * self.dt
+                self.excess_integral[i] += max(0., magnitude - self.tolerance) * dt
             row.update({f'{label}_legal_violation': violation,
                         f'{label}_legal_violation_magnitude': magnitude})
         opponent, old = states[1], previous[1]
-        acceleration = (opponent.speed - old.speed) / self.dt
-        lateral_speed = (opponent.d - old.d) / self.dt
+        acceleration = (opponent.speed - old.speed) / dt
+        lateral_speed = (opponent.d - old.d) / dt
         checks = dict(speed=abs(opponent.speed) > sensor.max_speed + 1e-9,
                       acceleration=abs(acceleration) > sensor.max_acceleration + 1e-9,
                       lateral_speed=abs(lateral_speed) > sensor.max_lateral_speed + 1e-9)
@@ -122,7 +278,7 @@ class EvaluationBounds:
             invalid_interval_steps=self.invalid_interval_steps,
             note='per-car [defender, attacker]; measured d versus envelope, separate from bitmap offtrack; end-of-step samples'),
             sensor_bound_violation_steps=self.sensor_counts,
-            sensor_bound_note='evaluation truth absolute speed, finite-difference longitudinal acceleration and lateral speed versus SensorConfig bounds; not measurement calibration')
+            sensor_bound_note='evaluation truth absolute speed, finite-difference longitudinal acceleration and lateral speed versus SensorConfig bounds; sampled at integration_dt in the runner, not measurement calibration')
 
 
 class StepMetrics:
@@ -165,6 +321,8 @@ class StepMetrics:
                        for name, values in self.pipeline_times.items()},
                     physics_deadline_misses=self.physics_deadline_misses,
                     physics_deadline_ms=self.dt * 1000,
+                    action_deadline_ms=self.dt * 1000,
+                    deadline_note='legacy physics_deadline fields use cfg.timestep action period, not the smaller integration_dt',
                     note='synchronous wall time from cycle observation read/conversion through perception, tracker, controller, adversary and command telemetry preparation; excludes env.step/render; no added simulated sensing or actuator latency')
 
     def update(self, commands, targets, planning_ms, controller_ms):
@@ -194,7 +352,7 @@ class StepMetrics:
 
 
 class LegacyAdapter:
-    """Original Defender/pursuit at its original physics-step cadence.
+    """Original Defender/pursuit at the configured action-period cadence.
 
     Same estimate, initial poses, adversary and sensor as robust. Original
     TrackRules and command shaping intentionally remain different. Missing,
@@ -209,7 +367,7 @@ class LegacyAdapter:
     def step(self, t, ego, estimate, defense=True):
         start = time.perf_counter()
         if estimate is None or not estimate.valid or not estimate.fresh:
-            target = self.envelope.nominal(ego.s)
+            target = self.envelope.nominal(ego.s + self.cfg.lookahead)
             self.defender.target = target
             reason, feasible, speed = 'legacy:no_valid_fresh_estimate_nominal_stop', False, 0.
         else:
@@ -236,11 +394,16 @@ def suite_cases(kind, cfg, sensor, length):
 
 
 def run(scenario, defense, cfg, rc, sc, line, track, map_base, map_ext,
-        output, sensor_kind='simulated', render=False, controller_kind='robust'):
+        output, sensor_kind='simulated', render=False, controller_kind='robust', stall_timeout=None,
+                progress_interval=10.):
     from rival_robust import RobustDefender, TrackEnvelope
     import gym
     from f110_gym.envs.base_classes import Integrator
     from f110_gym.envs.f110_env import F110Env
+    if not np.isfinite(progress_interval) or progress_interval <= 0:
+        raise ValueError('progress_interval must be finite and positive')
+    if stall_timeout is not None and (not np.isfinite(stall_timeout) or stall_timeout < 5.):
+        raise ValueError('stall_timeout must be finite and at least 5 seconds')
     envelope = TrackEnvelope(line, track, cfg, rc, boundaries_path=rc.boundaries_path)
     poses, offsets = [], []
     for s in (cfg.start_s, cfg.start_s - cfg.initial_gap):
@@ -253,30 +416,40 @@ def run(scenario, defense, cfg, rc, sc, line, track, map_base, map_ext,
         poses.append([*line.sample(s, d), line.heading(s)])
     if np.linalg.norm(np.array(poses[0][:2]) - poses[1][:2]) < cfg.car_length + cfg.separation_margin:
         raise ValueError('Initial footprints too close')
+    initial_targets = [envelope.nominal(s + cfg.lookahead)
+                       for s in (cfg.start_s, cfg.start_s - cfg.initial_gap)]
     if controller_kind == 'robust':
-        controller = RobustDefender(line, track, cfg, rc, offsets[0], envelope=envelope)
+        controller = RobustDefender(line, track, cfg, rc, initial_targets[0], envelope=envelope)
     else:
         controller = LegacyAdapter(line, track, cfg, offsets[0], envelope)
     overlay = Overlay(line) if render else None
-    attacker = Adversary(offsets[1])
+    attacker = Adversary(initial_targets[1], tracking_margin=rc.lateral_tracking_margin)
     sensor = SimulatedSensor(line, sc, cfg.seed)
     detector = LidarDetector(line, track, sc)
     tracker = OpponentTracker(line, sc)
+    # Compatibility while the parent adds this documented RobustConfig field.
+    max_physics_dt = getattr(rc, 'max_physics_dt', .01)
+    integration_dt, substeps = integration_schedule(cfg.timestep, max_physics_dt)
     env = gym.make('f110_gym:f110-v0', map=str(map_base), map_ext=map_ext,
-                   num_agents=2, timestep=cfg.timestep, seed=cfg.seed, integrator=Integrator.RK4)
+                   num_agents=2, timestep=integration_dt, seed=cfg.seed, integrator=Integrator.RK4)
     rows, events = [], []
-    metrics = StepMetrics(cfg.timestep, rc.control_period, offsets)
+    metrics = StepMetrics(cfg.timestep, rc.control_period, initial_targets)
+    stalls = StallMetric()
     bounds = EvaluationBounds(cfg.timestep)
     pass_metric = PassMetric(cfg.initial_gap, cfg.car_length + cfg.separation_margin)
     max_actual_speed = np.zeros(2)
     progress = np.zeros(2)
     collision = np.zeros(2, dtype=bool)
     offtrack = np.zeros(2, dtype=bool)
+    numerical = np.zeros(2, dtype=bool)
+    numerical_counts = np.zeros(2, dtype=int)
+    max_abs_yaw_rate = np.zeros(2)
+    physics_step_count = 0
     lap_times = [None, None]
     pass_time = None
     passed = False
     previous_steer = 0.
-    previous_target = offsets[0]
+    previous_target = initial_targets[0]
     previous_def_steer = 0.
     target_jump = steer_jump = 0.
     minsep = float('inf')
@@ -284,9 +457,30 @@ def run(scenario, defense, cfg, rc, sc, line, track, map_base, map_ext,
     elapsed = 0.
     reason = 'duration_limit'
     wall = time.perf_counter()
+    stream = None
+    next_checkpoint, next_progress = 10., progress_interval
+    interruption = None
+
+    def snapshot():
+        return dict(scenario=scenario, defense=defense, controller=controller_kind,
+            elapsed=elapsed, wall_seconds=time.perf_counter() - wall,
+            requested_duration=cfg.duration, integration_dt=integration_dt, action_period=cfg.timestep,
+            physics_steps=physics_step_count, progress=progress,
+            stall_metrics=stalls.summary(), numerical_failures=numerical,
+            numerical_failure_counts=numerical_counts, collisions=collision, offtrack=offtrack,
+            interruption=interruption,
+            cars={label: dict(progress=float(progress[i]),
+                last_rolling_progress=float(stalls.rolling_progress[i]),
+                locally_stalled=bool(stalls.active[i]), stall_start=stalls.start[i],
+                max_stall_time=float(stalls.max_time[i]), numerical_failure=bool(numerical[i]),
+                collision=bool(collision[i]), offtrack=bool(offtrack[i]))
+                for i, label in enumerate(('defender', 'attacker'))})
+
     old_callbacks, old_renderer = F110Env.render_callbacks, F110Env.renderer
     F110Env.render_callbacks, F110Env.renderer = [], None
     try:
+        stream = RunStream(output)
+        stream.checkpoint(snapshot())
         if cfg.car_length < env.params['length'] or cfg.car_width < env.params['width']:
             raise ValueError('Configured footprint undersizes simulator vehicle')
         if not np.isclose(cfg.wheelbase, env.params['lf'] + env.params['lr']):
@@ -294,27 +488,40 @@ def run(scenario, defense, cfg, rc, sc, line, track, map_base, map_ext,
         if render:
             env.add_render_callback(overlay)
         obs, _, done, _ = env.reset(np.asarray(poses))
-        states = [observe(obs, i, line) for i in range(2)]
-        minsep = float(np.hypot(states[0].x - states[1].x, states[0].y - states[1].y))
+        reset_numerical = numerical_failures(obs)
+        numerical |= np.asarray([bool(reasons) for reasons in reset_numerical])
+        numerical_counts += numerical.astype(int)
+        states = [None if numerical[i] else observe(obs, i, line) for i in range(2)]
+        xy = np.array([obs['poses_x'], obs['poses_y']], dtype=float)
+        if np.isfinite(xy).all():
+            minsep = float(np.linalg.norm(xy[:, 0] - xy[:, 1]))
         collision |= np.asarray(obs['collisions'], dtype=bool)
         for i, state in enumerate(states):
-            offtrack[i] = not track.footprint_safe([state.x, state.y], state.yaw,
-                cfg.car_length, cfg.car_width, 0.)
-            max_actual_speed[i] = abs(state.speed)
+            if numerical[i]:
+                events.append(dict(time=0., event='numerical_instability', car=i,
+                                   reasons=reset_numerical[i]))
+            if np.isfinite(obs['ang_vels_z'][i]):
+                max_abs_yaw_rate[i] = abs(obs['ang_vels_z'][i])
+            if state is not None:
+                offtrack[i] = not track.footprint_safe([state.x, state.y], state.yaw,
+                    cfg.car_length, cfg.car_width, 0.)
+                max_actual_speed[i] = abs(state.speed)
             if collision[i]:
                 events.append(dict(time=0., event='collision', car=i))
             if offtrack[i]:
                 events.append(dict(time=0., event='offtrack', car=i))
         if done:
             events.append(dict(time=0., event='gym_done_at_reset'))
+        stream.checkpoint(snapshot())
         last_render = -1.
         for step in range(int(np.ceil(cfg.duration / cfg.timestep))):
-            if done or collision.any() or offtrack.any():
-                reason = ('collision_at_reset' if collision.any() else
+            if done or collision.any() or offtrack.any() or numerical.any():
+                reason = ('numerical_instability' if numerical.any() else
+                          'collision_at_reset' if collision.any() else
                           'offtrack_at_reset' if offtrack.any() else
                           'gym_done_at_reset' if step == 0 else 'gym_done')
                 break
-            t = step * cfg.timestep
+            t = elapsed
             observation_start = time.perf_counter()
             states = [observe(obs, i, line) for i in range(2)]
             ego, opponent = states
@@ -353,6 +560,15 @@ def run(scenario, defense, cfg, rc, sc, line, track, map_base, map_ext,
                 attack_sampled_path_feasible=attack.sampled_path_feasible,
                 attack_selected_path_feasible=attack.selected_path_feasible,
                 attack_fallback=attack.fallback, attack_unresolved=attack.unresolved,
+                attacker_reference_speed_cap=attack.reference_speed_cap,
+                attacker_tracking_margin=attack.tracking_margin,
+                attacker_initial_body_error=attack.initial_body_error,
+                attacker_predicted_max_body_error=attack.predicted_max_body_error,
+                attacker_predicted_final_body_error=attack.predicted_final_body_error,
+                attacker_predicted_within_tracking_budget=attack.predicted_within_tracking_budget,
+                attacker_predicted_strict_body_legal=attack.predicted_strict_body_legal,
+                attacker_body_band_recovery=attack.body_band_recovery,
+                attacker_partial_body_recovery=attack.partial_body_recovery,
                 steering=decision.steering, speed=decision.speed,
                 attacker_steering=steer, attacker_speed_command=speed,
                 min_predicted_separation=decision.min_separation,
@@ -369,34 +585,86 @@ def run(scenario, defense, cfg, rc, sc, line, track, map_base, map_ext,
             row.update(metrics.pipeline(detection_ms, tracking_ms,
                                         (time.perf_counter() - observation_start) * 1000))
             rows.append(clean(row))
-            obs, _, done, _ = env.step(np.asarray([[decision.steering, decision.speed], [steer, speed]]))
-            elapsed = (step + 1) * cfg.timestep
-            new = [observe(obs, i, line) for i in range(2)]
-            rows[-1].update(clean(bounds.update(new, states, envelope, sc)))
-            for i, state in enumerate(new):
-                progress[i] += line.signed_distance(state.s, states[i].s)
-                max_actual_speed[i] = max(max_actual_speed[i], abs(state.speed))
-                hit = bool(obs['collisions'][i])
-                outside = not track.footprint_safe([state.x, state.y], state.yaw,
-                    cfg.car_length, cfg.car_width, 0.)
-                if hit and not collision[i]:
-                    events.append(dict(time=elapsed, event='collision', car=i))
-                if outside and not offtrack[i]:
-                    events.append(dict(time=elapsed, event='offtrack', car=i))
-                collision[i] |= hit
-                offtrack[i] |= outside
-                if progress[i] >= cfg.laps * line.length and lap_times[i] is None:
-                    lap_times[i] = elapsed
-            minsep = min(minsep, float(np.hypot(new[0].x - new[1].x, new[0].y - new[1].y)))
-            if pass_metric.update(elapsed, progress):
-                passed, pass_time = True, pass_metric.time
-                events.append(dict(time=pass_time, confirmed_at=elapsed, event='sustained_pass',
-                    sampled_path_feasible_attack_steps=attacker.sampled_path_feasible_steps))
-            rows[-1].update(step_end_time=elapsed, ego_progress=float(progress[0]),
+            inner_reason = None
+            actions = np.asarray([[decision.steering, decision.speed], [steer, speed]])
+            for inner in held_action_steps(env, actions, substeps, integration_dt, t, track, cfg):
+                obs, done, elapsed = inner.obs, inner.done, inner.elapsed
+                physics_step_count += 1
+                new = [None if inner.numerical[i] else observe(obs, i, line) for i in range(2)]
+                if all(state is not None for state in new):
+                    rows[-1].update(clean(bounds.update(new, states, envelope, sc, dt=integration_dt)))
+                for i, state in enumerate(new):
+                    if inner.numerical[i]:
+                        numerical[i] = True
+                        numerical_counts[i] += 1
+                        events.append(dict(time=elapsed, event='numerical_instability', car=i,
+                            reasons=inner.numerical[i],
+                            observation={key: clean(obs[key][i]) for key in
+                                ('poses_x', 'poses_y', 'poses_theta', 'linear_vels_x',
+                                 'linear_vels_y', 'ang_vels_z')}))
+                    if np.isfinite(obs['ang_vels_z'][i]):
+                        max_abs_yaw_rate[i] = max(max_abs_yaw_rate[i], abs(obs['ang_vels_z'][i]))
+                    if state is not None:
+                        progress[i] += line.signed_distance(state.s, states[i].s)
+                        max_actual_speed[i] = max(max_actual_speed[i], abs(state.speed))
+                    if inner.collision[i] and not collision[i]:
+                        events.append(dict(time=elapsed, event='collision', car=i))
+                    if inner.offtrack[i] and not offtrack[i]:
+                        events.append(dict(time=elapsed, event='offtrack', car=i))
+                    collision[i] |= inner.collision[i]
+                    offtrack[i] |= inner.offtrack[i]
+                    if (not numerical[i] and progress[i] >= cfg.laps * line.length
+                            and lap_times[i] is None):
+                        lap_times[i] = elapsed
+                xy = np.array([obs['poses_x'], obs['poses_y']], dtype=float)
+                if np.isfinite(xy).all():
+                    minsep = min(minsep, float(np.linalg.norm(xy[:, 0] - xy[:, 1])))
+                if not numerical.any() and pass_metric.update(elapsed, progress):
+                    passed, pass_time = True, pass_metric.time
+                    events.append(dict(time=pass_time, confirmed_at=elapsed, event='sustained_pass',
+                        sampled_path_feasible_attack_steps=attacker.sampled_path_feasible_steps))
+                states = new
+                inner_reason = inner.reason
+                if not numerical.any():
+                    new_stalls = stalls.update(elapsed, progress)
+                    for i in np.flatnonzero(new_stalls):
+                        events.append(dict(time=elapsed, event='stall_confirmed', car=int(i),
+                            stall_start=stalls.start[i], rolling_progress=float(stalls.rolling_progress[i])))
+                    if inner_reason is None and stalls.timed_out(stall_timeout):
+                        inner_reason = 'stalled'
+                        events.append(dict(time=elapsed, event='stall_timeout',
+                            cars=np.flatnonzero(stalls.active).tolist(), timeout=stall_timeout))
+                        break
+                if done:
+                    events.append(dict(time=elapsed, event='gym_done'))
+            rows[-1].update(action_time=t, action_period=cfg.timestep,
+                integration_dt=integration_dt, physics_step_count=inner.count,
+                cumulative_physics_steps=physics_step_count, action_elapsed=elapsed - t,
+                step_end_time=elapsed, ego_progress=float(progress[0]),
                 attacker_progress=float(progress[1]), ego_collision=bool(collision[0]),
                 attacker_collision=bool(collision[1]), ego_offtrack=bool(offtrack[0]),
-                attacker_offtrack=bool(offtrack[1]))
-            states = new
+                attacker_offtrack=bool(offtrack[1]), ego_numerical_failure=bool(numerical[0]),
+                attacker_numerical_failure=bool(numerical[1]),
+                ego_yaw_rate=clean(obs['ang_vels_z'][0]), attacker_yaw_rate=clean(obs['ang_vels_z'][1]))
+            for i, label in enumerate(('ego', 'attacker')):
+                rows[-1].update({f'{label}_rolling_progress_5s': float(stalls.rolling_progress[i]),
+                    f'{label}_locally_stalled': bool(stalls.active[i]),
+                    f'{label}_stall_start': stalls.start[i],
+                    f'{label}_max_stall_time': float(stalls.max_time[i])})
+            stream.write_row(rows[-1])
+            if elapsed >= next_checkpoint - 1e-9:
+                stream.checkpoint(snapshot())
+                next_checkpoint = (np.floor(elapsed / 10. + 1e-9) + 1) * 10.
+            if elapsed >= next_progress - 1e-9:
+                print(f'{output.name}: sim={elapsed:.2f}s wall={time.perf_counter()-wall:.1f}s '
+                      f'progress=[{progress[0]:.2f},{progress[1]:.2f}]m '
+                      f'last5s=[{stalls.rolling_progress[0]:.3f},{stalls.rolling_progress[1]:.3f}]m '
+                      f'stalled={stalls.active.tolist()} numerical={numerical.tolist()} '
+                      f'collision={collision.tolist()} offtrack={offtrack.tolist()}', flush=True)
+                next_progress = (np.floor(elapsed / progress_interval + 1e-9) + 1) * progress_interval
+            if inner_reason is not None:
+                reason = inner_reason
+                break
             if render and elapsed - last_render >= .1 - 1e-9:
                 overlay.target = line.sample(ego.s + cfg.lookahead, decision.target_offset)
                 env.render(mode='human_fast')
@@ -407,14 +675,24 @@ def run(scenario, defense, cfg, rc, sc, line, track, map_base, map_ext,
             if all(t is not None for t in lap_times):
                 reason = 'laps_completed'
                 break
+    except BaseException as exc:
+        interruption = dict(type=type(exc).__name__, message=str(exc))
+        raise
     finally:
         try:
-            if F110Env.renderer is not None:
-                F110Env.renderer.close()
+            if stream is not None:
+                try:
+                    stream.checkpoint(snapshot())
+                finally:
+                    stream.close()
         finally:
-            F110Env.renderer = old_renderer
-            F110Env.render_callbacks = old_callbacks
-            env.close()
+            try:
+                if F110Env.renderer is not None:
+                    F110Env.renderer.close()
+            finally:
+                F110Env.renderer = old_renderer
+                F110Env.render_callbacks = old_callbacks
+                env.close()
     planning = metrics.planning
     def span(key):
         values = [r[key] for r in rows if r[key] is not None]
@@ -422,14 +700,21 @@ def run(scenario, defense, cfg, rc, sc, line, track, map_base, map_ext,
     result = dict(scenario=scenario, defense=defense, sensor_kind=sensor_kind,
         controller=controller_kind,
         controller_notes=('original Defender/TrackRules/pursuit at timestep cadence; same estimates, sensor and adversary; absent/stale estimate nominal stop; no robust command slew' if controller_kind == 'legacy' else 'RobustDefender with internal control-period solves and timestep actuation'),
-        physics_steps=len(rows),
+        action_cycles=len(rows), physics_steps=physics_step_count,
+        integration_dt=integration_dt, substeps=substeps, action_period=cfg.timestep,
+        max_physics_dt=max_physics_dt,
+        max_physics_dt_source='RobustConfig' if hasattr(rc, 'max_physics_dt') else 'compatibility default pending parent field',
+        integration_note='held [steer,speed] commands; cfg.timestep remains action/sensor/slew period; physics_steps excludes reset initialization; no simulator-state resets or equation changes',
         sensor_description='truth-derived synthetic sensor, not hardware perception' if sensor_kind == 'simulated' else 'heuristic lidar clusters, not identified opponent truth',
         settings=asdict(cfg), robust=asdict(rc), sensor=asdict(sc),
         track=dict(map=str(map_base), extension=map_ext, length=line.length),
         stop_reason=reason, elapsed=elapsed, wall_seconds=time.perf_counter()-wall,
         events=events, collisions=collision, offtrack=offtrack,
+        numerical_failures=numerical, numerical_failure_counts=numerical_counts,
+        numerical_failure_count=int(numerical_counts.sum()),
+        max_abs_observed_yaw_rate=max_abs_yaw_rate,
         completed_laps=np.floor(np.maximum(progress, 0) / line.length).astype(int),
-        lap_completion_times=lap_times, completed=all(v is not None for v in lap_times),
+        lap_completion_times=lap_times, completed=reason != 'stalled' and not numerical.any() and all(v is not None for v in lap_times),
         completed_passes=int(passed), pass_time=pass_time, min_center_separation=minsep,
         measured_d_range=span('ego_truth_eval_d'), target_range=span('target'),
         max_target_step=target_jump, max_steering_step=steer_jump,
@@ -440,9 +725,15 @@ def run(scenario, defense, cfg, rc, sc, line, track, map_base, map_ext,
             note='per-car [defender, attacker]; derivatives of actual commands including initial zero transition; late=controller wall time > timestep, not measured simulator/OS actuation'),
         cars={label: dict(elapsed=elapsed, progress=progress[i],
             laps=float(progress[i] / line.length), completed=lap_times[i] is not None,
-            finish_time=lap_times[i], collision=collision[i], offtrack=offtrack[i])
+            finish_time=lap_times[i], collision=collision[i], offtrack=offtrack[i],
+                        numerical_failure=bool(numerical[i]), numerical_failure_count=int(numerical_counts[i]),
+                                    last_rolling_progress=float(stalls.rolling_progress[i]), locally_stalled=bool(stalls.active[i]),
+                                    globally_stationary=bool(progress[i] < .2 * elapsed), stall_start=stalls.start[i],
+                                    max_stall_time=float(stalls.max_time[i]))
             for i, label in enumerate(('defender', 'attacker'))}, 
-        progress=progress, stalled=progress < .2 * elapsed,
+        progress=progress, stalled=stalls.active, globally_stationary=progress < .2 * elapsed,
+        stall_metrics=stalls.summary(), stall_timeout=stall_timeout,
+        stationary_note='stalled uses the last full 5s window (<.25m signed progress); globally_stationary retains the old whole-run progress < .2 * elapsed criterion',
         unresolved_safety_steps=infeasible, requested_attack_steps=attacker.requested_steps,
         requested_corridor_valid_steps=attacker.corridor_valid_steps,
         guard_intervention_steps=attacker.guard_interventions,
@@ -451,7 +742,15 @@ def run(scenario, defense, cfg, rc, sc, line, track, map_base, map_ext,
         attacker_fallback_steps=attacker.fallback_steps,
         attacker_unresolved_steps=attacker.unresolved_steps,
         attack_evaluation=attack_outcome(progress, elapsed, collision, offtrack,
-            attacker.requested_steps, attacker.executed_attack_steps, attacker.unresolved_steps),
+            attacker.requested_steps, attacker.executed_attack_steps, attacker.unresolved_steps,
+                        numerical, stalls.active),
+        adversary_prediction_budget=dict(tracking_margin=attacker.tracking_margin,
+            source='RobustConfig.lateral_tracking_margin, same configured body tracking margin as defender',
+            body_recovery_steps=attacker.body_recovery_steps,
+            checked_body_recovery_steps=attacker.body_recovery_feasible_steps,
+            measured_strict_violation_action_samples=attacker.executed_violation_steps,
+            measured_recovery_error_growth_samples=attacker.recovery_error_growth_steps,
+            note='prediction tracking budget is not strict rule-band compliance or road expansion; pursuit targets, footprint/map boundary margins and collisions remain hard; measured legal-region monitoring retains its independent 0.02m reporting tolerance'),
         adversary_preview=dict(horizon=attacker.preview_horizon,
             reevaluation_period=attacker.reevaluation_period, commitment_time=attacker.commitment_time,
             side_hysteresis=attacker.side_hysteresis,
@@ -466,20 +765,19 @@ def run(scenario, defense, cfg, rc, sc, line, track, map_base, map_ext,
             p95=np.percentile(planning, 95) if planning else None,
             max=max(planning) if planning else None,
             solve_count=len(planning), missed_budget=metrics.missed))
-    output.parent.mkdir(parents=True, exist_ok=True)
-    if rows:
-        with output.with_suffix('.csv').open('w', newline='') as stream:
-            writer = csv.DictWriter(stream, fieldnames=list(rows[0]))
-            writer.writeheader()
-            writer.writerows(rows)
     result = clean(result)
+    result['incomplete'] = False
     output.with_suffix('.json').write_text(json.dumps(result, indent=2, allow_nan=False))
     print(f'{output.name}: {reason}, sim={elapsed:.2f}s wall={result["wall_seconds"]:.2f}s; '
-          f'pass={pass_time}; steps={len(rows)} solves={len(planning)} budget_misses={metrics.missed} '
+          f'pass={pass_time}; actions={len(rows)} physics_steps={physics_step_count} '
+                    f'numerical_failures={int(numerical_counts.sum())}; solves={len(planning)} budget_misses={metrics.missed} '
                     f'physics_deadline_misses={metrics.physics_deadline_misses}')
     for label, car in result['cars'].items():
         print(f'  {label}: laps={car["laps"]:.3f} completed={car["completed"]} '
-              f'finish={car["finish_time"]} collision={car["collision"]} offtrack={car["offtrack"]}')
+              f'finish={car["finish_time"]} collision={car["collision"]} offtrack={car["offtrack"]} '
+                            f'numerical_failure={car["numerical_failure"]}; last5s={car["last_rolling_progress"]:.3f}m '
+                                          f'local_stall={car["locally_stalled"]} stall_start={car["stall_start"]} '
+                                          f'max_stall={car["max_stall_time"]:.2f}s')
     print(f'  attack: invalid={result["attack_evaluation"]["invalid_attack"]} '
           f'reasons={result["attack_evaluation"]["invalid_attack_reasons"]}; '
           f'executed_steps={attacker.executed_attack_steps} fallback={attacker.fallback_steps} '
@@ -493,13 +791,21 @@ def main():
     parser.add_argument('--scenario', choices=SCENARIOS, default='adaptive')
     parser.add_argument('--duration', type=float)
     parser.add_argument('--render', action='store_true')
+    parser.add_argument('--progress-interval', type=float, default=10.,
+                        help='simulated seconds between progress messages (default: 10)')
     parser.add_argument('--compare', action='store_true')
     parser.add_argument('--controller', choices=('robust', 'legacy'), default='robust')
     parser.add_argument('--sensor', choices=('simulated', 'lidar'), default='simulated')
     parser.add_argument('--output', type=Path, default=Path(__file__).parent / 'rival_results/advanced')
     parser.add_argument('--region', choices=('inside', 'track'))
     parser.add_argument('--suite', choices=('smoke', 'stress'))
+    parser.add_argument('--stall-timeout', type=float, default=None,
+                        help='optional explicit stalled termination after at least 5 seconds of low progress; disabled by default')
     args = parser.parse_args()
+    if not np.isfinite(args.progress_interval) or args.progress_interval <= 0:
+        parser.error('--progress-interval must be finite and positive')
+    if args.stall_timeout is not None and (not np.isfinite(args.stall_timeout) or args.stall_timeout < 5.):
+        parser.error('--stall-timeout must be finite and at least 5 seconds')
     print('R.I.V.A.L. advanced: SIMULATION ONLY — not validated for a real vehicle or arbitrary adversarial behavior.')
     from rival_robust import RobustConfig
     raw = yaml.safe_load(args.config.read_text())
@@ -516,13 +822,18 @@ def main():
     cases = suite_cases(args.suite, cfg, sc, line.length) if args.suite else [(args.scenario, cfg, sc)]
     results = []
     args.output.mkdir(parents=True, exist_ok=True)
+    (args.output / 'summary.json').unlink(missing_ok=True)
     for index, (scenario, settings, sensor) in enumerate(cases):
         for defense in ((True, False) if args.compare else (True,)):
             tag = f'{index:02d}_{scenario}_{args.controller}_{"defense" if defense else "no_defense"}'
             try:
                 results.append(run(scenario, defense, settings, rc, sensor, line,
-                    track, map_base, map_ext, args.output / tag, args.sensor, args.render, args.controller))
+                    track, map_base, map_ext, args.output / tag, args.sensor, args.render, args.controller,
+                                        args.stall_timeout, args.progress_interval))
             except ValueError as exc:
+                checkpoint = (args.output / tag).with_suffix('.checkpoint.json')
+                if checkpoint.exists() and json.loads(checkpoint.read_text()).get('elapsed', 0.) > 0:
+                    raise  # Runtime errors must not become a completed setup-failure summary.
                 print(f'{tag}: invalid_setup: {exc}')
                 failure = dict(scenario=scenario, defense=defense, controller=args.controller, status='invalid_setup',
                     error=str(exc), settings=asdict(settings), sensor=asdict(sensor))
@@ -534,6 +845,10 @@ def main():
         passes=sum(r['completed_passes'] for r in valid),
         collision_runs=sum(any(r['collisions']) for r in valid),
         offtrack_runs=sum(any(r['offtrack']) for r in valid),
+        numerical_failure_runs=sum(any(r['numerical_failures']) for r in valid),
+        numerical_failure_count=sum(r['numerical_failure_count'] for r in valid),
+        local_stall_runs=sum(any(r['stalled']) for r in valid),
+        stall_timeout_runs=sum(r['stop_reason'] == 'stalled' for r in valid),
         unresolved_safety_steps=sum(r['unresolved_safety_steps'] for r in valid),
         invalid_attack_runs=sum(r['attack_evaluation']['invalid_attack'] for r in valid),
         attacker_failure_runs=sum(r['attack_evaluation']['attacker_failure'] for r in valid),
