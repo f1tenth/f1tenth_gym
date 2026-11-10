@@ -16,8 +16,9 @@ The [original baseline](examples/README_RIVAL.md) remains available for comparis
 Neither controller is validated for deployment on a real vehicle.
 
 ## Quickstart
-Use Python 3.11–3.15 in a fresh virtual environment (Python 3.15 verified).
-Do not reuse an environment containing the old NumPy/Gym pins. From a checkout:
+Use Python 3.11–3.15 in a fresh virtual environment. Python 3.15.2 was tested
+on Fedora Linux. Do not reuse an environment containing the old NumPy/Gym pins.
+From a checkout:
 
 ```bash
 python3.15 -m venv .venv
