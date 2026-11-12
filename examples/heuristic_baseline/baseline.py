@@ -514,7 +514,7 @@ class ScriptedAttacker:
 
 def run_episode(scenario, defender_mode='A', seed=0,
                 *, _env=None, _wp=None, _line=None, _tlen=None,
-                _lo=None, _hi=None, _obs_delay=0.0):
+                _lo=None, _hi=None, _obs_delay=0.0, _render=False):
     """
     Run one episode and return metrics.
 
@@ -652,6 +652,8 @@ def run_episode(scenario, defender_mode='A', seed=0,
 
             obs, _, done, _ = env.step(
                 np.array([[def_steer, v_def_state], [atk_steer, v_atk_state]]))
+            if _render:
+                env.render(mode='human')
             elapsed += TIMESTEP
 
             if np.any(obs['collisions']):
