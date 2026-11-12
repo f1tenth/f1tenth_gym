@@ -1,0 +1,55 @@
+{
+  "evaluation": {
+    "n_trials": 100,
+    "modes": [
+      "A",
+      "B"
+    ],
+    "scenarios": [
+      "straight",
+      "move_left",
+      "move_right",
+      "feint",
+      "late_move"
+    ],
+    "seeds": "0 to 99  (seed = trial index)",
+    "obs_delay_mode_b": 0.0
+  },
+  "map": {
+    "name": "example_map",
+    "base": "/Users/rishi/Documents/ARES/f1tenth_gym_RIVAL/examples/example_map",
+    "ext": ".png"
+  },
+  "idm": {
+    "IDM_A_MAX": 2.0,
+    "IDM_B": 3.0,
+    "IDM_S0": 0.5,
+    "IDM_T": 0.6,
+    "V0_DEFENDER": 4.0,
+    "V0_ATTACKER": 4.5,
+    "CAR_LENGTH": 0.58,
+    "LAT_THRESHOLD": 0.3,
+    "TIMESTEP": 0.01
+  },
+  "mobil": {
+    "MOBIL_INTERVAL": 0.2,
+    "B_SAFE": 4.0,
+    "DELTA_A_TH": 0.3,
+    "SWITCH_BIAS": 0.1,
+    "_ALIGN_THRESH": 0.43
+  },
+  "scenario_params": {
+    "ENGAGE_GAP": 5.0,
+    "START_S": 23.0,
+    "START_GAP": 5.0,
+    "FEINT_SWITCH": 1.0,
+    "LATE_CLOSE": 1.5,
+    "SIM_DURATION": 30.0
+  },
+  "lane_offsets": {
+    "LEFT": 0.4,
+    "CENTER": 0.0,
+    "RIGHT": -0.4,
+    "_SAFE_D_MAX": 1.005
+  }
+}
