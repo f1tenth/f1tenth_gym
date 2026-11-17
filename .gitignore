@@ -12,3 +12,4 @@ gym/f110_gym/unittest/centerline/
 docs/_build/
 *.mypy_cache/
 flycheck_*
+examples/RIVAL_PRESENTATION_NOTES.md
