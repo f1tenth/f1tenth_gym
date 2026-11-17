@@ -1,0 +1,52 @@
+# Controlled speed-advantage passing probe, not a competitive-defense benchmark.
+# Same inside region and margins; deliberately slow defender creates an opportunity.
+# Simulation evaluation only. Simulated sensing is truth-derived, not hardware perception.
+track_config: config_example_map.yaml
+settings:
+  timestep: 0.02
+  duration: 20.0
+  seed: 12345
+  # Both starts lie on a usable line segment; other sections are stress-tested.
+  start_s: 22.0
+  # More room for jerk-limited braking and the defender's prediction horizon.
+  initial_gap: 6.0
+  minimum_gap: 2.5
+  # Desired speeds in m/s; curvature, proximity, and safety checks can reduce them.
+  defender_speed: 0.5
+  attacker_speed: 2.0
+  # Match the defender's target-rate capability; retain the same physical vehicle.
+  offset_rate: 0.45
+robust:
+  track_speed_planning: true
+  compiled_attack_preview: true
+  region: inside
+  control_period: 0.1
+  horizon: 1.5
+  prediction_dt: 0.1
+  # Substep the unchanged RK4 dynamics; 0.02 s is unstable near low speeds.
+  max_physics_dt: 0.01
+  reference_smoothing_length: 3.0
+  # Extra clearance for the planned reference, not a reduced runtime wall margin.
+  reference_clearance_reserve: 0.12
+  # Explicit bound for this simulated adversary suite, NOT a hardware guarantee.
+  max_opponent_speed: 4.0
+  # Keep speed requests within the planned cruise ceiling when escaping.
+  escape_speed_fraction: 1.0
+  # Racecraft heuristics, not an official F1 or IAC rule implementation.
+  # One early line choice per encounter; no late opponent-lane chasing.
+  racecraft_lane_offset: 0.45
+  racecraft_min_move: 0.15
+  racecraft_reaction_buffer: 0.4
+  racecraft_corner_curvature: 0.08
+  racecraft_corner_time: 1.2
+  racecraft_overlap_margin: 0.15
+  racecraft_room_margin: 0.08
+  racecraft_reset_gap: 6.0
+  racecraft_reset_dwell: 1.0
+sensor:
+  noise_std: 0.03
+  speed_noise_std: 0.1
+  latency: 0.1
+  update_period: 0.1
+  dropout: 0.05
+  max_age: 0.5

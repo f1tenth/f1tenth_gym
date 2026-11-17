@@ -10,8 +10,17 @@ You can find the [documentation](https://f1tenth-gym.readthedocs.io/en/latest/) 
 
 ## R.I.V.A.L. defensive simulation
 
-The upgraded simulation-only controller, noisy/delayed tracking, adaptive attackers,
-and stress runner are documented in [the advanced guide](examples/README_RIVAL_ADVANCED.md).
+The simulation-only controller includes racecraft-inspired early lane commitment,
+overlap-aware defensive checks, noisy/delayed tracking, adaptive attackers, and an
+optional 3D race-control viewer. See [the advanced guide](examples/README_RIVAL_ADVANCED.md)
+for controls, configuration, tests, and limitations.
+
+```bash
+python examples/rival_advanced.py --scenario adaptive --duration 300 --render
+```
+
+Omit `--render` for headless experiments. The presentation does not change Gym's
+vehicle physics, and the policy is not an official F1 or IAC rule implementation.
 The [original baseline](examples/README_RIVAL.md) remains available for comparison.
 Neither controller is validated for deployment on a real vehicle.
 

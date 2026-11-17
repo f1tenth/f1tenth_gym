@@ -14,7 +14,7 @@ numerical stability. Actions remain rows of `[steering_angle, speed]`.
 
 ## Run
 
-From the repository root, with the project installed (Python 3.15.2 was tested):
+From the repository root, with the project installed (Python 3.15.2 on Fedora Linux was tested):
 
 ```bash
 # Default: simulated noisy/delayed observations, adaptive attacker, headless
@@ -27,8 +27,18 @@ python examples/rival_advanced.py --scenario adaptive --compare
 python examples/rival_advanced.py --controller legacy --scenario adaptive --compare \
   --output examples/rival_results/legacy_comparison
 
-# Render at 10 Hz without slowing every physics step with human-mode sleep
-python examples/rival_advanced.py --scenario adaptive --render --compare
+# New 3D race-control viewer; up to 300 simulated seconds / lap-goal completion
+python examples/rival_advanced.py --scenario adaptive --duration 300 --render
+
+# Track-aware faster profile with smooth attacker control
+python examples/rival_advanced.py --config examples/rival_advanced_fast.yaml \
+  --scenario adaptive --duration 120 --render --output examples/rival_results/fast
+
+# Optional faster presentation (does not change simulation time or physics)
+python examples/rival_advanced.py --scenario adaptive --render --render-speed 2
+
+# Keep the original 10 Hz top-down presentation available
+python examples/rival_advanced.py --scenario adaptive --render --viewer legacy --compare
 
 # Bounded scenario matrices: four smoke cases or twelve stress cases
 python examples/rival_advanced.py --suite smoke --duration 4 --compare
@@ -48,10 +58,378 @@ In Fish, activate with `source .venv-py315/bin/activate.fish`; Bash uses
 No dependency was added: the implementation uses the repository's NumPy, SciPy,
 Numba, Pillow, PyYAML, and legacy Gym/pyglet stack.
 
+The repaired `rival_advanced_fast.yaml` uses 3.0/3.4 m/s defender/attacker cruise
+targets instead of blindly requesting 20 m/s. It enables `track_speed_planning`,
+uses an 8 m initial gap and 2.5 m minimum following gap, and matches the attacker's
+lateral target rate to the defender's 0.45 m/s capability. These are different
+initial/following conditions from the conservative default, not a controlled
+speed-only performance comparison. Neither profile changes vehicle physics.
+
+The earlier 20 m/s configuration was not a usable high-speed controller: it
+caused stop/go recovery, abrupt attacker acceleration changes, and only brief
+peak speeds. Earlier 2.5/3.2 and 2.2/3.0 m/s variants also failed long-run stall
+checks. Their results do not validate the current profile; see the repaired-profile
+validation below. The original default profile remains available unchanged in
+its control behavior.
+
+The simulator's default 0.58 m-long F1TENTH vehicle has `v_max = 20 m/s`, so a
+literal 26 m/s exceeds its configured limit; the sample track and controller are
+also not validated for racing at that speed. Do not reinterpret scaled-car speeds
+as verified full-size F1 speeds. `--render-speed` changes wall-time pacing only;
+it cannot make a CPU-bound simulation run faster than the machine can compute.
+
 The first trajectory solve may compile/load a Numba kernel and take longer.
 Compilation and inference timings are not hidden by the metrics. A hardware
 system would need an explicit warmup/arming gate and an independently enforced
 control deadline; this runner supplies neither.
+
+## Corner tracking in the normal fast setup
+
+The normal fast configuration now enables `robust.corner_tracking: true` with
+`target_tracking_gain: 4.0`. Cruise targets remain 3.0/3.4 m/s, the start/gaps and
+inside legal region are unchanged, and Gym's physics and margins are unchanged.
+
+The defender's offset target now includes bounded moving-reference feedforward:
+it anticipates the reference offset's change as the car advances, rather than
+treating the moving reference as a stationary point at which to stop. **Total**
+target rate and acceleration remain bounded by 0.45 m/s and 0.8 m/s². Both cars
+also reserve headroom to release positive acceleration before reaching a speed
+ceiling, while preserving the 6 m/s³ command-jerk bound. This prevents the old
+ceiling overshoot from unnecessarily triggering an attacker lateral correction.
+There is no hard speed clip; an abruptly lowered, unreachable cap can still
+require a transient braking response.
+
+The shared speed step is in `rival_control.py`. Defender execution/readable/JIT
+prediction and attacker readable/JIT prediction use matching arithmetic. The
+conservative configuration leaves this opt-in disabled for comparison.
+
+A fixed-seed full-lap trial of the fast adaptive scenario measured:
+
+| Metric | Before corner fix | With corner fix |
+|---|---:|---:|
+| Defender corner lateral-error p95 | 0.298 m | 0.105 m |
+| Defender corner lateral-error maximum | 0.358 m | 0.195 m |
+| Attacker corner lateral-error p95 | 0.046 m | 0.040 m |
+| Attacker corner lateral-error maximum | 0.225 m | 0.061 m |
+| Corner time below 0.3 m/s, after startup, defender / attacker | 1.02 / 0.26 s | 0 / 0 s |
+| Both lap goals finished | 82.96 s | 80.02 s |
+| Unresolved defender / attacker action cycles | 794 / 10 | 557 / 0 |
+| Collision / off-track / numerical failure / local stall | None | None |
+
+Errors are relative to the smooth legal reference, not a claim that every
+intentional recovery/defensive offset is tracking error. Metrics exclude the
+first two seconds and classify corners by `abs(curvature) >= 0.05` or
+`abs(reference_slope) >= 0.05`; RMS and percentiles use actual action durations.
+The `rival_corner_metrics.py` utility reports these definitions and also wrapped
+heading error and descriptive steering variation/reversals. This is one scenario
+and seed—not a general cornering, defensive-performance or safety guarantee.
+The adaptive run still deferred attacks and reported unresolved defender decisions
+and CPU deadline misses.
+
+Validation: **402 tests passed** in the GL-enabled suite (406 discovered, four
+long opt-ins skipped there). The four configuration/lap/controlled-pass regression
+tests passed separately, including new corner-error, no-near-stop and total-target
+acceleration checks. Seven existing API/dynamics tests, dependency checks and
+whitespace checks also passed. Historical feasibility snapshots explicitly retain
+the pre-corner controller mode; they are not silently reinterpreted as new states.
+
+```bash
+python examples/rival_advanced.py --config examples/rival_advanced_fast.yaml \
+  --scenario adaptive --duration 120 --render --output examples/rival_results/corners
+python examples/rival_corner_metrics.py \
+  --csv examples/rival_results/corners/00_adaptive_robust_defense.csv \
+  --config examples/rival_advanced_fast.yaml
+```
+
+## Previous timing, feasibility, and passing improvements
+
+The fast profile enables `compiled_attack_preview` as well as
+`track_speed_planning`. The conservative default leaves both disabled. The new
+`rival_attack_rollout.py` accelerates supported short previews; custom geometry,
+policy subclasses, and staged/extended maneuvers retain the reference Python
+path. `rival_defender_checks.py` accelerates the same nine opponent hypotheses,
+swept SAT separation and progress calculations. Tests compare numeric results,
+first commands, failure ordering and map checks against the reference paths.
+There is no reduced hypothesis count, larger margin allowance, coarser time grid,
+new dependency, or Gym physics change. Initial JIT/cache-load costs are still
+reported; this is not a hard-real-time system.
+
+The defender now logs the full rejection conjunction and tries a bounded
+midpoint/hazard recovery search after the original candidates fail. New paths
+change the action only if every original check accepts them. Failed hazard
+probes preserve the established emergency selection. Racecraft compares offsets
+at consistent reference stations, avoiding confusion between normal corner
+following and a new lateral block; protected-body/overlap checks remain active.
+
+The attacker evaluates staged **entry / pass / exit** opportunities rather than
+requiring an offset lane over an unnecessarily long section of track. Candidate
+checks predict defender reference motion, speed tracking, and braking. A committed
+side cannot be swapped while alongside; aborts and front returns retain their
+collision, headway and braking checks. The original short preview remains an
+independent requirement. Opportunity geometry and timing are bounded sampled
+assumptions—not a proof of full-maneuver safety or arbitrary-adversary coverage.
+
+### Observed before/after on the default fast adaptive case
+
+The same speeds, start, seed, margins, `inside` region and physics timestep were
+used. Policies differ, so trajectories and action counts need not be identical.
+Timings are observations on the development machine, not portable benchmarks.
+
+| Metric | Earlier repaired fast profile | Latest run |
+|---|---:|---:|
+| Both lap goals complete | Yes, 82.54 simulated s | Yes, 82.96 simulated s |
+| Wall duration, headless | 206.28 s | 79.69 s |
+| Pipeline p50 / p95 | 43.21 / 99.55 ms | 8.86 / 44.73 ms |
+| 20 ms pipeline misses | 4,117 / 4,127 cycles | 982 / 4,148 cycles |
+| Defender unresolved cycles | 660 | **794** |
+| Attacker unresolved cycles | 13 | 10 |
+| Collision / off-track / numerical failure / local stall | None | None |
+| Executed sampled-feasible attacks | 0 | 0 |
+
+**The live defender unresolved count did not improve.** Same-state replays
+confirmed several genuine candidate-coverage fixes, but they do not establish a
+closed-loop reduction: the changed actions lead to different subsequent states.
+The latest run still has no valid executed attack, so it is not evidence of
+competitive defensive performance. The pipeline still misses its 20 ms budget,
+and simulated sensing/actuation does not acquire wall-time latency from those
+misses. There is no claim of safe real-time vehicle operation.
+
+### Controlled passing probe
+
+`rival_passing_demo.yaml` deliberately uses a 0.5 m/s defender and 2.0 m/s attacker,
+start station 22 m and a 6 m initial gap, preserving the inside region and margins.
+This is a separate speed-advantage probe, not an easier substitute for the default
+adaptive evaluation:
+
+```bash
+python examples/rival_advanced.py --config examples/rival_passing_demo.yaml \
+  --scenario left-pass --duration 20 --render --compare \
+  --output examples/rival_results/passing_demo
+```
+
+The 20-second headless comparison recorded a sustained pass at **5.12 s** and
+401 executed sampled-feasible attack steps in **each** run, with no collisions,
+off-track events, numerical failures, local stalls or attacker-unresolved steps.
+The defender still reported unresolved decisions. Defense-on and no-defense pass
+times were equal: this validates an executable passing path, **not an advantage
+for the defensive policy**. Neither car completed a lap in this short probe.
+
+The sample track's minimum inside legal center-band width is about **0.095 m**,
+less than the configured **0.43 m** center separation. Many local attempts must
+therefore defer. This is a measured local constraint, not a global impossibility
+proof. `--region track` remains an explicit opt-in relaxation, never applied
+silently to make a pass happen.
+
+### Diagnostics and regression commands
+
+Final validation on Python 3.15.2 / Fedora Linux: **364 tests passed** in the
+GL-enabled suite (368 discovered, four long regressions skipped there). The four
+configuration/lap/controlled-pass tests then passed with `RIVAL_FAST_TESTS=1` and
+`RIVAL_PASS_TESTS=1`; seven existing API/dynamics tests passed separately.
+`git diff --check` and `python -m pip check` also passed. The old 60/300-second
+conservative-profile opt-ins were not rerun as part of this latest validation.
+
+CSV adds `planner_candidate_*`, `planner_selected_*`, attacker plan/maneuver
+latencies, maneuver phase and opportunity reason. Candidate rejection categories
+can overlap; JSON aggregates candidates only on solve cycles and selected failures
+on every action cycle. These fields expose failure causes rather than renaming
+unresolved decisions as safe. JSON also records passing-opportunity counts and
+separate attacker planning percentiles.
+
+```bash
+# Display-independent tests; expensive real-Gym regressions stay opt-in.
+python -m unittest discover -s examples -p 'test_rival_*.py' -v
+# Actual lap and controlled matched-pass regressions (can take minutes):
+env RIVAL_FAST_TESTS=1 RIVAL_PASS_TESTS=1 python -m unittest discover -s examples -p test_rival_fast_run.py -v
+```
+
+## Repaired fast-profile controller (preceding implementation)
+
+`robust.track_speed_planning: true` opts into the shared `SpeedProfile` and the
+attacker improvements. It is enabled in `rival_advanced_fast.yaml`, not in the
+conservative default. The selected-reference speed plan combines offset-path
+curvature, lateral acceleration, lateral-target-rate constraints, and whole-lap
+backward braking propagation. Front-preview queries reserve response/jerk distance
+and include every intervening sampled node, including across lap closure. Both
+Python and compiled defender rollouts use the same cap; attacker previews also
+apply it at each predicted station. This remains a reference heuristic, not a
+speed guarantee for arbitrary tactical offsets.
+
+The attacker now clones a speed/acceleration state for each candidate and commits
+only the selected first command, with bounded acceleration and jerk. Recovery
+checks useful nominal/hold speeds before absolute crawl speeds; a previously slow
+hold cannot permanently hide a newly feasible faster nominal route. Every
+continued recovery is freshly checked. Hard footprint, legal-band, collision and
+tracking-budget checks remain active; an already invalid margin still reports
+unresolved rather than silently expanding the road.
+
+Fast previews use sampled defender hold/reference-following hypotheses with
+constant speed or bounded acceleration, plus oriented-body separation and
+between-node padding. A pass also needs estimated room for its full completion,
+lateral transition and braking—not just today's short preview. Infeasible passes
+are deferred, and a freshly checked nominal return is preferred before the cars
+become alongside. Following demand accounts for response, jerk, braking distance
+and headway. This deliberately favors controlled following on narrow sections.
+It does not model every defensive maneuver or arbitrary opponent braking/ramming.
+
+### Historical repaired-profile validation, before the latest changes
+
+The then-current adaptive fast-profile run completed both lap goals at **82.54 simulated
+seconds**, within a 120-second budget, in about **206 wall seconds**:
+
+| Metric | Defender | Attacker |
+|---|---:|---:|
+| Lap goal finish time | 82.23 s | 82.53 s |
+| Maximum measured speed | 3.18 m/s | 3.60 m/s |
+| Maximum command jerk | 6.00 m/s³ | 6.00 m/s³ |
+| Collision / off-track / numerical failure | 0 / 0 / 0 | 0 / 0 / 0 |
+| Maximum local-stall duration | 0 s | 0 s |
+| Unresolved decision steps | 660 | 13 |
+
+Cruise targets can be briefly exceeded by the jerk-limited command filter and
+simulator speed tracking; they are not hard clamps on measured speed. All 4,127
+CSV action rows were checked for failures, stalls, and command-jerk limits. There
+was **no pass and no executed sampled-feasible attack**: this run demonstrates
+track completion/command smoothness, **not effective defense against an attack**.
+The evaluator correctly marks the attack ineligible. CPU deadline misses remain;
+OpenGL/NVIDIA does not accelerate the planner. Other starts, seeds, scenarios,
+multiple-lap goals, and real-vehicle operation are not established by this run.
+
+The GL-enabled RIVAL suite passed **282 tests**, with three long opt-ins skipped
+(285 discovered). The opt-in fast lap regression was then rerun successfully:
+its three configuration/integration tests passed in about 226 wall seconds.
+Coverage includes Python/JIT speed-cap parity, lap wrap, future narrowing,
+jerk-limited stop/restart, candidate command-state isolation, unchanged hard
+margins, recovery selection and rendered/headless command parity.
+
+```bash
+# Normally skipped because it takes several minutes; uses the actual Gym/map.
+env RIVAL_FAST_TESTS=1 python -m unittest discover -s examples -p test_rival_fast_run.py -v
+```
+
+CSV includes attacker/defender profile caps, attacker first-command acceleration,
+and an explicit label for the assumed defender model in attacker reasons. JSON
+records profile construction diagnostics. Those are not safety certificates.
+
+## 3D race-control presentation
+
+`--render` now opens a standalone, resizable OpenGL viewer rather than modifying
+Gym's original renderer. It includes lit 3D RC-car bodies and wheels, a dark
+occupancy-map-derived track surface, cyan/red car identification, racing line,
+target markers, the selected rollout, and a screen-space speed/lap/decision HUD.
+The car meshes stay inside the configured XY vehicle footprints; decorative
+height does not introduce a new collision shape or change contact physics.
+
+- **C** cycles follow, chase, isometric, and top-down perspective cameras.
+- **Mouse wheel** zooms; **H** toggles the HUD and planning overlays.
+- **Escape / window close** ends the run as `viewer_closed`, saving the CSV and
+  summary. This is not lap completion or a successful defensive result.
+- `--render-speed 1` (default) paces presentation toward real time; `2` requests
+  double speed; `0` runs unthrottled. Slow CPU planning can still run slower than
+  the requested pace. Headless runs are never paced.
+
+The viewer uses existing pyglet 1.5 compatibility OpenGL and needs a display
+(or an Xvfb display for offscreen GL tests). No game-engine dependency is added.
+It displays actual observation poses, not a separate animated vehicle simulation.
+The existing Gym single-track/tire/contact model and RK4 integration remain the
+source of motion: no added downforce, banking, suspension, 3D tire forces, or
+F1-scale vehicle dynamics are implied by the graphics. NVIDIA/OpenGL may draw
+frames; planning and physics remain on the CPU. `--viewer legacy` keeps the
+original renderer for troubleshooting and existing workflows.
+
+## Racecraft-inspired defensive model
+
+`rival_racecraft.py` adds stateful permissions and utility above the existing
+robust trajectory checks. It borrows **principles**, not an official rule set,
+from circuit racing and autonomous racing:
+
+1. **One early lane choice per encounter.** Choose a fixed offset relative to
+   the smooth legal reference, favoring the inside of a distant bend or the
+   initially threatened side on a straight. Do not continuously chase changes
+   in the attacker's lateral position. Only a feasible winning rollout consumes
+   the move; an infeasible proposal does not authorize trying the other side.
+2. **No late reactive block.** Uncertain closing time must exceed both the TTC
+   floor and a lateral-maneuver time budget (translation, settling, measurement
+   age, and buffer). A late lock remains latched for that encounter.
+3. **Commit before braking/turn-in.** Curvature is previewed over travel during
+   `racecraft_corner_time` plus braking distance and pursuit lookahead. A nearby
+   corner locks out new tactical moves; checked corner-tracking recovery remains
+   available when longitudinal separation allows it.
+4. **Respect overlap on either side.** Reject sampled body motion toward the
+   occupied side, including residual steering/target momentum. At predicted
+   longitudinal overlap, reserve a car-width plus separation/uncertainty margin
+   in the existing legal corridor when it can fit two cars. Never widen the
+   inside-half band to manufacture passing room. If that band cannot fit the
+   extra room reserve, the original map/SAT separation checks still apply;
+   neither a legal passing opportunity nor rule compliance is claimed.
+5. **Retain encounter memory.** Dropouts, noisy side changes, old commitment
+   timers, and defense toggles do not grant a second move. Reset only after a
+   continuously observed separated retreat or clear pass, with a dwell period.
+   Disabling defense removes tactical lane utility but retains collision and
+   overlap checks for a matched no-defense comparison.
+
+Acceleration, jerk, steering and target slew, curvature-based speed limits,
+map/whole-body legality, and uncertain opponent hypotheses remain active. A
+racecraft rejection can only remove feasibility, never certify a path that
+failed another check. If all candidates fail, the output is still an explicitly
+unresolved `emergency` fallback—not a claimed safe hold or permission to squeeze.
+
+The `robust` YAML section exposes lane displacement, early reaction buffer,
+corner curvature/preview, overlap/room margins, and reset gap/dwell. See
+`RobustConfig` for all defaults. Distances are scaled-car metres and speeds m/s,
+not full-size F1 values. The old `commitment_time` field remains accepted for
+configuration compatibility; it no longer unlocks another defensive move.
+
+CSV adds `racecraft_phase`, `racecraft_reason`, `racecraft_encounter`,
+`racecraft_committed_bias`, `racecraft_move_used`, `racecraft_locked`, and
+`racecraft_safe`. JSON summarizes encounters, committed encounters, phase counts,
+and selected policy-check failures. `racecraft_safe` means only that the additional
+sampled racecraft filter accepted the selected path; use the independent overall
+`feasible` and evaluator failures too. Neither flag is a safety certificate.
+
+This is a more interpretable simulation baseline, **not a validated F1 or Indy
+Autonomous Challenge controller**. No official stewarding/one-move regulation,
+right-to-a-corner adjudication, strategic tire degradation, aero/wake effects,
+friction estimation, or protection against arbitrary ramming is implemented.
+The truth-derived synthetic sensor and approximate prediction limitations remain.
+The default `--region inside` still enforces the project's scaled inside-half
+interpretation. `--region track` explicitly relaxes it to the full mapped legal
+corridor for circuit-racing experiments; it does not activate official F1 rules.
+
+## Verification of the presentation/racecraft upgrade
+
+Tested with Python 3.15.2, Gym 0.26.2 and pyglet 1.5.31 on Fedora Linux:
+
+- At the presentation/racecraft-upgrade stage: 212 tests discovered; the five display/long-run opt-ins are
+  skipped by default. With `RIVAL_VIEWER_GL_TEST=1`, **210 passed**, leaving only
+  the two long-run tests skipped.
+- Final 60-second and 300-second-budget real-Gym adaptive regressions passed.
+  The latter took about 204 wall seconds; these tests remain goal-bounded, not
+  forced five-minute sessions. Their rolling progress, failure and numerical
+  checks remain enabled.
+- Hidden-window integration verified identical headless/rendered commands and
+  simulated outcomes, plus clean explicit user-close handling. All four camera
+  modes, screenshot capture and window events passed the GL smoke test.
+- Four-second rendered defense/no-defense runs on the sample map completed
+  without collision, off-track or numerical failure. Neither recorded a pass;
+  together they still reported **166 unresolved controller steps**. Both short
+  runs missed CPU deadlines. This does **not** establish defensive superiority.
+- Existing compatibility/API and dynamics tests: **7 passed**. Broad discovery
+  over `gym/f110_gym/unittest` also imports interactive demos, so use the targeted
+  commands below. A package-qualified dynamics invocation can hit an existing
+  Numba cache module-name mismatch; discovery keeps the expected module name.
+- `git diff --check` and `python -m pip check` passed. Runtime test success is
+  not a claim that all existing editor/static-typing diagnostics are resolved.
+
+```bash
+python -m unittest discover -s examples -p 'test_rival_*.py' -v
+# OpenGL display required; omit this variable for headless-only unit tests
+# In Fish, use env as shown; this also works in Bash.
+env RIVAL_VIEWER_GL_TEST=1 python -m unittest discover -s examples -p 'test_rival_*.py' -v
+env RIVAL_LONG_TESTS=1 RIVAL_SOAK_TESTS=1 python -m unittest discover -s examples -p test_rival_longrun.py -v
+python -m unittest discover -s gym/f110_gym/unittest -p compatibility_test.py -v
+python -m unittest discover -s gym/f110_gym/unittest -p dynamics_test.py -v
+```
 
 ## Longer runs and the corner-stall fix
 
@@ -110,7 +488,8 @@ periodic simulated time, wall time, per-car progress and rolling stall state.
 Five-second signed-progress windows detect local stops that whole-run averages
 miss; `--stall-timeout` terminates explicitly as `stalled`, never success.
 
-Final default-adaptive validation, Python 3.15.2 / Gym 0.26.2:
+Historical corner-stall-fix validation **before the racecraft upgrade**, Python
+3.15.2 / Gym 0.26.2 (these timings are not a benchmark for the new policy):
 
 | Outcome | Defender | Attacker |
 |---|---:|---:|
@@ -119,7 +498,7 @@ Final default-adaptive validation, Python 3.15.2 / Gym 0.26.2:
 | Maximum local-stall duration | 0 s | 0 s |
 | Collision / off-track / numerical failure | 0 / 0 / 0 | 0 / 0 / 0 |
 
-The standard suite passed 152 tests (the two expensive long tests are skipped
+At that stage, the standard suite passed 152 tests (the two expensive long tests are skipped
 unless enabled); nine existing simulator/API/dynamics tests also passed. The
 real-Gym 60-second regression and the up-to-300-second goal-bounded regression
 both passed. CI runs the 60-second regression on Python 3.15. They independently reconstruct rolling progress from CSV, check every
@@ -218,8 +597,10 @@ Known estimated speed, acceleration, and lateral-rate bound violations disable
 blocking. Evaluator truth checks separately reveal bounds violated before the
 tracker recognizes them. No bounded prediction protects against arbitrary ramming.
 
-Commitment/hysteresis limits side-switching. Disabling tactical defense forces a
-new plan immediately; invalid sensor packets cannot pass through as valid state.
+The racecraft encounter state now enforces a single early lane commitment,
+late/corner locks, and overlap room checks rather than timer-only side-switch
+hysteresis. Disabling tactical defense forces a new plan immediately; invalid
+sensor packets cannot pass through as valid state.
 
 ### 4. Legal geometry is still an explicit approximation
 

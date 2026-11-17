@@ -7,6 +7,7 @@ settings:
   # Both starts lie on a usable line segment; other sections are stress-tested.
   start_s: 26.0
   initial_gap: 4.5
+  # Desired speeds in m/s; curvature, proximity, and safety checks can reduce them.
   defender_speed: 2.0
   attacker_speed: 2.8
 robust:
@@ -21,6 +22,17 @@ robust:
   reference_clearance_reserve: 0.12
   # Explicit bound for this simulated adversary suite, NOT a hardware guarantee.
   max_opponent_speed: 4.0
+  # Racecraft heuristics, not an official F1 or IAC rule implementation.
+  # One early line choice per encounter; no late opponent-lane chasing.
+  racecraft_lane_offset: 0.45
+  racecraft_min_move: 0.15
+  racecraft_reaction_buffer: 0.4
+  racecraft_corner_curvature: 0.08
+  racecraft_corner_time: 1.2
+  racecraft_overlap_margin: 0.15
+  racecraft_room_margin: 0.08
+  racecraft_reset_gap: 6.0
+  racecraft_reset_dwell: 1.0
 sensor:
   noise_std: 0.03
   speed_noise_std: 0.1

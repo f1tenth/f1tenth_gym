@@ -395,16 +395,21 @@ def suite_cases(kind, cfg, sensor, length):
 
 def run(scenario, defense, cfg, rc, sc, line, track, map_base, map_ext,
         output, sensor_kind='simulated', render=False, controller_kind='robust', stall_timeout=None,
-                progress_interval=10.):
+        progress_interval=10., viewer_kind='3d', render_speed=1.):
     from rival_robust import RobustDefender, TrackEnvelope
     import gym
     from f110_gym.envs.base_classes import Integrator
     from f110_gym.envs.f110_env import F110Env
+    if viewer_kind not in ('3d', 'legacy'):
+        raise ValueError('viewer_kind must be 3d or legacy')
+    if not np.isfinite(render_speed) or render_speed < 0:
+        raise ValueError('render_speed must be finite and nonnegative')
     if not np.isfinite(progress_interval) or progress_interval <= 0:
         raise ValueError('progress_interval must be finite and positive')
     if stall_timeout is not None and (not np.isfinite(stall_timeout) or stall_timeout < 5.):
         raise ValueError('stall_timeout must be finite and at least 5 seconds')
     envelope = TrackEnvelope(line, track, cfg, rc, boundaries_path=rc.boundaries_path)
+    reference_offset = getattr(envelope, 'reference', envelope.nominal)
     poses, offsets = [], []
     for s in (cfg.start_s, cfg.start_s - cfg.initial_gap):
         d = envelope.nominal(s)
@@ -422,8 +427,15 @@ def run(scenario, defense, cfg, rc, sc, line, track, map_base, map_ext,
         controller = RobustDefender(line, track, cfg, rc, initial_targets[0], envelope=envelope)
     else:
         controller = LegacyAdapter(line, track, cfg, offsets[0], envelope)
-    overlay = Overlay(line) if render else None
-    attacker = Adversary(initial_targets[1], tracking_margin=rc.lateral_tracking_margin)
+    defender_profile = getattr(controller, 'speed_profile', None)
+    overlay = Overlay(line) if render and viewer_kind == 'legacy' else None
+    viewer = None
+    attacker_profile = None
+    if rc.track_speed_planning:
+        from rival_speed import SpeedProfile
+        attacker_profile = SpeedProfile(line, envelope, cfg, rc, cfg.attacker_speed)
+    attacker = Adversary(initial_targets[1], tracking_margin=rc.lateral_tracking_margin,
+        speed_profile=attacker_profile, motion_config=rc if attacker_profile is not None else None)
     sensor = SimulatedSensor(line, sc, cfg.seed)
     detector = LidarDetector(line, track, sc)
     tracker = OpponentTracker(line, sc)
@@ -485,8 +497,12 @@ def run(scenario, defense, cfg, rc, sc, line, track, map_base, map_ext,
             raise ValueError('Configured footprint undersizes simulator vehicle')
         if not np.isclose(cfg.wheelbase, env.params['lf'] + env.params['lr']):
             raise ValueError('Wheelbase mismatch; physics is not overridden')
-        if render:
+        if overlay is not None:
             env.add_render_callback(overlay)
+        if render and viewer_kind == '3d':
+            from rival_viewer import RaceViewer
+            viewer = RaceViewer(line, track, map_base, map_ext,
+                                car_length=cfg.car_length, car_width=cfg.car_width)
         obs, _, done, _ = env.reset(np.asarray(poses))
         reset_numerical = numerical_failures(obs)
         numerical |= np.asarray([bool(reasons) for reasons in reset_numerical])
@@ -514,6 +530,7 @@ def run(scenario, defense, cfg, rc, sc, line, track, map_base, map_ext,
             events.append(dict(time=0., event='gym_done_at_reset'))
         stream.checkpoint(snapshot())
         last_render = -1.
+        render_wall = None
         for step in range(int(np.ceil(cfg.duration / cfg.timestep))):
             if done or collision.any() or offtrack.any() or numerical.any():
                 reason = ('numerical_instability' if numerical.any() else
@@ -539,9 +556,11 @@ def run(scenario, defense, cfg, rc, sc, line, track, map_base, map_ext,
             control_start = time.perf_counter()
             decision = controller.step(t, ego, estimate, defense=defense)
             controller_ms = (time.perf_counter() - control_start) * 1000
+            attack_start = time.perf_counter()
             attack = attacker.plan(t, scenario, opponent, ego, line, envelope, track, cfg,
                 previous_steering=previous_steer,
                 measured_forward_speed=float(obs['linear_vels_x'][1]))
+            attacker_plan_ms = (time.perf_counter() - attack_start) * 1000
             steer, speed, _ = pursuit(opponent, line, attack.target, attack.speed, previous_steer, cfg)
             previous_steer = steer
             target_jump = max(target_jump, abs(decision.target_offset - previous_target))
@@ -552,7 +571,19 @@ def run(scenario, defense, cfg, rc, sc, line, track, map_base, map_ext,
                 [decision.target_offset, attack.target], decision.planning_ms, controller_ms)
             sep = float(np.hypot(ego.x - opponent.x, ego.y - opponent.y))
             row = dict(time=t, mode=decision.mode, reason=decision.reason,
+                racecraft_phase=getattr(decision, 'racecraft_phase', 'unavailable'),
+                racecraft_reason=getattr(decision, 'racecraft_reason', ''),
+                racecraft_encounter=getattr(decision, 'racecraft_encounter', 0),
+                racecraft_committed_bias=getattr(decision, 'racecraft_committed_bias', None),
+                racecraft_move_used=getattr(decision, 'racecraft_move_used', False),
+                racecraft_locked=getattr(decision, 'racecraft_locked', False),
+                racecraft_safe=getattr(decision, 'racecraft_safe', True),
                 feasible=decision.feasible, target=decision.target_offset,
+                defender_selected_bias=getattr(controller, '_bias', None),
+                defender_reference_offset=reference_offset(ego.s),
+                defender_reference_target=reference_offset(ego.s + cfg.lookahead),
+                attacker_reference_offset=reference_offset(opponent.s),
+                attacker_reference_target=reference_offset(opponent.s + cfg.lookahead),
                 attacker_target=attack.target, attack_reason=attack.reason,
                 attack_requested=attack.requested, attack_desired=attack.desired,
                 attack_corridor_valid=attack.requested_corridor_valid,
@@ -561,6 +592,13 @@ def run(scenario, defense, cfg, rc, sc, line, track, map_base, map_ext,
                 attack_selected_path_feasible=attack.selected_path_feasible,
                 attack_fallback=attack.fallback, attack_unresolved=attack.unresolved,
                 attacker_reference_speed_cap=attack.reference_speed_cap,
+                attacker_plan_wall_ms=attacker_plan_ms,
+                attacker_maneuver_check_ms=getattr(attacker, 'maneuver_check_ms', 0.),
+                attacker_maneuver_phase=getattr(attacker, 'maneuver_phase', 'unavailable'),
+                attacker_maneuver_reason=getattr(getattr(attacker, 'maneuver', None), 'reason', None),
+                attacker_profile_speed_cap=getattr(attack, 'profile_speed_cap', None),
+                attacker_command_acceleration=getattr(attack, 'acceleration', None) if attacker_profile is not None else None,
+                defender_profile_speed_cap=None if defender_profile is None else defender_profile.limit(ego.s, ego.speed),
                 attacker_tracking_margin=attack.tracking_margin,
                 attacker_initial_body_error=attack.initial_body_error,
                 attacker_predicted_max_body_error=attack.predicted_max_body_error,
@@ -580,6 +618,14 @@ def run(scenario, defense, cfg, rc, sc, line, track, map_base, map_ext,
                 estimate_error=None if estimate is None else float(np.hypot(
                     estimate.state.x - opponent.x, estimate.state.y - opponent.y)))
             row.update(command_metrics)
+            for name in ('candidate_count', 'candidate_feasible_count', 'candidate_map_rejections',
+                         'candidate_legal_rejections', 'candidate_separation_rejections',
+                         'candidate_racecraft_rejections', 'candidate_freshness_rejections',
+                         'candidate_assumption_rejections', 'candidate_rejection_masks',
+                         'candidate_refinement_count', 'selected_map_safe', 'selected_legal_safe',
+                         'selected_separation_safe', 'selected_racecraft_safe', 'selected_model_feasible',
+                         'selected_fresh', 'selected_assumptions_valid', 'selected_rejections'):
+                row['planner_' + name] = getattr(decision, name, None)
             for label, state in zip(('ego_truth_eval', 'opponent_truth_eval'), states):
                 row.update({f'{label}_{k}': v for k, v in asdict(state).items()})
             row.update(metrics.pipeline(detection_ms, tracking_ms,
@@ -662,13 +708,32 @@ def run(scenario, defense, cfg, rc, sc, line, track, map_base, map_ext,
                       f'stalled={stalls.active.tolist()} numerical={numerical.tolist()} '
                       f'collision={collision.tolist()} offtrack={offtrack.tolist()}', flush=True)
                 next_progress = (np.floor(elapsed / progress_interval + 1e-9) + 1) * progress_interval
+            if render and not numerical.any() and (viewer is not None or elapsed - last_render >= .1 - 1e-9):
+                # Wall pacing affects presentation only. Commands and simulated
+                # sensor times never depend on rendering speed or wall delays.
+                if render_wall is None:
+                    render_wall = time.perf_counter() - elapsed / render_speed if render_speed else 0.
+                if render_speed:
+                    time.sleep(max(0., render_wall + elapsed / render_speed - time.perf_counter()))
+                render_state = states[0]
+                assert render_state is not None  # Non-numerical observation required above.
+                target_point = line.sample(render_state.s + cfg.lookahead, decision.target_offset)
+                if viewer is not None:
+                    best = getattr(controller, '_best', None)
+                    opened = viewer.update(obs, elapsed=elapsed, decision=decision,
+                        attacker_target=attack.target, progress=progress, lap_goal=cfg.laps,
+                        scenario=scenario, defense=defense, target_point=target_point,
+                        rollout_path=None if best is None else best.trajectory)
+                    if not opened and inner_reason is None:
+                        inner_reason = 'viewer_closed'
+                else:
+                    assert overlay is not None
+                    overlay.target = target_point
+                    env.render(mode='human_fast')
+                last_render = elapsed
             if inner_reason is not None:
                 reason = inner_reason
                 break
-            if render and elapsed - last_render >= .1 - 1e-9:
-                overlay.target = line.sample(ego.s + cfg.lookahead, decision.target_offset)
-                env.render(mode='human_fast')
-                last_render = elapsed
             if collision.any() or offtrack.any():
                 reason = 'collision' if collision.any() else 'offtrack'
                 break
@@ -687,8 +752,12 @@ def run(scenario, defense, cfg, rc, sc, line, track, map_base, map_ext,
                     stream.close()
         finally:
             try:
-                if F110Env.renderer is not None:
-                    F110Env.renderer.close()
+                try:
+                    if viewer is not None:
+                        viewer.close()
+                finally:
+                    if F110Env.renderer is not None:
+                        F110Env.renderer.close()
             finally:
                 F110Env.renderer = old_renderer
                 F110Env.render_callbacks = old_callbacks
@@ -699,6 +768,15 @@ def run(scenario, defense, cfg, rc, sc, line, track, map_base, map_ext,
         return [min(values), max(values)] if values else [None, None]
     result = dict(scenario=scenario, defense=defense, sensor_kind=sensor_kind,
         controller=controller_kind,
+        presentation=dict(render=render, viewer=viewer_kind if render else None,
+            render_speed=render_speed if render else None,
+            note='presentation pacing only; no wall-time actuation model'),
+        racecraft=dict(encounters=max((r['racecraft_encounter'] for r in rows), default=0),
+            committed_encounters=len({r['racecraft_encounter'] for r in rows if r['racecraft_move_used']}),
+            phases={phase: sum(r['racecraft_phase'] == phase for r in rows)
+                    for phase in sorted({r['racecraft_phase'] for r in rows})},
+            rejected_selected_steps=sum(not r['racecraft_safe'] for r in rows),
+            note='sampled policy permissions, not official race-rule compliance or safety certification'),
         controller_notes=('original Defender/TrackRules/pursuit at timestep cadence; same estimates, sensor and adversary; absent/stale estimate nominal stop; no robust command slew' if controller_kind == 'legacy' else 'RobustDefender with internal control-period solves and timestep actuation'),
         action_cycles=len(rows), physics_steps=physics_step_count,
         integration_dt=integration_dt, substeps=substeps, action_period=cfg.timestep,
@@ -707,6 +785,10 @@ def run(scenario, defense, cfg, rc, sc, line, track, map_base, map_ext,
         integration_note='held [steer,speed] commands; cfg.timestep remains action/sensor/slew period; physics_steps excludes reset initialization; no simulator-state resets or equation changes',
         sensor_description='truth-derived synthetic sensor, not hardware perception' if sensor_kind == 'simulated' else 'heuristic lidar clusters, not identified opponent truth',
         settings=asdict(cfg), robust=asdict(rc), sensor=asdict(sc),
+        speed_planning=dict(enabled=rc.track_speed_planning,
+            attacker=None if attacker_profile is None else attacker_profile.diagnostics,
+            defender=None if defender_profile is None else defender_profile.diagnostics,
+            note='reference speed envelope; no change to Gym dynamics; rollout safety checks remain independent'),
         track=dict(map=str(map_base), extension=map_ext, length=line.length),
         stop_reason=reason, elapsed=elapsed, wall_seconds=time.perf_counter()-wall,
         events=events, collisions=collision, offtrack=offtrack,
@@ -756,6 +838,20 @@ def run(scenario, defense, cfg, rc, sc, line, track, map_base, map_ext,
             side_hysteresis=attacker.side_hysteresis,
             actuation_dt=cfg.timestep,
             note='XY kinematic bicycle using measured body-forward speed/yaw, actual pursuit and bounded target/steering/speed slew; approximate speed tracking, constant defender d/speed; not Gym dynamics or full-maneuver proof'),
+        attacker_planning_ms={key: float(np.percentile([r['attacker_plan_wall_ms'] for r in rows], percentile))
+            if rows else None for key, percentile in (('p50', 50), ('p95', 95), ('max', 100))},
+        attacker_opportunities=dict(reasons=getattr(attacker, 'opportunity_reasons', {}),
+            phases={phase: sum(r['attacker_maneuver_phase'] == phase for r in rows)
+                    for phase in sorted({r['attacker_maneuver_phase'] for r in rows})},
+            note='sampled entry/pass/exit opportunities, not completed passes or defense credit'),
+        planner_rejections=dict(solves=sum(bool(r['planning_solve']) for r in rows),
+            candidate_totals={name: sum((r['planner_' + name] or 0) for r in rows if r['planning_solve'])
+                for name in ('candidate_count', 'candidate_feasible_count', 'candidate_map_rejections',
+                             'candidate_legal_rejections', 'candidate_separation_rejections',
+                             'candidate_racecraft_rejections', 'candidate_refinement_count')},
+            selected_failure_steps={name: sum(name in (r['planner_selected_rejections'] or []) for r in rows)
+                for name in ('map', 'legal', 'separation', 'racecraft', 'freshness', 'assumptions')},
+            note='candidate reasons overlap; solve totals exclude held-command cycles; selected reasons count action cycles'),
         pipeline_latency=metrics.latency_summary(), evaluation_bounds=bounds.summary(),
         defended_attack_credit=False,  # A finite run alone does not establish successful defense.
         sensor_unavailable_steps=unavailable, sensor_stale_steps=stale,
@@ -790,7 +886,11 @@ def main():
     parser.add_argument('--config', type=Path, default=Path(__file__).with_suffix('.yaml'))
     parser.add_argument('--scenario', choices=SCENARIOS, default='adaptive')
     parser.add_argument('--duration', type=float)
-    parser.add_argument('--render', action='store_true')
+    parser.add_argument('--render', action='store_true', help='open the 3D race-control viewer')
+    parser.add_argument('--viewer', choices=('3d', 'legacy'), default='3d',
+                        help='presentation only; the legacy top-down renderer remains available')
+    parser.add_argument('--render-speed', type=float, default=1.,
+                        help='wall pacing while rendering: 1 = real time, 2 = double speed, 0 = unthrottled')
     parser.add_argument('--progress-interval', type=float, default=10.,
                         help='simulated seconds between progress messages (default: 10)')
     parser.add_argument('--compare', action='store_true')
@@ -802,6 +902,8 @@ def main():
     parser.add_argument('--stall-timeout', type=float, default=None,
                         help='optional explicit stalled termination after at least 5 seconds of low progress; disabled by default')
     args = parser.parse_args()
+    if not np.isfinite(args.render_speed) or args.render_speed < 0:
+        parser.error('--render-speed must be finite and nonnegative')
     if not np.isfinite(args.progress_interval) or args.progress_interval <= 0:
         parser.error('--progress-interval must be finite and positive')
     if args.stall_timeout is not None and (not np.isfinite(args.stall_timeout) or args.stall_timeout < 5.):
@@ -829,7 +931,7 @@ def main():
             try:
                 results.append(run(scenario, defense, settings, rc, sensor, line,
                     track, map_base, map_ext, args.output / tag, args.sensor, args.render, args.controller,
-                                        args.stall_timeout, args.progress_interval))
+                    args.stall_timeout, args.progress_interval, args.viewer, args.render_speed))
             except ValueError as exc:
                 checkpoint = (args.output / tag).with_suffix('.checkpoint.json')
                 if checkpoint.exists() and json.loads(checkpoint.read_text()).get('elapsed', 0.) > 0:

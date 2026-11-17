@@ -9,6 +9,8 @@ import math
 import numpy as np
 from numba import njit
 
+from rival_control import advance_speed_command
+
 
 @njit(cache=True)
 def _clip(x, lo, hi):
@@ -43,9 +45,43 @@ def _interval(s, nodes, lo, hi, period):
             hi[i] + fraction * (hi[j] - hi[i]))
 
 
+# Empty read-only arrays use the same Numba signature as precomputed profiles.
+_EMPTY_SPEED_ARRAY = np.empty(0, dtype=np.float64)
+_EMPTY_SPEED_ARRAY.flags.writeable = False
+
+
+@njit(cache=True)
+def _profile_limit(s, measured_speed, nodes, squared, response):
+    """Compiled SpeedProfile.limit; scan the full front interval, not one point."""
+    if not np.isfinite(s) or not np.isfinite(measured_speed):
+        raise ValueError("s and measured_speed must be finite")
+    period, lookahead, response_time, acceleration_distance, global_min = response
+    s = s % period
+    local = np.interp(s, nodes, squared)
+    speed = max(0., measured_speed, math.sqrt(local))
+    distance = lookahead + speed * response_time + acceleration_distance
+    if distance >= period:
+        return math.sqrt(global_min)
+    end = s + distance
+    cap = min(local, np.interp(end % period, nodes, squared))
+    # nodes includes the closing endpoint. Endpoints are interpolated above;
+    # search only strictly internal nodes, splitting once at the lap seam.
+    lo = np.searchsorted(nodes, s, side="right")
+    hi = np.searchsorted(nodes, min(end, period), side="left")
+    for i in range(lo, hi):
+        cap = min(cap, squared[i])
+    if end > period:
+        hi = np.searchsorted(nodes, end - period, side="left")
+        for i in range(hi):
+            cap = min(cap, squared[i])
+    return math.sqrt(cap)
+
+
 @njit(cache=True)
 def _simulate(points, edges, lengths, starts, tangents, curvatures,
-              nodes, lower, upper, reference, slopes, ego, controls, bias, desired_speed, times, c, r):
+              nodes, lower, upper, reference, slopes, ego, controls, bias, desired_speed, times, c, r,
+              speed_profile=None):
+    """Profile data is (wrapped_s, squared_speeds, numeric response tuple), or None."""
     s, d, projected_speed, x, y, yaw = ego
     target, lateral_rate, acceleration, steering, command_speed = controls
     initial_target = target
@@ -67,7 +103,15 @@ def _simulate(points, edges, lengths, starts, tangents, curvatures,
         nominal, _ = _interval(preview_s, nodes, reference, reference, starts[-1])
         goal = _clip(nominal + bias, plo, phi) if plo <= phi else initial_target
         error = goal - target
-        desired_rate = np.sign(error) * min(r[3], math.sqrt(max(0., 2 * r[4] * abs(error))))
+        if r[7]:
+            reference_rate = 0.
+            if plo <= phi:
+                next_reference, _ = _interval(preview_s + max(0., projected_speed) * dt,
+                                              nodes, reference, reference, starts[-1])
+                reference_rate = (next_reference - nominal) / dt
+            desired_rate = _clip(reference_rate + r[8] * error, -r[3], r[3])
+        else:
+            desired_rate = np.sign(error) * min(r[3], math.sqrt(max(0., 2 * r[4] * abs(error))))
         lateral_rate = _rate(lateral_rate, desired_rate, r[4], dt)
         target = target + lateral_rate * dt
         curvature = 0.
@@ -79,12 +123,22 @@ def _simulate(points, edges, lengths, starts, tangents, curvatures,
             curvature = max(curvature, abs((1 - f) * curvatures[i] + f * curvatures[(i + 1) % len(points)]))
         turn_speed = math.sqrt(r[5] / max(curvature, 1e-3))
         slope_speed = .8 * r[3] / max(slope, 1e-6)
-        desired_accel = _clip((min(desired_speed, turn_speed, slope_speed) - command_speed) / max(dt, 1e-6), -r[1], r[0])
-        acceleration = _rate(acceleration, desired_accel, r[2], dt)
-        release = r[2] * dt
-        braking_limit = max(0., math.sqrt(release ** 2 + 2 * r[2] * command_speed) - release)
-        acceleration = max(acceleration, -braking_limit)
-        command_speed = max(0., command_speed + acceleration * dt)
+        speed_cap = min(desired_speed, turn_speed, slope_speed)
+        if speed_profile is not None:
+            speed_nodes, speed_squared, speed_response = speed_profile
+            if len(speed_nodes):
+                speed_cap = min(speed_cap, _profile_limit(
+                    s, projected_speed, speed_nodes, speed_squared, speed_response))
+        if r[7]:
+            command_speed, acceleration = advance_speed_command(command_speed, acceleration,
+                speed_cap, dt, r[0], r[1], r[2])
+        else:
+            desired_accel = _clip((speed_cap - command_speed) / max(dt, 1e-6), -r[1], r[0])
+            acceleration = _rate(acceleration, desired_accel, r[2], dt)
+            release = r[2] * dt
+            braking_limit = max(0., math.sqrt(release ** 2 + 2 * r[2] * command_speed) - release)
+            acceleration = max(acceleration, -braking_limit)
+            command_speed = max(0., command_speed + acceleration * dt)
         i, f = _segment(s + c[0], starts, lengths)
         px = points[i, 0] + f * edges[i, 0] - target * tangents[i, 1]
         py = points[i, 1] + f * edges[i, 1] + target * tangents[i, 0]
@@ -124,13 +178,26 @@ def _simulate(points, edges, lengths, starts, tangents, curvatures,
 
 
 def simulate_trajectory(line, envelope, ego, controls, bias, desired_speed, times,
-                        vehicle_cfg, robust_cfg):
+                        vehicle_cfg, robust_cfg, speed_profile=None) -> tuple[np.ndarray, float, float]:
     """Return (Nx7 path, legal violation, maximum lateral acceleration).
 
     Accepts actual ClosedRaceline/TrackEnvelope data; no Python callbacks enter
     the compiled loop. Configuration is packed per call to honor mutable configs.
+    Optional SpeedProfile data caps desired speed at every command node, using
+    projected speed just like the parent Python controller. Its arrays are reused
+    without copying/re-squaring. None passes empty arrays and disables profile
+    arithmetic. corner_tracking opts into bounded total target tracking and the
+    shared speed-command step; integration nodes and safety sampling are unchanged.
     """
     c, r = vehicle_cfg, robust_cfg
+    if speed_profile is None:
+        speed_data = (_EMPTY_SPEED_ARRAY, _EMPTY_SPEED_ARRAY, (0., 0., 0., 0., 0.))
+    else:
+        speed_data = (speed_profile._wrapped_s, speed_profile._squared,
+                      (float(speed_profile.length), float(speed_profile._lookahead),
+                       float(speed_profile._response_time),
+                       float(speed_profile._response_acceleration_distance),
+                       float(speed_profile._global_min)))
     return _simulate(line.points, line._edges, line._lengths, line._starts,
                      line._tangents, line._curvatures, envelope.s, envelope.lo,
                      envelope.hi, envelope.reference_offsets, envelope._reference_slopes,
@@ -140,4 +207,5 @@ def simulate_trajectory(line, envelope, ego, controls, bias, desired_speed, time
                      (c.lookahead, c.wheelbase, c.max_steer, c.max_steer_rate),
                      (r.max_acceleration, r.max_braking, r.max_jerk,
                       r.max_lateral_rate, r.max_lateral_acceleration,
-                      r.max_lateral_accel, r.lateral_tracking_margin))
+                      r.max_lateral_accel, r.lateral_tracking_margin,
+                      r.corner_tracking, r.target_tracking_gain), speed_data)
